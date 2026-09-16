@@ -1,0 +1,11 @@
+{
+  "integration_key": "chave-de-teste",
+  "transaction_id": "TX123",
+  "seller_id": "S1",
+  "status": "paid",
+  "type": "order",
+  "test": false,
+  "tangible": false,
+  "customer": { "name": "João Silva", "email": " Joao@Gmail.com " },
+  "product": { "name": "Atlas Visual - Plano Completo", "code": "ATLAS-COMPLETO", "sku": "SKU-1", "price": 4700, "quantity": 1 }
+}
