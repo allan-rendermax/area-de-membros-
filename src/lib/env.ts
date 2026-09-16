@@ -7,8 +7,9 @@ function required(name: string): string {
 }
 
 export const env = {
-  get supabaseUrl() { return required('NEXT_PUBLIC_SUPABASE_URL') },
-  get supabasePublishableKey() { return required('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY') },
+  // All Supabase clients run on the server. Keep legacy names as a local fallback.
+  get supabaseUrl() { return process.env.SUPABASE_URL || required('NEXT_PUBLIC_SUPABASE_URL') },
+  get supabasePublishableKey() { return process.env.SUPABASE_PUBLISHABLE_KEY || required('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY') },
   get supabaseSecretKey() { return required('SUPABASE_SECRET_KEY') },
   get paytIntegrationKey() { return required('PAYT_INTEGRATION_KEY') },
   get resendApiKey() { return required('RESEND_API_KEY') },
