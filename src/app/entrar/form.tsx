@@ -8,7 +8,7 @@ export function EntrarForm({ initialEmail, supportUrl }: { initialEmail: string;
 
   return (
     <form action={action} className="flex flex-col gap-4">
-      <label className="flex flex-col gap-2 text-sm font-medium">
+      <label className="flex flex-col gap-2 text-sm font-medium text-grafite">
         Email usado na compra
         <input
           name="email"
@@ -17,16 +17,16 @@ export function EntrarForm({ initialEmail, supportUrl }: { initialEmail: string;
           autoComplete="email"
           required
           defaultValue={state.email}
-          className="rounded-lg border border-zinc-300 px-4 py-3 text-base outline-none focus:border-zinc-900"
+          className="rounded-md border border-junta bg-white px-4 py-3 text-base text-tinta outline-none focus:border-tinta focus-visible:outline-none"
         />
       </label>
       {state.error && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="border-l-[3px] border-sinal bg-sinal/10 px-3 py-2 text-sm leading-relaxed text-tinta">
           {state.error}
           {supportUrl && (
             <>
               {' '}
-              <a href={supportUrl} className="underline">Falar com o suporte</a>
+              <a href={supportUrl} className="font-semibold underline">Falar com o suporte</a>
             </>
           )}
         </p>
@@ -34,7 +34,7 @@ export function EntrarForm({ initialEmail, supportUrl }: { initialEmail: string;
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-zinc-900 px-4 py-3 font-semibold text-white disabled:opacity-60"
+        className="rounded-md bg-tinta px-4 py-3.5 font-semibold text-papel hover:bg-tinta-suave disabled:opacity-60"
       >
         {pending ? 'Entrando…' : 'Entrar'}
       </button>
