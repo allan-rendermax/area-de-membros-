@@ -10,6 +10,8 @@ export class FakeRepo implements PostbackRepo {
   customers: CustomerRow[] = []
   titles: Record<string, string[]> = { 'ATLAS-COMPLETO': ['Atlas Visual', 'Bônus 1'] }
   failCreateCustomerTimes = 0
+  // Simula outro aviso simultâneo que criou o cliente entre a busca e a criação.
+  hideCustomerFromLookupOnce = false
 
   async logEvent(payload: unknown) {
     const id = `ev-${this.events.length + 1}`
@@ -38,6 +40,10 @@ export class FakeRepo implements PostbackRepo {
     return { orderId: existing.id, changed: false, status: existing.status as OrderStatus }
   }
   async findCustomerByEmail(email: string) {
+    if (this.hideCustomerFromLookupOnce) {
+      this.hideCustomerFromLookupOnce = false
+      return null
+    }
     return this.customers.find((c) => c.email === email) ?? null
   }
   async createCustomer(email: string, name: string) {
@@ -45,9 +51,11 @@ export class FakeRepo implements PostbackRepo {
       this.failCreateCustomerTimes--
       throw new Error('auth indisponível')
     }
+    const existing = this.customers.find((c) => c.email === email)
+    if (existing) return { customer: existing, created: false }
     const customer = { id: `cus-${this.customers.length + 1}`, email, name, blockedAt: null }
     this.customers.push(customer)
-    return customer
+    return { customer, created: true }
   }
   async getMaterialTitlesForProduct(_storeId: string, productCode: string) {
     return this.titles[productCode] ?? []

@@ -1,7 +1,9 @@
 import Link from 'next/link'
 import { SHARING_DEVICE_THRESHOLD, searchCustomers } from '@/lib/data/customers'
+import { requireAdmin } from '@/lib/auth/require-admin'
 
 export default async function ClientesPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+  await requireAdmin()
   const { q = '' } = await searchParams
   const customers = await searchCustomers(q.trim().toLowerCase())
 

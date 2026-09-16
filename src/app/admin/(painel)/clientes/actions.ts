@@ -43,7 +43,7 @@ export async function reenviarAcesso(formData: FormData) {
 
   const store = await getDefaultStore()
   const { materials, granted } = await loadCustomerAccess(store.id, customer.email)
-  const materialTitles = materials.filter((m) => granted.has(m.id)).map((m) => m.title)
+  const materialTitles = materials.filter((m) => m.isPublished && granted.has(m.id)).map((m) => m.title)
 
   try {
     await createResendMailer().sendAccessGranted({

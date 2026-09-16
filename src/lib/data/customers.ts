@@ -18,27 +18,33 @@ export async function findCustomerByEmail(email: string): Promise<CustomerRow | 
   return data ? toCustomer(data) : null
 }
 
-export async function createCustomer(email: string, name: string): Promise<CustomerRow> {
+export async function createCustomer(
+  email: string,
+  name: string,
+): Promise<{ customer: CustomerRow; created: boolean }> {
   const db = createAdminClient()
 
   let userId: string
-  const created = await db.auth.admin.createUser({ email, email_confirm: true, user_metadata: { name } })
-  if (created.error) {
+  const authUser = await db.auth.admin.createUser({ email, email_confirm: true, user_metadata: { name } })
+  if (authUser.error) {
     const { data: existingId, error: rpcError } = await db.rpc('get_auth_user_id_by_email', { p_email: email })
-    if (rpcError || !existingId) throw created.error
+    if (rpcError || !existingId) throw authUser.error
     userId = existingId as string
   } else {
-    userId = created.data.user.id
+    userId = authUser.data.user.id
   }
 
-  const { error: upsertError } = await db
+  // A linha em customers é o que decide "cliente novo": só um aviso consegue inseri-la,
+  // mesmo com dois avisos simultâneos para o mesmo email.
+  const { data: inserted, error: upsertError } = await db
     .from('customers')
     .upsert({ id: userId, email, name }, { onConflict: 'id', ignoreDuplicates: true })
+    .select('id')
   if (upsertError) throw upsertError
 
   const { data, error } = await db.from('customers').select('id, email, name, blocked_at').eq('id', userId).single()
   if (error) throw error
-  return toCustomer(data)
+  return { customer: toCustomer(data), created: inserted.length > 0 }
 }
 
 const LOGIN_WINDOW_MINUTES = 15
@@ -128,10 +134,12 @@ export async function changeCustomerEmail(id: string, newEmail: string): Promise
   if (current.email === newEmail) return
   if (await findCustomerByEmail(newEmail)) throw new Error('Já existe um cliente com este email')
 
+  // Ordem pensada para retentativa: o email do cliente muda por último, então se algo
+  // falhar no meio, repetir a ação com o mesmo email novo completa o que faltou.
   const { error: authError } = await db.auth.admin.updateUserById(id, { email: newEmail, email_confirm: true })
   if (authError) throw authError
-  const { error: customerError } = await db.from('customers').update({ email: newEmail }).eq('id', id)
-  if (customerError) throw customerError
   const { error: ordersError } = await db.from('orders').update({ customer_email: newEmail }).eq('customer_email', current.email)
   if (ordersError) throw ordersError
+  const { error: customerError } = await db.from('customers').update({ email: newEmail }).eq('id', id)
+  if (customerError) throw customerError
 }

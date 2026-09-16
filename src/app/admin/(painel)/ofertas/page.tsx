@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { listMaterials, listOffers } from '@/lib/data/catalog'
 import { getDefaultStore } from '@/lib/data/stores'
+import { requireAdmin } from '@/lib/auth/require-admin'
 
 export default async function OfertasPage() {
+  await requireAdmin()
   const store = await getDefaultStore()
   const [offers, materials] = await Promise.all([listOffers(store.id), listMaterials(store.id)])
   const titles = new Map(materials.map((m) => [m.id, m.title]))

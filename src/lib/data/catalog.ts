@@ -131,6 +131,9 @@ export async function saveOffer(input: {
   paytProductCode: string
   materialIds: string[]
 }): Promise<void> {
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!input.materialIds.every((id) => uuid.test(id))) throw new Error('Material inválido')
+
   const db = createAdminClient()
   const row = { store_id: input.storeId, name: input.name, payt_product_code: input.paytProductCode }
 
@@ -144,12 +147,20 @@ export async function saveOffer(input: {
     offerId = data.id as string
   }
 
-  const { error: deleteError } = await db.from('offer_materials').delete().eq('offer_id', offerId)
-  if (deleteError) throw deleteError
+  // Grava os vínculos novos antes de remover os desmarcados: se algo falhar no meio,
+  // quem já comprou nunca perde acesso a um material que continua na oferta.
   if (input.materialIds.length) {
-    const { error: insertError } = await db
+    const { error: upsertError } = await db
       .from('offer_materials')
-      .insert(input.materialIds.map((materialId) => ({ offer_id: offerId, material_id: materialId })))
-    if (insertError) throw insertError
+      .upsert(
+        input.materialIds.map((materialId) => ({ offer_id: offerId, material_id: materialId })),
+        { onConflict: 'offer_id,material_id', ignoreDuplicates: true },
+      )
+    if (upsertError) throw upsertError
   }
+
+  let removal = db.from('offer_materials').delete().eq('offer_id', offerId)
+  if (input.materialIds.length) removal = removal.not('material_id', 'in', `(${input.materialIds.join(',')})`)
+  const { error: deleteError } = await removal
+  if (deleteError) throw deleteError
 }

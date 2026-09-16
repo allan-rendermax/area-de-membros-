@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getCustomer, listDevices } from '@/lib/data/customers'
 import { listOrdersByEmail } from '@/lib/data/orders'
 import { alternarBloqueio, corrigirEmail, reenviarAcesso } from '../actions'
+import { requireAdmin } from '@/lib/auth/require-admin'
 
 const button = 'rounded-lg px-3 py-2 text-sm font-semibold'
 
@@ -12,6 +13,7 @@ export default async function ClientePage({
   params: Promise<{ id: string }>
   searchParams: Promise<{ msg?: string }>
 }) {
+  await requireAdmin()
   const [{ id }, { msg }] = await Promise.all([params, searchParams])
   const customer = await getCustomer(id)
   if (!customer) notFound()

@@ -24,7 +24,8 @@ export interface PostbackRepo {
   getStoreBySlug(slug: string): Promise<Store | null>
   applyOrderStatus(input: ApplyOrderInput): Promise<{ orderId: string; changed: boolean; status: OrderStatus }>
   findCustomerByEmail(email: string): Promise<CustomerRow | null>
-  createCustomer(email: string, name: string): Promise<CustomerRow>
+  // created = false quando outro aviso simultâneo criou o cliente primeiro.
+  createCustomer(email: string, name: string): Promise<{ customer: CustomerRow; created: boolean }>
   getMaterialTitlesForProduct(storeId: string, productCode: string): Promise<string[]>
 }
 
@@ -118,8 +119,8 @@ export async function processPostback(
     if (order.status === 'pago') {
       const existing = await repo.findCustomerByEmail(p.customerEmail)
       if (!existing) {
-        await repo.createCustomer(p.customerEmail, p.customerName)
-        customerCreated = true
+        const { created } = await repo.createCustomer(p.customerEmail, p.customerName)
+        customerCreated = created
       }
 
       if (order.changed || customerCreated) {

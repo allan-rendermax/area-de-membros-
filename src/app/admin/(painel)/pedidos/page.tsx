@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { listOrders, type OrderFilter } from '@/lib/data/orders'
 import { getDefaultStore } from '@/lib/data/stores'
+import { requireAdmin } from '@/lib/auth/require-admin'
 
 const FILTERS: { value: OrderFilter; label: string }[] = [
   { value: 'todos', label: 'Todos' },
@@ -18,6 +19,7 @@ const STATUS_STYLE: Record<string, string> = {
 }
 
 export default async function PedidosPage({ searchParams }: { searchParams: Promise<{ filtro?: string }> }) {
+  await requireAdmin()
   const { filtro } = await searchParams
   const filter = FILTERS.some((f) => f.value === filtro) ? (filtro as OrderFilter) : 'todos'
   const store = await getDefaultStore()

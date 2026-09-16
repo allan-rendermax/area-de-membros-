@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { listMaterials } from '@/lib/data/catalog'
 import { getDefaultStore } from '@/lib/data/stores'
+import { requireAdmin } from '@/lib/auth/require-admin'
 
 export default async function MateriaisPage() {
+  await requireAdmin()
   const store = await getDefaultStore()
   const materials = await listMaterials(store.id)
 

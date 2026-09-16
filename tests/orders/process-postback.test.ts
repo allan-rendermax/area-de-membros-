@@ -108,6 +108,15 @@ describe('processPostback', () => {
     expect(mailer.sent).toHaveLength(1)
   })
 
+  it('cliente criado ao mesmo tempo por outro aviso não recebe boas-vindas duplicado', async () => {
+    repo.customers.push({ id: 'cus-existente', email: 'joao@gmail.com', name: 'João Silva', blockedAt: null })
+    repo.hideCustomerFromLookupOnce = true
+    const result = await run(paid)
+    expect(result).toMatchObject({ changed: true, customerCreated: false, emailSent: true })
+    expect(mailer.sent[0]).toMatchObject({ firstAccess: false })
+    expect(repo.customers).toHaveLength(1)
+  })
+
   it('loja inexistente gera falha registrada', async () => {
     await expect(
       processPostback(paid, { repo, mailer, integrationKey: KEY, storeSlug: 'outra' }),

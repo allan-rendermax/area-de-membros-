@@ -2,8 +2,10 @@ import { notFound } from 'next/navigation'
 import { getOffer, listMaterials } from '@/lib/data/catalog'
 import { getDefaultStore } from '@/lib/data/stores'
 import { OfferForm } from '../offer-form'
+import { requireAdmin } from '@/lib/auth/require-admin'
 
 export default async function OfertaPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin()
   const { id } = await params
   const store = await getDefaultStore()
   const [offer, materials] = await Promise.all([id === 'novo' ? null : getOffer(id), listMaterials(store.id)])
