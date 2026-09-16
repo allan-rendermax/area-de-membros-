@@ -48,8 +48,9 @@ Tudo pertence a uma **loja**. A regra central: **o que se vende (oferta) é sepa
 | `offers` | `id`, `store_id`, `name`, `payt_product_code` | Código único por loja. Ex.: Plano Básico, Plano Completo, cada bump e upsell |
 | `offer_materials` | `offer_id`, `material_id` | Plano Completo → Atlas + Bônus 1, 2, 3 |
 | `customers` | `id` (= `auth.users.id`), `email` (único, minúsculo), `name`, `blocked_at` | Um cliente pode comprar em várias lojas |
-| `orders` | `id`, `store_id`, `customer_id`, `payt_transaction_id`, `payt_product_code`, `offer_id` (nulo se desconhecida), `status`, `payt_type`, `is_test`, `amount_cents`, `paid_at`, `updated_at` | Único por (`payt_transaction_id`, `payt_product_code`) |
-| `payt_events` | `id`, `received_at`, `payload` (jsonb), `key_valid`, `processed_at`, `error` | Todo aviso recebido, válido ou não |
+| `orders` | `id`, `store_id`, `customer_email`, `payt_transaction_id`, `payt_product_code`, `status`, `status_rank`, `payt_type`, `is_test`, `amount_cents`, `paid_at`, `updated_at` | Único por (`payt_transaction_id`, `payt_product_code`). Ligado ao cliente pelo email e à oferta pelo código do produto — sem chave fixa, então cadastrar a oferta depois vale automaticamente |
+| `payt_events` | `id`, `received_at`, `payload` (jsonb), `key_valid`, `outcome`, `processed_at`, `error` | Todo aviso recebido, válido ou não |
+| `login_attempts` | `ip`, `created_at` | Limite de tentativas na tela de login |
 | `customer_devices` | `customer_id`, `device_hash`, `first_seen_at`, `last_seen_at` | Base do alerta de compartilhamento |
 
 ### Regra de acesso
@@ -62,7 +63,8 @@ Consequências:
 
 - Reembolso/chargeback muda o status do pedido e o acesso some sozinho.
 - Duas ofertas que liberam o mesmo material: reembolsar uma não remove o acesso concedido pela outra.
-- Pedido de oferta ainda não cadastrada fica com `offer_id` nulo; ao cadastrar a oferta com aquele código, os pedidos existentes são vinculados e o acesso passa a valer.
+- Pedido de oferta ainda não cadastrada não casa com nenhuma oferta; ao cadastrar a oferta com aquele código, o acesso passa a valer sem nenhuma atualização nos pedidos.
+- Pedidos pendentes não criam cliente; o cliente é criado quando o primeiro pedido vira `pago`.
 
 ### Segurança dos dados
 
@@ -75,7 +77,7 @@ Endpoint: `POST /api/webhooks/payt`.
 1. **Registrar** o payload bruto em `payt_events`.
 2. **Validar** `integration_key` contra a variável de ambiente (comparação em tempo constante). Inválida → responde 401, marca `key_valid = false`, fim.
 3. **Normalizar** email (trim + minúsculas).
-4. **Encontrar ou criar** o pedido por (`transaction_id`, código do produto). Vincular à oferta pelo código; se não existir, `offer_id` nulo.
+4. **Encontrar ou criar** o pedido por (`transaction_id`, código do produto), guardando o email normalizado e o código do produto.
 5. **Traduzir o status** da Payt para o status interno e **nunca retroceder**:
 
    | Interno | Nível | Payt (confirmado) |
@@ -87,12 +89,12 @@ Endpoint: `POST /api/webhooks/payt`.
    | `chargeback` | 2 | a confirmar com aviso de teste |
 
    Um aviso só altera o pedido se o novo nível for **maior** que o atual. Status desconhecido (ex.: `lost_cart`, `subscription_renewed`) é registrado e **não altera acesso**.
-6. **Se o pedido acabou de virar `pago`:**
-   - cliente não existe → cria usuário no Supabase Auth + linha em `customers` → envia email **"Seu acesso chegou"**;
-   - cliente existe → envia email **"Novo material liberado"**.
-7. Responder 200. Erro inesperado → registra em `payt_events.error` e responde 500.
+6. **Se o status atual do pedido é `pago`:**
+   - garante que o cliente existe (cria usuário no Supabase Auth + linha em `customers` se preciso);
+   - envia email somente se o pedido **acabou de virar** `pago` ou o cliente **acabou de ser criado**: **"Seu acesso chegou"** para cliente novo, **"Novo material liberado"** para existente.
+7. Falha no envio do email é registrada em `payt_events.error` e responde 200 (o admin reenvia). Erro inesperado (ex.: banco fora) → registra e responde 500 para a Payt tentar de novo; o reprocessamento é seguro.
 
-**Idempotência:** o mesmo aviso repetido não cria usuário duplicado nem reenvia email, porque o envio só ocorre na transição para `pago`.
+**Idempotência:** o mesmo aviso repetido não cria usuário duplicado nem reenvia email. Se a criação do cliente falhar no meio, a nova tentativa da Payt cria o cliente e envia o email.
 
 **Bumps e upsells:** cada produto vira um pedido próprio; reembolso de um não afeta os outros.
 
@@ -184,6 +186,6 @@ Autenticação do Supabase não envia emails a clientes (login sem email), excet
 ## 12. Pendências que dependem do dono do negócio
 
 - Compra do domínio `.com` (confirmar nome e preço antes).
-- Contas: GitHub e Resend (Supabase e Vercel já conectados).
+- Contas: GitHub, Resend, Supabase e Vercel já existem. Falta conectar GitHub e Resend ao projeto na etapa 1/5.
 - Cadastro de materiais, ofertas, links de download e checkout (feito pelo admin após a etapa 6).
 - Disparo do aviso de teste no painel da Payt.
