@@ -69,3 +69,69 @@ export async function recordDevice(customerId: string, userAgent: string, ip: st
     )
   if (error) throw error
 }
+
+export const SHARING_DEVICE_THRESHOLD = 4
+const DEVICE_WINDOW_DAYS = 30
+
+export type CustomerSummary = CustomerRow & { recentDevices: number }
+
+export async function searchCustomers(query: string): Promise<CustomerSummary[]> {
+  const db = createAdminClient()
+  let request = db.from('customers').select('id, email, name, blocked_at').order('created_at', { ascending: false }).limit(50)
+  if (query) request = request.ilike('email', `%${query.replace(/[%_]/g, '')}%`)
+  const { data, error } = await request
+  if (error) throw error
+  const customers = (data as DbCustomer[]).map(toCustomer)
+  if (customers.length === 0) return []
+
+  const since = new Date(Date.now() - DEVICE_WINDOW_DAYS * 86_400_000).toISOString()
+  const { data: devices, error: devicesError } = await db
+    .from('customer_devices')
+    .select('customer_id')
+    .in('customer_id', customers.map((c) => c.id))
+    .gte('last_seen_at', since)
+  if (devicesError) throw devicesError
+
+  const counts = new Map<string, number>()
+  for (const d of devices) counts.set(d.customer_id, (counts.get(d.customer_id) ?? 0) + 1)
+  return customers.map((c) => ({ ...c, recentDevices: counts.get(c.id) ?? 0 }))
+}
+
+export async function getCustomer(id: string): Promise<CustomerRow | null> {
+  const { data, error } = await createAdminClient().from('customers').select('id, email, name, blocked_at').eq('id', id).maybeSingle()
+  if (error) throw error
+  return data ? toCustomer(data) : null
+}
+
+export async function listDevices(customerId: string) {
+  const { data, error } = await createAdminClient()
+    .from('customer_devices')
+    .select('user_agent, first_seen_at, last_seen_at')
+    .eq('customer_id', customerId)
+    .order('last_seen_at', { ascending: false })
+  if (error) throw error
+  return data.map((d) => ({ userAgent: d.user_agent, firstSeenAt: d.first_seen_at, lastSeenAt: d.last_seen_at }))
+}
+
+export async function setCustomerBlocked(id: string, blocked: boolean): Promise<void> {
+  const { error } = await createAdminClient()
+    .from('customers')
+    .update({ blocked_at: blocked ? new Date().toISOString() : null })
+    .eq('id', id)
+  if (error) throw error
+}
+
+export async function changeCustomerEmail(id: string, newEmail: string): Promise<void> {
+  const db = createAdminClient()
+  const current = await getCustomer(id)
+  if (!current) throw new Error('Cliente não encontrado')
+  if (current.email === newEmail) return
+  if (await findCustomerByEmail(newEmail)) throw new Error('Já existe um cliente com este email')
+
+  const { error: authError } = await db.auth.admin.updateUserById(id, { email: newEmail, email_confirm: true })
+  if (authError) throw authError
+  const { error: customerError } = await db.from('customers').update({ email: newEmail }).eq('id', id)
+  if (customerError) throw customerError
+  const { error: ordersError } = await db.from('orders').update({ customer_email: newEmail }).eq('customer_email', current.email)
+  if (ordersError) throw ordersError
+}
