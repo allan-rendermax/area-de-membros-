@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import type { CustomerRow } from '@/lib/domain/types'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -38,4 +39,33 @@ export async function createCustomer(email: string, name: string): Promise<Custo
   const { data, error } = await db.from('customers').select('id, email, name, blocked_at').eq('id', userId).single()
   if (error) throw error
   return toCustomer(data)
+}
+
+const LOGIN_WINDOW_MINUTES = 15
+
+export async function countRecentLoginAttempts(ip: string): Promise<number> {
+  const since = new Date(Date.now() - LOGIN_WINDOW_MINUTES * 60_000).toISOString()
+  const { count, error } = await createAdminClient()
+    .from('login_attempts')
+    .select('id', { count: 'exact', head: true })
+    .eq('ip', ip)
+    .gte('created_at', since)
+  if (error) throw error
+  return count ?? 0
+}
+
+export async function recordLoginAttempt(ip: string): Promise<void> {
+  const { error } = await createAdminClient().from('login_attempts').insert({ ip })
+  if (error) throw error
+}
+
+export async function recordDevice(customerId: string, userAgent: string, ip: string): Promise<void> {
+  const deviceHash = createHash('sha256').update(`${userAgent}|${ip}`).digest('hex')
+  const { error } = await createAdminClient()
+    .from('customer_devices')
+    .upsert(
+      { customer_id: customerId, device_hash: deviceHash, user_agent: userAgent, last_seen_at: new Date().toISOString() },
+      { onConflict: 'customer_id,device_hash' },
+    )
+  if (error) throw error
 }
