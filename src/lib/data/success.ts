@@ -12,9 +12,17 @@ type DbSuccessRow = {
 }
 
 export async function loadSuccessRows(storeId: string): Promise<SuccessRow[]> {
-  const { data, error } = await createAdminClient().rpc('store_customer_success', { p_store_id: storeId })
-  if (error) throw error
-  return (data as DbSuccessRow[]).map((r) => ({
+  const client = createAdminClient()
+  const rows: DbSuccessRow[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await client.rpc('store_customer_success', { p_store_id: storeId })
+      .range(from, from + 999)
+    if (error) throw error
+    const batch = data as DbSuccessRow[]
+    rows.push(...batch)
+    if (batch.length < 1000) break
+  }
+  return rows.map((r) => ({
     customerId: r.customer_id,
     email: r.email,
     firstPaidAt: r.first_paid_at,

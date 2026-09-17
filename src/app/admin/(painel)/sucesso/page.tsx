@@ -5,7 +5,7 @@ import { formatDateTime, SUCCESS_STATUS_LABEL, SUCCESS_STATUS_STYLE } from '@/li
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { countFailedEmailsSince, loadSuccessRows } from '@/lib/data/success'
 import { classifyCustomer, summarizeSuccess, type SuccessStatus } from '@/lib/success/classify'
-import { parsePeriod, periodWindow } from '@/lib/success/period'
+import { parsePage, parsePeriod, periodWindow } from '@/lib/success/period'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +18,6 @@ export default async function SucessoPage({ searchParams }: PageProps<'/admin/su
   const days = parsePeriod(periodo)
   const status = STATUS_FILTERS.find((s) => s === filtro) ?? 'todos'
   const query = typeof q === 'string' ? q.trim().toLowerCase() : ''
-  const page = Math.max(0, Number(pagina) || 0)
 
   const store = await getAdminStore()
   const { now, sinceIso } = periodWindow(days)
@@ -30,6 +29,7 @@ export default async function SucessoPage({ searchParams }: PageProps<'/admin/su
     .filter((r) => status === 'todos' || r.status === status)
     .filter((r) => !query || r.email.includes(query))
     .sort((a, b) => Date.parse(b.firstPaidAt) - Date.parse(a.firstPaidAt))
+  const page = parsePage(pagina, filtered.length, PAGE_SIZE)
   const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   const href = (changes: Record<string, string | number>) => {
