@@ -61,7 +61,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
           {shelf.locked.length > 0 && (
             <Carousel title="Desbloqueie mais">
               {shelf.locked.map((p) => (
-                <LockedPoster key={p.id} product={p} initiallyOpen={openSlug === p.slug} />
+                <LockedPoster key={`${p.id}-${openSlug === p.slug}`} product={p} initiallyOpen={openSlug === p.slug} />
               ))}
             </Carousel>
           )}
