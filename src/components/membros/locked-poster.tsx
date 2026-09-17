@@ -1,24 +1,37 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ShelfProduct } from '@/lib/access/access'
 import { AutoCover } from './auto-cover'
 import { LockIcon } from './icons'
 import { POSTER_WIDTH } from './poster-card'
 
 export function LockedPoster({ product, initiallyOpen = false }: { product: ShelfProduct; initiallyOpen?: boolean }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const [open, setOpen] = useState(initiallyOpen)
   const closeButton = useRef<HTMLButtonElement>(null)
+
+  const close = useCallback(() => {
+    setOpen(false)
+    if (!searchParams.has('comprar')) return
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('comprar')
+    const query = params.toString()
+    router.replace(`${pathname}${query ? `?${query}` : ''}${window.location.hash}`, { scroll: false })
+  }, [pathname, router, searchParams])
 
   useEffect(() => {
     if (!open) return
     closeButton.current?.focus()
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key === 'Escape') close()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open])
+  }, [open, close])
 
   return (
     <>
@@ -43,7 +56,7 @@ export function LockedPoster({ product, initiallyOpen = false }: { product: Shel
           aria-modal="true"
           aria-labelledby={`comprar-${product.id}`}
           className="fixed inset-0 z-50 flex items-end justify-center bg-fundo/80 sm:items-center sm:p-4"
-          onClick={() => setOpen(false)}
+          onClick={close}
         >
           <div className="painel-sobe w-full max-w-lg overflow-hidden rounded-t-xl bg-superficie sm:rounded-xl" onClick={(e) => e.stopPropagation()}>
             <AutoCover seed={product.id} title="" imageUrl={product.bannerUrl ?? product.coverUrl} aspect="banner" className="rounded-none" />
@@ -61,7 +74,7 @@ export function LockedPoster({ product, initiallyOpen = false }: { product: Shel
                     Quero acessar
                   </a>
                 )}
-                <button ref={closeButton} type="button" onClick={() => setOpen(false)} className="rounded-md px-4 py-3 text-texto-suave hover:text-texto">
+                <button ref={closeButton} type="button" onClick={close} className="rounded-md px-4 py-3 text-texto-suave hover:text-texto">
                   Fechar
                 </button>
               </div>
