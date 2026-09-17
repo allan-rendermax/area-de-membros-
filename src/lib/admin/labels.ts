@@ -50,3 +50,17 @@ export const EMAIL_STATUS_STYLE: Record<string, string> = {
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 }
+
+export const SUCCESS_STATUS_LABEL: Record<string, string> = {
+  nunca_entrou: 'Nunca entrou',
+  nao_abriu: 'Entrou e não abriu nada',
+  ativo: 'Ativo',
+  inativo: 'Inativo',
+}
+
+export const SUCCESS_STATUS_STYLE: Record<string, string> = {
+  nunca_entrou: 'bg-destaque/15 text-destaque',
+  nao_abriu: 'bg-alerta/15 text-alerta',
+  ativo: 'bg-sucesso/15 text-sucesso',
+  inativo: 'bg-superficie-2 text-texto-suave',
+}
