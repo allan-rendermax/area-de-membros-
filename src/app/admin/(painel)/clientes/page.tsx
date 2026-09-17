@@ -1,34 +1,34 @@
 import Link from 'next/link'
-import { SHARING_DEVICE_THRESHOLD, searchCustomers } from '@/lib/data/customers'
+import { ui } from '@/components/admin/ui'
 import { requireAdmin } from '@/lib/auth/require-admin'
+import { SHARING_DEVICE_THRESHOLD, searchCustomers } from '@/lib/data/customers'
 
-export default async function ClientesPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function ClientesPage({ searchParams }: PageProps<'/admin/clientes'>) {
   await requireAdmin()
-  const { q = '' } = await searchParams
-  const customers = await searchCustomers(q.trim().toLowerCase())
+  const { q } = await searchParams
+  const query = typeof q === 'string' ? q.trim().toLowerCase() : ''
+  const customers = await searchCustomers(query)
 
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-bold">Clientes</h1>
-      <form className="mb-4 flex gap-2">
-        <input name="q" defaultValue={q} placeholder="Buscar por email" className="w-full max-w-sm rounded-lg border border-zinc-300 px-3 py-2" />
-        <button type="submit" className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-semibold text-white">Buscar</button>
+    <div className="flex flex-col gap-4">
+      <h1 className={ui.h1}>Clientes</h1>
+      <form className="flex gap-2">
+        <input name="q" defaultValue={query} placeholder="Buscar por e-mail" className={`${ui.input} w-full max-w-sm`} />
+        <button type="submit" className={ui.button}>Buscar</button>
       </form>
-      <ul className="divide-y divide-zinc-200 rounded-xl border border-zinc-200 bg-white">
+      <ul className={`${ui.card} divide-y divide-borda`}>
         {customers.map((c) => (
           <li key={c.id}>
-            <Link href={`/admin/clientes/${c.id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-              <span>{c.email} <span className="text-sm text-zinc-500">{c.name}</span></span>
-              <span className="flex gap-2 text-xs">
-                {c.recentDevices >= SHARING_DEVICE_THRESHOLD && (
-                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">{c.recentDevices} aparelhos</span>
-                )}
-                {c.blockedAt && <span className="rounded-full bg-red-100 px-2 py-0.5 text-red-800">bloqueado</span>}
+            <Link href={`/admin/clientes/${c.id}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-superficie-2">
+              <span>{c.email} <span className="text-sm text-texto-suave">{c.name}</span></span>
+              <span className="flex gap-2">
+                {c.recentDevices >= SHARING_DEVICE_THRESHOLD && <span className={`${ui.pill} bg-alerta/15 text-alerta`}>{c.recentDevices} aparelhos</span>}
+                {c.blockedAt && <span className={`${ui.pill} bg-destaque/15 text-destaque`}>bloqueado</span>}
               </span>
             </Link>
           </li>
         ))}
-        {customers.length === 0 && <li className="px-4 py-3 text-zinc-500">Nenhum cliente encontrado.</li>}
+        {customers.length === 0 && <li className="px-4 py-3 text-texto-suave">Nenhum cliente encontrado.</li>}
       </ul>
     </div>
   )
