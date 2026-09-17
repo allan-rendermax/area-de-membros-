@@ -10,7 +10,7 @@ const SIZES: Record<string, { size: number; padding: number }> = {
 
 export async function GET(_request: Request, { params }: { params: Promise<{ loja: string; size: string }> }) {
   const { loja, size } = await params
-  const spec = SIZES[size]
+  const spec = Object.hasOwn(SIZES, size) ? SIZES[size] : undefined
   const store = spec && isValidStoreSlug(loja) ? await getStoreBySlug(loja) : null
   if (!spec || !store) return new Response('Not found', { status: 404 })
 

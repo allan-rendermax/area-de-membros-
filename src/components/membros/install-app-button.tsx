@@ -1,11 +1,43 @@
 'use client'
 
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { DownloadIcon } from './icons'
 
 type InstallPromptEvent = Event & {
   prompt(): Promise<void>
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
+
+let deferredPrompt: InstallPromptEvent | null = null
+let installed = false
+let registered = false
+const listeners = new Set<() => void>()
+
+function notify() {
+  listeners.forEach((listener) => listener())
+}
+
+function register() {
+  if (registered || typeof window === 'undefined') return
+  registered = true
+
+  window.addEventListener('beforeinstallprompt', (event: Event) => {
+    event.preventDefault()
+    deferredPrompt = event as InstallPromptEvent
+    notify()
+  })
+  window.addEventListener('appinstalled', () => {
+    installed = true
+    deferredPrompt = null
+    notify()
+  })
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
+}
+
+function subscribe(listener: () => void) {
+  register()
+  listeners.add(listener)
+  return () => { listeners.delete(listener) }
 }
 
 const noopSubscribe = () => () => {}
@@ -21,26 +53,11 @@ function isIos(): boolean {
 export function InstallAppButton({ className = '' }: { className?: string }) {
   const standalone = useSyncExternalStore(noopSubscribe, isStandalone, () => true)
   const ios = useSyncExternalStore(noopSubscribe, isIos, () => false)
-  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
-  const [installed, setInstalled] = useState(false)
+  const installPrompt = useSyncExternalStore(subscribe, () => deferredPrompt, () => null)
+  const isInstalled = useSyncExternalStore(subscribe, () => installed, () => false)
   const [helpOpen, setHelpOpen] = useState(false)
 
-  useEffect(() => {
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
-    const onPrompt = (event: Event) => {
-      event.preventDefault()
-      setInstallPrompt(event as InstallPromptEvent)
-    }
-    const onInstalled = () => setInstalled(true)
-    window.addEventListener('beforeinstallprompt', onPrompt)
-    window.addEventListener('appinstalled', onInstalled)
-    return () => {
-      window.removeEventListener('beforeinstallprompt', onPrompt)
-      window.removeEventListener('appinstalled', onInstalled)
-    }
-  }, [])
-
-  if (standalone || installed || (!installPrompt && !ios)) return null
+  if (standalone || isInstalled || (!installPrompt && !ios)) return null
 
   async function install() {
     if (!installPrompt) {
@@ -49,8 +66,9 @@ export function InstallAppButton({ className = '' }: { className?: string }) {
     }
     await installPrompt.prompt()
     const choice = await installPrompt.userChoice
-    if (choice.outcome === 'accepted') setInstalled(true)
-    setInstallPrompt(null)
+    if (choice.outcome === 'accepted') installed = true
+    deferredPrompt = null
+    notify()
   }
 
   return (
