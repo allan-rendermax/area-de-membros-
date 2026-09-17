@@ -91,3 +91,23 @@ export async function listOrdersByEmail(email: string): Promise<AdminOrder[]> {
   if (error) throw error
   return (data as DbOrder[]).map(toAdminOrder)
 }
+
+export async function hasPaidOrderInStore(email: string, storeId: string): Promise<boolean> {
+  const db = createAdminClient()
+  const { data: orders, error } = await db
+    .from('orders')
+    .select('payt_product_code')
+    .eq('customer_email', email)
+    .eq('status', 'pago')
+  if (error) throw error
+  const codes = [...new Set(orders.map((o) => o.payt_product_code as string))]
+  if (codes.length === 0) return false
+
+  const { count, error: offersError } = await db
+    .from('offers')
+    .select('id', { count: 'exact', head: true })
+    .eq('store_id', storeId)
+    .in('payt_product_code', codes)
+  if (offersError) throw offersError
+  return (count ?? 0) > 0
+}
