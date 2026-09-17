@@ -139,8 +139,9 @@ export async function saveOffer(input: OfferInput): Promise<void> {
   const row = { store_id: input.storeId, name: input.name, payt_product_code: input.paytProductCode }
   let offerId = input.id
   if (offerId) {
-    const { error } = await db.from('offers').update(row).eq('id', offerId).eq('store_id', input.storeId)
+    const { data, error } = await db.from('offers').update(row).eq('id', offerId).eq('store_id', input.storeId).select('id')
     if (error) throw friendly(error, 'Este código da Payt já está em outra oferta.')
+    if (!data?.length) throw new Error('Oferta não encontrada nesta loja. Recarregue a página.')
   } else {
     const { data, error } = await db.from('offers').insert(row).select('id').single()
     if (error) throw friendly(error, 'Este código da Payt já está em outra oferta.')

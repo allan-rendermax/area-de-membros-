@@ -54,6 +54,13 @@ export async function listStores(): Promise<Store[]> {
 }
 
 export async function saveStore(input: StoreInput): Promise<string> {
+  if (input.id) {
+    const currentStore = await getStoreById(input.id)
+    if (currentStore?.slug === env.defaultStoreSlug && input.slug !== currentStore.slug) {
+      throw new Error('O endereço da loja padrão não pode ser alterado.')
+    }
+  }
+
   const row = {
     slug: input.slug,
     name: input.name,
