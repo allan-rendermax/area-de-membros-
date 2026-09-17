@@ -1,16 +1,6 @@
 import type { OrderRef, OrderStatus } from '@/lib/domain/types'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export async function listOrderRefsByEmail(storeId: string, email: string): Promise<OrderRef[]> {
-  const { data, error } = await createAdminClient()
-    .from('orders')
-    .select('payt_product_code, status')
-    .eq('store_id', storeId)
-    .eq('customer_email', email)
-  if (error) throw error
-  return data.map((o) => ({ productCode: o.payt_product_code, status: o.status as OrderStatus }))
-}
-
 export async function listAllOrderRefsByEmail(email: string): Promise<OrderRef[]> {
   const { data, error } = await createAdminClient()
     .from('orders')

@@ -13,7 +13,6 @@ export type Store = {
   slug: string
   name: string
   logoUrl: string | null
-  primaryColor: string
   supportUrl: string | null
   supportWhatsapp: string | null
   loginImageUrl: string | null
@@ -27,19 +26,6 @@ export type CustomerRow = {
   name: string
   blockedAt: string | null
 }
-
-export type Material = {
-  id: string
-  title: string
-  description: string
-  coverUrl: string | null
-  downloadUrl: string
-  checkoutUrl: string | null
-  sortOrder: number
-  isPublished: boolean
-}
-
-export type OfferLink = { productCode: string; materialId: string }
 
 export type OrderRef = { productCode: string; status: OrderStatus }
 

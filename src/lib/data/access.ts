@@ -1,23 +1,8 @@
-import { grantedMaterialIds, grantedProductIds } from '@/lib/access/access'
-import type { CustomerRow, Material, Product } from '@/lib/domain/types'
-import { getOfferLinks, listMaterials } from './catalog'
+import { grantedProductIds } from '@/lib/access/access'
+import type { CustomerRow, Product } from '@/lib/domain/types'
 import { findCustomerByEmail } from './customers'
-import { listAllOrderRefsByEmail, listOrderRefsByEmail } from './orders'
+import { listAllOrderRefsByEmail } from './orders'
 import { getProductLinks, listProducts } from './products'
-
-export async function loadCustomerAccess(
-  storeId: string,
-  email: string,
-): Promise<{ customer: CustomerRow | null; materials: Material[]; granted: Set<string> }> {
-  const [customer, materials, links, orders] = await Promise.all([
-    findCustomerByEmail(email),
-    listMaterials(storeId),
-    getOfferLinks(storeId),
-    listOrderRefsByEmail(storeId, email),
-  ])
-  const granted = grantedMaterialIds(orders, links, !customer || customer.blockedAt !== null)
-  return { customer, materials, granted }
-}
 
 export async function loadStoreAccess(
   storeId: string,
