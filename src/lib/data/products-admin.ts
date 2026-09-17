@@ -2,7 +2,7 @@ import type { ItemInput, ModuleInput, OfferInput, ProductInput } from '@/lib/adm
 import { moveInList } from '@/lib/admin/order'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const MAX_IMAGE_BYTES = 2 * 1024 * 1024
 
 function friendly(error: { code?: string; message: string }, duplicateMessage: string): Error {
   return new Error(error.code === '23505' ? duplicateMessage : error.message)
@@ -96,7 +96,7 @@ export async function moveItem(id: string, moduleId: string, direction: 'up' | '
 }
 
 export async function uploadImage(file: File): Promise<string> {
-  if (!file.type.startsWith('image/') || file.size > MAX_IMAGE_BYTES) throw new Error('Envie uma imagem de até 5 MB.')
+  if (!file.type.startsWith('image/') || file.size > MAX_IMAGE_BYTES) throw new Error('Envie uma imagem de até 2 MB.')
   const db = createAdminClient()
   const ext = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg'
   const path = `${crypto.randomUUID()}.${ext}`

@@ -20,7 +20,7 @@ export function StoreForm({ store }: { store: Store | null }) {
       <label className={ui.label}>Link de suporte (opcional)<input name="support_url" type="url" defaultValue={store?.supportUrl ?? ''} className={ui.input} /></label>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className={ui.label}>
-          Logo
+          Logo (até 2 MB)
           {store?.logoUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={store.logoUrl} alt="" className="h-12 w-auto rounded bg-fundo p-1" />
@@ -28,7 +28,7 @@ export function StoreForm({ store }: { store: Store | null }) {
           <input name="logo" type="file" accept="image/*" className="text-sm" />
         </label>
         <label className={ui.label}>
-          Imagem do login
+          Imagem do login (até 2 MB)
           {store?.loginImageUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={store.loginImageUrl} alt="" className="aspect-video w-full rounded object-cover" />

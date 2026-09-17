@@ -9,7 +9,15 @@ let repo: FakeRepo
 let notifier: FakeNotifier
 
 function run(body: unknown) {
-  return processPostback(body, { repo, notify: notifier.notify, integrationKey: KEY })
+  return processPostback(body, {
+    repo,
+    notify: async (notice) => {
+      const result = await notifier.notify(notice)
+      if (result.ok) repo.markNotified(notice.customerId, notice.store.id)
+      return result
+    },
+    integrationKey: KEY,
+  })
 }
 const withStatus = (status: string, extra: object = {}) => ({ ...paid, status, ...extra })
 
@@ -51,6 +59,7 @@ describe('processPostback', () => {
 
   it('aviso repetido não duplica cliente nem email', async () => {
     await run(paid)
+    expect(repo.notices).toEqual([{ customerId: 'cus-1', storeId: ARQ.id, status: 'enviado' }])
     expect(await run(paid)).toMatchObject({ outcome: 'sem_mudanca', customerCreated: false, emailsSent: 0 })
     expect(repo.customers).toHaveLength(1)
     expect(notifier.sent).toHaveLength(1)
@@ -112,6 +121,9 @@ describe('processPostback', () => {
       kind: 'processed', outcome: 'liberado', status: 'pago', emailsSent: 0, emailErrors: ['notify indisponível'],
     })
     expect(repo.events[0]).toMatchObject({ outcome: 'liberado', error: 'falha no email: notify indisponível' })
+    expect(repo.notices).toEqual([{
+      customerId: 'cus-1', storeId: ARQ.id, status: 'falhou', toEmail: 'joao@gmail.com', kind: 'acesso_novo', error: 'notify indisponível',
+    }])
   })
 
   it('getProductsForCode lançando erro não derruba o processamento e fica registrado', async () => {
@@ -121,6 +133,72 @@ describe('processPostback', () => {
       kind: 'processed', outcome: 'liberado', status: 'pago', emailsSent: 0, emailErrors: ['produtos indisponíveis'],
     })
     expect(repo.events[0]).toMatchObject({ outcome: 'liberado', error: 'falha no email: produtos indisponíveis' })
+    expect(repo.notices).toEqual([{
+      customerId: 'cus-1', storeId: ARQ.id, status: 'falhou', toEmail: 'joao@gmail.com', kind: 'acesso_novo', error: 'produtos indisponíveis',
+    }])
+  })
+
+  it('falha ao registrar o email não derruba o aviso nem oculta o erro original', async () => {
+    notifier.throwError = true
+    repo.failLogFailedNotice = true
+    expect(await run(paid)).toMatchObject({ kind: 'processed', emailsSent: 0, emailErrors: ['notify indisponível'] })
+    expect(repo.events[0]).toMatchObject({ outcome: 'liberado', error: 'falha no email: notify indisponível' })
+  })
+
+  it('aviso repetido com registro falhou fica para o reenvio em lote', async () => {
+    notifier.throwError = true
+    await run(paid)
+    notifier.throwError = false
+    expect(repo.notices).toHaveLength(1)
+    expect(await run(paid)).toMatchObject({ outcome: 'sem_mudanca', emailsSent: 0 })
+    expect(notifier.sent).toHaveLength(0)
+  })
+
+  it('retentativa após falha na segunda linha envia exatamente um email com todos os produtos da loja', async () => {
+    await repo.createCustomer('joao@gmail.com', 'João Silva')
+    repo.failApplyOnCode = 'BUMP-CHECKLIST'
+    await expect(run(bumps)).rejects.toThrow('gravação indisponível')
+    expect(repo.orders.map((order) => order.productCode)).toEqual(['ATLAS-COMPLETO'])
+    expect(notifier.sent).toHaveLength(0)
+
+    repo.failApplyOnCode = null
+    expect(await run(bumps)).toMatchObject({ emailsSent: 1, customerCreated: false })
+    expect(notifier.sent).toHaveLength(1)
+    expect(notifier.sent[0].products.map((product) => product.id)).toEqual(['p-atlas', 'p-bonus1', 'p-check', 'p-pack'])
+    expect(await run(bumps)).toMatchObject({ emailsSent: 0 })
+    expect(notifier.sent).toHaveLength(1)
+  })
+
+  it('retentativa recupera a loja sem mudanças e sem notice após falha na segunda linha de outra loja', async () => {
+    await repo.createCustomer('joao@gmail.com', 'João Silva')
+    const otherStore = { id: 'store-2', slug: 'outra', name: 'Outra loja' }
+    repo.storesByCode['BUMP-CHECKLIST'] = otherStore
+    repo.storesByCode['BUMP-PACK'] = otherStore
+    repo.failApplyOnCode = 'BUMP-CHECKLIST'
+    await expect(run(bumps)).rejects.toThrow('gravação indisponível')
+    expect(repo.orders).toHaveLength(1)
+    expect(notifier.sent).toHaveLength(0)
+
+    repo.failApplyOnCode = null
+    expect(await run(bumps)).toMatchObject({ emailsSent: 2, customerCreated: false })
+    const storeNotices = notifier.sent.filter((notice) => notice.store.id === ARQ.id)
+    expect(storeNotices).toHaveLength(1)
+    expect(storeNotices[0].products.map((product) => product.id)).toEqual(['p-atlas', 'p-bonus1'])
+    expect(notifier.sent.find((notice) => notice.store.id === otherStore.id)?.products.map((product) => product.id)).toEqual(['p-check', 'p-pack'])
+    expect(await run(bumps)).toMatchObject({ emailsSent: 0 })
+    expect(notifier.sent).toHaveLength(2)
+  })
+
+  it('registro de outro cliente ou loja não impede recuperar acesso sem mudanças', async () => {
+    await repo.createCustomer('joao@gmail.com', 'João Silva')
+    notifier.throwError = true
+    await run(paid)
+    repo.notices = [
+      { customerId: 'outro-cliente', storeId: ARQ.id, status: 'enviado' },
+      { customerId: 'cus-1', storeId: 'outra-loja', status: 'enviado' },
+    ]
+    expect(await run(paid)).toMatchObject({ emailsSent: 0, emailErrors: ['notify indisponível'] })
+    expect(repo.notices[2]).toMatchObject({ customerId: 'cus-1', storeId: ARQ.id, kind: 'produto_novo', status: 'falhou' })
   })
 
   it('se criar o cliente falhar, a nova tentativa cria e envia o email', async () => {

@@ -56,5 +56,29 @@ export function createPostbackRepo(): PostbackRepo {
     findCustomerByEmail,
     createCustomer,
     getProductsForCode,
+
+    async hasNoticeForStore(customerId, storeId) {
+      const { data, error } = await db
+        .from('email_log')
+        .select('id')
+        .eq('customer_id', customerId)
+        .eq('store_id', storeId)
+        .limit(1)
+      if (error) throw error
+      return data.length > 0
+    },
+
+    async logFailedNotice(entry) {
+      const { error } = await db.from('email_log').insert({
+        store_id: entry.storeId,
+        customer_id: entry.customerId,
+        to_email: entry.toEmail,
+        kind: entry.kind,
+        product_ids: [],
+        status: 'falhou',
+        error: entry.error,
+      })
+      if (error) throw error
+    },
   }
 }

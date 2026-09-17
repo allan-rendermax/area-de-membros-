@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'node:crypto'
-import type { AccessNotice, CustomerRow, NoticeResult, OrderStatus, StoreRef } from '@/lib/domain/types'
+import type { AccessNotice, CustomerRow, EmailKind, NoticeResult, OrderStatus, StoreRef } from '@/lib/domain/types'
 import { parsePaytPostback, type PaytProductLine } from '@/lib/payt/parse'
 import { mapPaytStatus } from '@/lib/payt/status'
 
@@ -44,6 +44,8 @@ export interface PostbackRepo {
   // created = false quando outro aviso simultâneo criou o cliente primeiro.
   createCustomer(email: string, name: string): Promise<{ customer: CustomerRow; created: boolean }>
   getProductsForCode(code: string): Promise<{ id: string; title: string }[]>
+  hasNoticeForStore(customerId: string, storeId: string): Promise<boolean>
+  logFailedNotice(entry: { storeId: string; customerId: string; toEmail: string; kind: EmailKind; error: string }): Promise<void>
 }
 
 export type ProcessedLine = { code: string; storeId: string | null; orderId: string; changed: boolean; status: OrderStatus }
@@ -158,7 +160,7 @@ export async function processPostback(
 
       for (const store of storesOf(paid)) {
         const storeLines = paid.filter((l) => l.store?.id === store.id)
-        if (!customerCreated && !storeLines.some((l) => l.changed)) continue
+        if (!customerCreated && !storeLines.some((l) => l.changed) && (await repo.hasNoticeForStore(customer.id, store.id))) continue
         granted = true
         try {
           const products = await productsFor(repo, storeLines)
@@ -175,6 +177,17 @@ export async function processPostback(
           else emailErrors.push(result.error)
         } catch (e) {
           emailErrors.push(errorMessage(e))
+          try {
+            await repo.logFailedNotice({
+              storeId: store.id,
+              customerId: customer.id,
+              toEmail: p.customerEmail,
+              kind: customerCreated ? 'acesso_novo' : 'produto_novo',
+              error: errorMessage(e),
+            })
+          } catch {
+            // O erro original continua no evento mesmo se o registro de email falhar.
+          }
         }
       }
     }

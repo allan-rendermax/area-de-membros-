@@ -13,12 +13,12 @@ export function ProductForm({ product }: { product: Product | null }) {
 
       <div className="flex flex-col gap-4">
         <div>
-          <p className="mb-2 text-sm text-texto-suave">Capa (vertical 2:3)</p>
+          <p className="mb-2 text-sm text-texto-suave">Capa (vertical 2:3) (até 2 MB)</p>
           <AutoCover seed={seed} title={product?.title ?? 'Novo produto'} imageUrl={product?.coverUrl ?? null} aspect="poster" />
           <input name="cover" type="file" accept="image/*" className="mt-2 text-sm" />
         </div>
         <div>
-          <p className="mb-2 text-sm text-texto-suave">Banner (horizontal 16:9)</p>
+          <p className="mb-2 text-sm text-texto-suave">Banner (horizontal 16:9) (até 2 MB)</p>
           <AutoCover seed={seed} title="" imageUrl={product?.bannerUrl ?? null} aspect="banner" />
           <input name="banner" type="file" accept="image/*" className="mt-2 text-sm" />
         </div>
