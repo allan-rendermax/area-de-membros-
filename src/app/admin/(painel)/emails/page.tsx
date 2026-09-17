@@ -2,7 +2,8 @@ import Link from 'next/link'
 import { ui } from '@/components/admin/ui'
 import { EMAIL_KIND_LABEL, EMAIL_STATUS_STYLE, formatDateTime } from '@/lib/admin/labels'
 import { requireAdmin } from '@/lib/auth/require-admin'
-import { countEmailsUsedToday, countUnresolvedFailed, listEmailLog, type EmailLogFilter } from '@/lib/data/email-log'
+import { countEmailsUsedToday, countUnresolvedFailed, listEmailLog, listUnresolvedFailed, type EmailLogFilter } from '@/lib/data/email-log'
+import { groupFailedEmails, MAX_RESEND_PER_RUN } from '@/lib/email/batch'
 import { env } from '@/lib/env'
 import { reenviarEmail, reenviarEmLote } from './actions'
 
@@ -26,6 +27,9 @@ export default async function EmailsPage({ searchParams }: PageProps<'/admin/ema
     countUnresolvedFailed(),
   ])
   const limit = env.emailDailyLimit
+  const slotsLeft = Math.max(0, limit - usedToday)
+  const groups = groupFailedEmails(await listUnresolvedFailed()).length
+  const nextBatch = Math.min(groups, slotsLeft, MAX_RESEND_PER_RUN)
   const pageHref = (n: number) => `/admin/emails?filtro=${filter}&pagina=${n}`
 
   return (
@@ -42,8 +46,12 @@ export default async function EmailsPage({ searchParams }: PageProps<'/admin/ema
           <p className="text-2xl font-bold">{usedToday} / {limit}</p>
           <p className="text-sm text-texto-suave">usados hoje (limite do plano)</p>
         </div>
+        <div>
+          <p className="text-2xl font-bold">{nextBatch}</p>
+          <p className="text-sm text-texto-suave">serão reenviados no próximo clique (1 por cliente e loja; cabem {slotsLeft} hoje)</p>
+        </div>
         <form action={reenviarEmLote} className="ml-auto">
-          <button type="submit" className={ui.button} disabled={failedCount === 0 || usedToday >= limit}>Reenviar em lote</button>
+          <button type="submit" className={ui.button} disabled={nextBatch === 0}>Reenviar em lote</button>
         </form>
       </section>
       <p className="text-sm text-texto-suave">

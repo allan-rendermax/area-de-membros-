@@ -35,7 +35,7 @@ export default async function AvisosPage({ searchParams }: PageProps<'/admin/avi
           <thead className="border-b border-borda">
             <tr>
               <th className={ui.th}>Recebido</th><th className={ui.th}>E-mail</th><th className={ui.th}>Códigos</th>
-              <th className={ui.th}>Status Payt</th><th className={ui.th}>Resultado</th><th className={ui.th}>Erro</th>
+              <th className={ui.th}>Status Payt</th><th className={ui.th}>Chave válida</th><th className={ui.th}>Resultado</th><th className={ui.th}>Erro</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-borda">
@@ -62,11 +62,12 @@ export default async function AvisosPage({ searchParams }: PageProps<'/admin/avi
                   </ul>
                 </td>
                 <td className={ui.td}>{r.paytStatus ?? '—'}</td>
+                <td className={ui.td}>{r.keyValid === true ? 'Sim' : r.keyValid === false ? 'Não' : '—'}</td>
                 <td className={ui.td}><span className={`${ui.pill} ${outcomeStyle(r.outcome)}`}>{outcomeLabel(r.outcome)}</span></td>
                 <td className={`${ui.td} max-w-xs truncate text-texto-suave`} title={r.error ?? undefined}>{r.error ?? ''}</td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={6} className={`${ui.td} text-texto-suave`}>Nenhum aviso.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={7} className={`${ui.td} text-texto-suave`}>Nenhum aviso.</td></tr>}
           </tbody>
         </table>
       </div>
