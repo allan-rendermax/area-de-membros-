@@ -19,7 +19,7 @@ export type EntrarState = { error: string | null; email: string; supportHref: st
 const MESSAGES: Record<LoginFailure, string> = {
   bot: 'Não foi possível validar o envio. Recarregue a página e tente novamente.',
   invalid_email: 'Digite um e-mail válido.',
-  admin_email: 'Este e-mail é de administrador. Entre por /admin/entrar.',
+  admin_email: 'Não encontramos compras com este e-mail nesta loja. Confira se é o mesmo e-mail usado na compra.',
   not_found: 'Não encontramos compras com este e-mail nesta loja. Confira se é o mesmo e-mail usado na compra.',
   blocked: 'Este acesso está suspenso. Fale com o suporte.',
   rate_limited: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
@@ -62,7 +62,7 @@ export async function entrar(storeSlug: string, _prev: EntrarState, formData: Fo
   )
 
   if (!decision.ok) {
-    const context = decision.reason === 'not_found' || decision.reason === 'blocked' ? 'nao_encontrado' : 'geral'
+    const context = decision.reason === 'not_found' || decision.reason === 'admin_email' || decision.reason === 'blocked' ? 'nao_encontrado' : 'geral'
     const typed = normalizeEmail(email)
     return { error: MESSAGES[decision.reason], email, supportHref: supportHref(store, context, typed || null) }
   }

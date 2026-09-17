@@ -42,6 +42,11 @@ export async function decideCustomerLogin(input: LoginInput, deps: LoginDeps): P
     return { ok: false, reason: 'invalid_email' }
   }
 
+  if (deps.verifyTurnstile && !(await deps.verifyTurnstile(input.turnstileToken, input.ip))) {
+    await deps.recordAttempt({ ip: input.ip, emailHash: null, storeId: input.storeId })
+    return { ok: false, reason: 'bot' }
+  }
+
   const emailHash = hashEmail(email, deps.guardSecret)
   const previous = await deps.countAttemptsByEmailHash(emailHash, since)
   if (previous >= GUARD.emailLimit) return { ok: false, reason: 'rate_limited' }
@@ -50,7 +55,6 @@ export async function decideCustomerLogin(input: LoginInput, deps: LoginDeps): P
   const delay = progressiveDelayMs(previous)
   if (delay > 0) await deps.sleep(delay)
 
-  if (deps.verifyTurnstile && !(await deps.verifyTurnstile(input.turnstileToken, input.ip))) return { ok: false, reason: 'bot' }
   if (isAdminEmail(email, deps.adminEmails)) return { ok: false, reason: 'admin_email' }
 
   const customer = await deps.findCustomerByEmail(email)

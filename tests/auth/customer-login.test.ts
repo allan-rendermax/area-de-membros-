@@ -18,13 +18,17 @@ function input(extra: Partial<LoginInput> = {}): LoginInput {
 function setup(o: { ipAttempts?: number; emailAttempts?: number; customers?: CustomerRow[]; paidIn?: string[]; turnstile?: boolean } = {}) {
   const recorded: { ip: string; emailHash: string | null; storeId: string }[] = []
   const slept: number[] = []
+  const calls = { countAttemptsByEmailHash: 0 }
   const customers = o.customers ?? [joao]
   const deps: LoginDeps = {
     adminEmails: ['dono@gmail.com'],
     guardSecret: SECRET,
     now: () => NOW,
     countAttemptsByIp: async () => o.ipAttempts ?? 0,
-    countAttemptsByEmailHash: async () => o.emailAttempts ?? 0,
+    countAttemptsByEmailHash: async () => {
+      calls.countAttemptsByEmailHash += 1
+      return o.emailAttempts ?? 0
+    },
     recordAttempt: async (entry) => {
       recorded.push(entry)
     },
@@ -35,7 +39,7 @@ function setup(o: { ipAttempts?: number; emailAttempts?: number; customers?: Cus
     findCustomerByEmail: async (email) => customers.find((c) => c.email === email) ?? null,
     hasPaidOrderInStore: async (email, storeId) => (o.paidIn ?? ['joao@gmail.com|s1']).includes(`${email}|${storeId}`),
   }
-  return { deps, recorded, slept }
+  return { deps, recorded, slept, calls }
 }
 
 describe('decideCustomerLogin', () => {
@@ -86,6 +90,14 @@ describe('decideCustomerLogin', () => {
   it('Turnstile ligado recusa token inválido e aceita válido', async () => {
     expect(await decideCustomerLogin(input(), setup({ turnstile: false }).deps)).toEqual({ ok: false, reason: 'bot' })
     expect(await decideCustomerLogin(input(), setup({ turnstile: true }).deps)).toMatchObject({ ok: true })
+  })
+
+  it.each([2, GUARD.emailLimit])('Turnstile inválido conta só para o IP, sem consultar o e-mail nem atrasar (%i tentativas)', async (emailAttempts) => {
+    const { deps, recorded, slept, calls } = setup({ turnstile: false, emailAttempts })
+    expect(await decideCustomerLogin(input(), deps)).toEqual({ ok: false, reason: 'bot' })
+    expect(recorded).toEqual([{ ip: '1.1.1.1', emailHash: null, storeId: 's1' }])
+    expect(calls.countAttemptsByEmailHash).toBe(0)
+    expect(slept).toEqual([])
   })
 
   it('recusa e-mail de admin', async () => {
