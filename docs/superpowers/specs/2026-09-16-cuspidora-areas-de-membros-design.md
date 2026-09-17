@@ -91,7 +91,7 @@ Só há dados de exemplo (4 materiais, oferta `TESTE-ATLAS`, pedido `TESTE-LOCAL
 2. Para **cada** código: `apply_order_status(transaction_id, código, …)` com a regra de nunca retroceder; a loja vem da oferta do código (nula se desconhecido).
 3. Se algum pedido deste aviso está `pago` e acabou de virar pago (ou o cliente acabou de ser criado): garante o cliente e envia **um único e-mail** listando os produtos liberados neste aviso, por loja.
 4. Status desconhecido ou `peding_refund`: registrado, sem mudar acesso.
-5. `payt_events` guarda e-mail, códigos, status e resultado (`liberado`, `sem_mudanca`, `codigo_desconhecido`, `ignorado`, `chave_invalida`, `erro`).
+5. `payt_events` guarda e-mail, códigos, status e resultado (`liberado`, `atualizado` — ex.: reembolso aplicado —, `sem_mudanca`, `codigo_desconhecido`, `ignorado`, `invalido`, `chave_invalida`, `erro`).
 6. Os nomes de campos de bump são confirmados no primeiro aviso real; o parser tolera ausência das listas.
 
 ### 5.2 Tela de avisos — `/admin/avisos`
@@ -205,7 +205,7 @@ Comprador da loja = tem pedido `pago` de oferta da loja.
 
 - Seletor de período (7/30/90 dias) e loja.
 - Indicadores: compradores, % que entrou, % que abriu algo, e-mails com falha.
-- Tabela de clientes: e-mail, primeira compra, produtos liberados, último acesso, itens abertos, situação; filtros rápidos **Nunca entrou** e **Entrou e não abriu nada**; busca por e-mail; 50 por página.
+- Tabela de clientes: e-mail, primeira compra, pedidos pagos na loja, último acesso, itens abertos, situação; filtros rápidos **Nunca entrou** e **Entrou e não abriu nada**; busca por e-mail; 50 por página.
 - Ficha do cliente (já existente em `/admin/clientes/[id]`) ganha linha do tempo: pedidos, e-mails (com status), primeiro/último acesso e itens abertos; botão **Reenviar acesso**.
 
 ## 9. Admin — telas afetadas
@@ -215,7 +215,8 @@ Comprador da loja = tem pedido `pago` de oferta da loja.
 | Lojas (nova) | Criar/editar loja: nome, slug, logo, WhatsApp, link de suporte, imagem do login |
 | Produtos (substitui Materiais) | Lista por loja; edição com abas **Geral** (capas, checkout, destaque, publicado) e **Conteúdo** (módulos e itens com ordenação) |
 | Ofertas | Escolhe produtos em vez de materiais; código Payt único global |
-| Pedidos, Clientes | Filtro por loja; coluna origem |
+| Pedidos | Filtro pela loja selecionada (códigos sem oferta aparecem de todas as lojas); coluna origem |
+| Clientes | Busca global por e-mail (a conta do cliente é única); reenvio usa a loja selecionada |
 | Avisos, E-mails, Sucesso | Novas (§5.2, §5.3, §8.3) |
 
 ## 10. Erros
