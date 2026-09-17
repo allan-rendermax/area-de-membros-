@@ -16,7 +16,7 @@ export function AdminLoginForm() {
       <form action={verify} className="flex flex-col gap-4">
         <p className="text-sm text-zinc-600">Enviamos um código para {sent.email}.</p>
         <input type="hidden" name="email" value={sent.email} />
-        <input name="token" inputMode="numeric" autoComplete="one-time-code" maxLength={6} required className={input} placeholder="000000" />
+        <input name="token" inputMode="numeric" autoComplete="one-time-code" maxLength={10} required className={input} placeholder="Código recebido por email" />
         {verified.error && <p role="alert" className="text-sm text-red-700">{verified.error}</p>}
         <button type="submit" disabled={verifying} className={button}>{verifying ? 'Verificando…' : 'Entrar'}</button>
       </form>
