@@ -1,42 +1,41 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-concreto: #e4e5e1;
-  --color-papel: #f8f8f5;
-  --color-tinta: #1d2935;
-  --color-tinta-suave: #2c3b4a;
-  --color-grafite: #5e6772;
-  --color-junta: #c9cbc5;
-  --color-sinal: #edb51c;
-  --font-sans: var(--font-archivo), system-ui, sans-serif;
+  --color-fundo: #0b0b0c;
+  --color-superficie: #141414;
+  --color-superficie-2: #1c1c1f;
+  --color-borda: #2a2a2e;
+  --color-texto: #f5f5f5;
+  --color-texto-suave: #a1a1aa;
+  --color-destaque: #e11d2e;
+  --color-destaque-hover: #f43f5e;
+  --color-sucesso: #22c55e;
+  --color-alerta: #f59e0b;
+  --color-whatsapp: #25d366;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
 }
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 body {
-  background-color: var(--color-concreto);
-  /* grade de prancheta: 24px, quase imperceptível */
-  background-image:
-    linear-gradient(to right, rgb(29 41 53 / 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(29 41 53 / 0.045) 1px, transparent 1px);
-  background-size: 24px 24px;
-  color: var(--color-tinta);
+  background-color: var(--color-fundo);
+  color: var(--color-texto);
   font-family: var(--font-sans);
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-tinta);
+  outline: 2px solid var(--color-destaque);
   outline-offset: 2px;
 }
 
-.fita-interdicao {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    var(--color-sinal) 0 14px,
-    var(--color-tinta) 14px 28px
-  );
+.sem-barra {
+  scrollbar-width: none;
+}
+
+.sem-barra::-webkit-scrollbar {
+  display: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
