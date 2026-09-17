@@ -1,22 +1,23 @@
-import type { Metadata } from "next";
-import { Archivo } from "next/font/google";
-import "./globals.css";
+import type { Metadata, Viewport } from 'next'
+import { Inter } from 'next/font/google'
+import './globals.css'
 
-const archivo = Archivo({
-  variable: "--font-archivo",
-  subsets: ["latin"],
-  axes: ["wdth"],
-});
+const inter = Inter({ variable: '--font-inter', subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: "Área de Membros",
-  description: "Seus materiais",
-};
+  title: 'Área de Membros',
+  description: 'Seus produtos em um só lugar',
+}
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export const viewport: Viewport = {
+  themeColor: '#0b0b0c',
+  colorScheme: 'dark',
+}
+
+export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="pt-BR" className={`${archivo.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="pt-BR" className={`${inter.variable} h-full antialiased`}>
+      <body className="flex min-h-full flex-col bg-fundo text-texto">{children}</body>
     </html>
-  );
+  )
 }
