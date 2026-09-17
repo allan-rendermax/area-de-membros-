@@ -1,3 +1,4 @@
+import { InstallAppButton } from '@/components/membros/install-app-button'
 import { Carousel } from '@/components/membros/carousel'
 import { Hero } from '@/components/membros/hero'
 import { LockedPoster } from '@/components/membros/locked-poster'
@@ -26,7 +27,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
 
   return (
     <>
-      <StoreHeader store={store} email={customer.email} />
+      <StoreHeader store={store} email={customer.email} actions={<InstallAppButton />} />
       <main className="pb-24">
         {shelf.featured && <Hero product={shelf.featured} storeSlug={store.slug} />}
         <div className={`relative flex flex-col gap-8 ${shelf.featured ? '-mt-2 sm:-mt-8' : 'pt-6'}`}>

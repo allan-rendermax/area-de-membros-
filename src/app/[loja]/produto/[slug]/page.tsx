@@ -1,3 +1,4 @@
+import { InstallAppButton } from '@/components/membros/install-app-button'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { AutoCover } from '@/components/membros/auto-cover'
@@ -26,7 +27,7 @@ export default async function ProdutoPage({ params }: PageProps<'/[loja]/produto
 
   return (
     <>
-      <StoreHeader store={store} email={customer.email} />
+      <StoreHeader store={store} email={customer.email} actions={<InstallAppButton />} />
       <main className="pb-24">
         <section className="relative">
           <AutoCover seed={product.id} title="" imageUrl={product.bannerUrl ?? product.coverUrl} aspect="banner" className="max-h-[55vh] w-full rounded-none sm:aspect-[21/9]" />

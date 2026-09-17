@@ -1,3 +1,4 @@
+import { InstallAppButton } from '@/components/membros/install-app-button'
 import { WhatsAppFloating } from '@/components/membros/whatsapp-button'
 import { freshFormStamp } from '@/lib/auth/login-guard'
 import { coverGradient } from '@/lib/content/cover'
@@ -66,6 +67,9 @@ export default async function EntrarPage({ params, searchParams }: PageProps<'/[
               stamp={stamp}
               turnstileSiteKey={env.turnstileSiteKey && env.turnstileSecretKey ? env.turnstileSiteKey : null}
             />
+          </div>
+          <div className="mt-6 flex justify-center lg:justify-start">
+            <InstallAppButton />
           </div>
         </div>
       </div>
