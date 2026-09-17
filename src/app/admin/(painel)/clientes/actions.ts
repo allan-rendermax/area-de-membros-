@@ -3,11 +3,10 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { requireAdmin } from '@/lib/auth/require-admin'
-import { loadCustomerAccess } from '@/lib/data/access'
-import { changeCustomerEmail, getCustomer, setCustomerBlocked } from '@/lib/data/customers'
+import { changeCustomerEmail, setCustomerBlocked } from '@/lib/data/customers'
 import { getDefaultStore } from '@/lib/data/stores'
 import { isValidEmail, normalizeEmail } from '@/lib/domain/email'
-import { createResendMailer } from '@/lib/email/resend-mailer'
+import { resendAccessForCustomer } from '@/lib/email/server'
 
 function back(id: string, message: string): never {
   revalidatePath(`/admin/clientes/${id}`)
@@ -38,23 +37,7 @@ export async function corrigirEmail(formData: FormData) {
 export async function reenviarAcesso(formData: FormData) {
   await requireAdmin()
   const id = String(formData.get('id'))
-  const customer = await getCustomer(id)
-  if (!customer) back(id, 'Cliente não encontrado.')
-
   const store = await getDefaultStore()
-  const { materials, granted } = await loadCustomerAccess(store.id, customer.email)
-  const materialTitles = materials.filter((m) => m.isPublished && granted.has(m.id)).map((m) => m.title)
-
-  try {
-    await createResendMailer().sendAccessGranted({
-      to: customer.email,
-      customerName: customer.name,
-      storeName: store.name,
-      materialTitles,
-      firstAccess: true,
-    })
-  } catch (e) {
-    back(id, `Falha ao enviar: ${e instanceof Error ? e.message : 'erro desconhecido'}`)
-  }
-  back(id, 'Email de acesso reenviado.')
+  const result = await resendAccessForCustomer(id, store.id)
+  back(id, result.ok ? 'E-mail de acesso reenviado.' : `Falha ao enviar: ${result.error}`)
 }
