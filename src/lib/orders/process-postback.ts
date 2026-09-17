@@ -1,10 +1,10 @@
 import { timingSafeEqual } from 'node:crypto'
-import type { CustomerRow, OrderStatus, Store } from '@/lib/domain/types'
-import { parsePaytPostback } from '@/lib/payt/parse'
+import type { AccessNotice, CustomerRow, NoticeResult, OrderStatus, StoreRef } from '@/lib/domain/types'
+import { parsePaytPostback, type PaytProductLine } from '@/lib/payt/parse'
 import { mapPaytStatus } from '@/lib/payt/status'
 
 export type ApplyOrderInput = {
-  storeId: string
+  storeId: string | null
   transactionId: string
   productCode: string
   productName: string
@@ -16,30 +16,37 @@ export type ApplyOrderInput = {
   amountCents: number | null
 }
 
-export type EventOutcome = 'unauthorized' | 'invalid' | 'ignored' | 'processed' | 'failed'
+export type EventOutcome =
+  | 'chave_invalida'
+  | 'invalido'
+  | 'ignorado'
+  | 'liberado'
+  | 'atualizado'
+  | 'sem_mudanca'
+  | 'codigo_desconhecido'
+  | 'erro'
+
+export type EventFinish = {
+  keyValid: boolean
+  outcome: EventOutcome
+  error?: string
+  customerEmail?: string
+  productCodes?: string[]
+  paytStatus?: string
+}
 
 export interface PostbackRepo {
   logEvent(payload: unknown): Promise<string>
-  finishEvent(id: string, result: { keyValid: boolean; outcome: EventOutcome; error?: string }): Promise<void>
-  getStoreBySlug(slug: string): Promise<Store | null>
+  finishEvent(id: string, result: EventFinish): Promise<void>
+  findStoreForProductCode(code: string): Promise<StoreRef | null>
   applyOrderStatus(input: ApplyOrderInput): Promise<{ orderId: string; changed: boolean; status: OrderStatus }>
   findCustomerByEmail(email: string): Promise<CustomerRow | null>
   // created = false quando outro aviso simultâneo criou o cliente primeiro.
   createCustomer(email: string, name: string): Promise<{ customer: CustomerRow; created: boolean }>
-  getMaterialTitlesForProduct(storeId: string, productCode: string): Promise<string[]>
+  getProductsForCode(code: string): Promise<{ id: string; title: string }[]>
 }
 
-export type AccessEmail = {
-  to: string
-  customerName: string
-  storeName: string
-  materialTitles: string[]
-  firstAccess: boolean
-}
-
-export interface Mailer {
-  sendAccessGranted(email: AccessEmail): Promise<void>
-}
+export type ProcessedLine = { code: string; storeId: string | null; orderId: string; changed: boolean; status: OrderStatus }
 
 export type ProcessResult =
   | { kind: 'unauthorized' }
@@ -47,13 +54,16 @@ export type ProcessResult =
   | { kind: 'ignored'; reason: string }
   | {
       kind: 'processed'
-      orderId: string
+      outcome: 'liberado' | 'atualizado' | 'sem_mudanca' | 'codigo_desconhecido'
       status: OrderStatus
-      changed: boolean
+      lines: ProcessedLine[]
+      unknownCodes: string[]
       customerCreated: boolean
-      emailSent: boolean
-      emailError?: string
+      emailsSent: number
+      emailErrors: string[]
     }
+
+type Line = { product: PaytProductLine; store: StoreRef | null; orderId: string; changed: boolean; status: OrderStatus }
 
 function errorMessage(e: unknown): string {
   if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message)
@@ -70,93 +80,132 @@ function keyMatches(body: unknown, expected: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b)
 }
 
+function storesOf(lines: Line[]): StoreRef[] {
+  const stores = new Map<string, StoreRef>()
+  for (const line of lines) if (line.store) stores.set(line.store.id, line.store)
+  return [...stores.values()]
+}
+
+async function productsFor(repo: PostbackRepo, lines: Line[]): Promise<{ id: string; title: string }[]> {
+  const products = new Map<string, { id: string; title: string }>()
+  for (const line of lines) {
+    for (const product of await repo.getProductsForCode(line.product.code)) {
+      if (!products.has(product.id)) products.set(product.id, product)
+    }
+  }
+  return [...products.values()]
+}
+
 export async function processPostback(
   body: unknown,
-  deps: { repo: PostbackRepo; mailer: Mailer; integrationKey: string; storeSlug: string },
+  deps: { repo: PostbackRepo; notify(notice: AccessNotice): Promise<NoticeResult>; integrationKey: string },
 ): Promise<ProcessResult> {
-  const { repo, mailer } = deps
+  const { repo } = deps
   const eventId = await repo.logEvent(body)
 
   if (!keyMatches(body, deps.integrationKey)) {
-    await repo.finishEvent(eventId, { keyValid: false, outcome: 'unauthorized' })
+    await repo.finishEvent(eventId, { keyValid: false, outcome: 'chave_invalida' })
     return { kind: 'unauthorized' }
   }
 
   const parsed = parsePaytPostback(body)
   if (!parsed.ok) {
-    await repo.finishEvent(eventId, { keyValid: true, outcome: 'invalid', error: parsed.error })
+    await repo.finishEvent(eventId, { keyValid: true, outcome: 'invalido', error: parsed.error })
     return { kind: 'invalid', error: parsed.error }
   }
   const p = parsed.value
+  const summary = { customerEmail: p.customerEmail, productCodes: p.products.map((x) => x.code), paytStatus: p.status }
 
   const status = mapPaytStatus(p.status)
   if (!status) {
-    await repo.finishEvent(eventId, { keyValid: true, outcome: 'ignored', error: `status ignorado: ${p.status}` })
+    await repo.finishEvent(eventId, { keyValid: true, outcome: 'ignorado', error: `status ignorado: ${p.status}`, ...summary })
     return { kind: 'ignored', reason: p.status }
   }
 
   try {
-    const store = await repo.getStoreBySlug(deps.storeSlug)
-    if (!store) throw new Error(`Loja não encontrada: ${deps.storeSlug}`)
+    const lines: Line[] = []
+    for (const product of p.products) {
+      const store = await repo.findStoreForProductCode(product.code)
+      const order = await repo.applyOrderStatus({
+        storeId: store?.id ?? null,
+        transactionId: p.transactionId,
+        productCode: product.code,
+        productName: product.name,
+        customerEmail: p.customerEmail,
+        customerName: p.customerName,
+        status,
+        paytType: p.type,
+        isTest: p.isTest,
+        amountCents: product.amountCents,
+      })
+      lines.push({ product, store, orderId: order.orderId, changed: order.changed, status: order.status })
+    }
 
-    const order = await repo.applyOrderStatus({
-      storeId: store.id,
-      transactionId: p.transactionId,
-      productCode: p.productCode,
-      productName: p.productName,
-      customerEmail: p.customerEmail,
-      customerName: p.customerName,
-      status,
-      paytType: p.type,
-      isTest: p.isTest,
-      amountCents: p.amountCents,
-    })
-
+    const unknownCodes = lines.filter((l) => !l.store).map((l) => l.product.code)
+    const paid = lines.filter((l) => l.status === 'pago')
     let customerCreated = false
-    let emailSent = false
-    let emailError: string | undefined
+    let emailsSent = 0
+    let granted = false
+    const emailErrors: string[] = []
 
-    if (order.status === 'pago') {
-      const existing = await repo.findCustomerByEmail(p.customerEmail)
-      if (!existing) {
-        const { created } = await repo.createCustomer(p.customerEmail, p.customerName)
-        customerCreated = created
+    if (paid.length > 0) {
+      let customer = await repo.findCustomerByEmail(p.customerEmail)
+      if (!customer) {
+        const created = await repo.createCustomer(p.customerEmail, p.customerName)
+        customer = created.customer
+        customerCreated = created.created
       }
 
-      if (order.changed || customerCreated) {
-        try {
-          const materialTitles = await repo.getMaterialTitlesForProduct(store.id, p.productCode)
-          await mailer.sendAccessGranted({
-            to: p.customerEmail,
-            customerName: p.customerName,
-            storeName: store.name,
-            materialTitles,
-            firstAccess: customerCreated,
-          })
-          emailSent = true
-        } catch (e) {
-          emailError = errorMessage(e)
-        }
+      for (const store of storesOf(paid)) {
+        const storeLines = paid.filter((l) => l.store?.id === store.id)
+        if (!customerCreated && !storeLines.some((l) => l.changed)) continue
+        granted = true
+        const products = await productsFor(repo, storeLines)
+        if (products.length === 0) continue
+        const result = await deps.notify({
+          customerId: customer.id,
+          to: p.customerEmail,
+          customerName: p.customerName,
+          store,
+          products,
+          kind: customerCreated ? 'acesso_novo' : 'produto_novo',
+        })
+        if (result.ok) emailsSent++
+        else emailErrors.push(result.error)
       }
     }
 
+    const outcome = granted
+      ? 'liberado'
+      : lines.some((l) => l.store && l.changed)
+        ? 'atualizado'
+        : unknownCodes.length === lines.length
+          ? 'codigo_desconhecido'
+          : 'sem_mudanca'
+    const errors = [
+      ...(unknownCodes.length ? [`códigos desconhecidos: ${unknownCodes.join(', ')}`] : []),
+      ...emailErrors.map((e) => `falha no email: ${e}`),
+    ]
+
     await repo.finishEvent(eventId, {
       keyValid: true,
-      outcome: 'processed',
-      error: emailError ? `falha no email: ${emailError}` : undefined,
+      outcome,
+      ...summary,
+      ...(errors.length ? { error: errors.join(' | ') } : {}),
     })
 
     return {
       kind: 'processed',
-      orderId: order.orderId,
-      status: order.status,
-      changed: order.changed,
+      outcome,
+      status: lines[0].status,
+      lines: lines.map((l) => ({ code: l.product.code, storeId: l.store?.id ?? null, orderId: l.orderId, changed: l.changed, status: l.status })),
+      unknownCodes,
       customerCreated,
-      emailSent,
-      ...(emailError ? { emailError } : {}),
+      emailsSent,
+      emailErrors,
     }
   } catch (e) {
-    await repo.finishEvent(eventId, { keyValid: true, outcome: 'failed', error: errorMessage(e) })
+    await repo.finishEvent(eventId, { keyValid: true, outcome: 'erro', error: errorMessage(e), ...summary })
     throw e
   }
 }
