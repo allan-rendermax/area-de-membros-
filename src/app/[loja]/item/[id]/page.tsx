@@ -1,3 +1,4 @@
+import { InstallAppButton } from '@/components/membros/install-app-button'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { ItemAnchor } from '@/components/membros/episode-card'
@@ -42,7 +43,7 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
 
   return (
     <>
-      <StoreHeader store={store} email={customer.email} />
+      <StoreHeader store={store} email={customer.email} actions={<InstallAppButton />} />
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pt-4 pb-24 sm:px-8 lg:flex-row">
         <div className="min-w-0 flex-1">
           <div className="aspect-video overflow-hidden rounded-lg bg-fundo">
