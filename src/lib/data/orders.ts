@@ -29,11 +29,12 @@ export type AdminOrder = {
   status: OrderStatus
   isTest: boolean
   amountCents: number | null
+  source: string
 }
 
 export type OrderFilter = 'todos' | 'problemas' | 'desconhecidas' | 'teste'
 
-const ORDER_COLUMNS = 'id, created_at, customer_email, payt_product_code, payt_product_name, status, is_test, amount_cents'
+const ORDER_COLUMNS = 'id, created_at, customer_email, payt_product_code, payt_product_name, status, is_test, amount_cents, source'
 
 type DbOrder = {
   id: string
@@ -44,6 +45,7 @@ type DbOrder = {
   status: string
   is_test: boolean
   amount_cents: number | null
+  source: string
 }
 
 function toAdminOrder(o: DbOrder): AdminOrder {
@@ -56,22 +58,27 @@ function toAdminOrder(o: DbOrder): AdminOrder {
     status: o.status as OrderStatus,
     isTest: o.is_test,
     amountCents: o.amount_cents,
+    source: o.source,
   }
 }
 
 export async function listOrders(storeId: string, filter: OrderFilter): Promise<AdminOrder[]> {
   const db = createAdminClient()
-  let query = db.from('orders').select(ORDER_COLUMNS).eq('store_id', storeId).order('created_at', { ascending: false }).limit(200)
+  let query = db.from('orders').select(ORDER_COLUMNS).order('created_at', { ascending: false }).limit(200)
+  query = filter === 'desconhecidas' ? query.is('store_id', null) : query.eq('store_id', storeId)
   if (filter === 'problemas') query = query.in('status', ['reembolsado', 'chargeback'])
   if (filter === 'teste') query = query.eq('is_test', true)
   const { data, error } = await query
   if (error) throw error
   const orders = (data as DbOrder[]).map(toAdminOrder)
+  if (filter !== 'desconhecidas' || orders.length === 0) return orders
 
-  if (filter !== 'desconhecidas') return orders
-  const { data: offers, error: offersError } = await db.from('offers').select('payt_product_code').eq('store_id', storeId)
+  const { data: offers, error: offersError } = await db
+    .from('offers')
+    .select('payt_product_code')
+    .in('payt_product_code', [...new Set(orders.map((o) => o.productCode))])
   if (offersError) throw offersError
-  const known = new Set(offers.map((o) => o.payt_product_code))
+  const known = new Set(offers.map((o) => o.payt_product_code as string))
   return orders.filter((o) => !known.has(o.productCode))
 }
 

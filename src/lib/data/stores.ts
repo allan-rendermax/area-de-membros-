@@ -1,3 +1,4 @@
+import type { StoreInput } from '@/lib/admin/forms'
 import type { Store } from '@/lib/domain/types'
 import { env } from '@/lib/env'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -44,4 +45,34 @@ export async function getDefaultStore(): Promise<Store> {
   const store = await getStoreBySlug(env.defaultStoreSlug)
   if (!store) throw new Error(`Loja não encontrada: ${env.defaultStoreSlug}`)
   return store
+}
+
+export async function listStores(): Promise<Store[]> {
+  const { data, error } = await createAdminClient().from('stores').select(STORE_COLUMNS).order('name')
+  if (error) throw error
+  return (data as DbStore[]).map(toStore)
+}
+
+export async function saveStore(input: StoreInput): Promise<string> {
+  if (input.id) {
+    const currentStore = await getStoreById(input.id)
+    if (currentStore?.slug === env.defaultStoreSlug && input.slug !== currentStore.slug) {
+      throw new Error('O endereço da loja padrão não pode ser alterado.')
+    }
+  }
+
+  const row = {
+    slug: input.slug,
+    name: input.name,
+    logo_url: input.logoUrl,
+    support_whatsapp: input.supportWhatsapp,
+    support_url: input.supportUrl,
+    login_image_url: input.loginImageUrl,
+  }
+  const db = createAdminClient()
+  const { data, error } = input.id
+    ? await db.from('stores').update(row).eq('id', input.id).select('id').single()
+    : await db.from('stores').insert(row).select('id').single()
+  if (error) throw error.code === '23505' ? new Error('Já existe uma loja com este endereço.') : error
+  return data.id as string
 }

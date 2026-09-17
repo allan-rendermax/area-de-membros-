@@ -1,73 +1,61 @@
 import Link from 'next/link'
-import { listOrders, type OrderFilter } from '@/lib/data/orders'
-import { getDefaultStore } from '@/lib/data/stores'
+import { ui } from '@/components/admin/ui'
+import { getAdminStore } from '@/lib/admin/current-store'
 import { requireAdmin } from '@/lib/auth/require-admin'
+import { listOrders, type OrderFilter } from '@/lib/data/orders'
 
 const FILTERS: { value: OrderFilter; label: string }[] = [
   { value: 'todos', label: 'Todos' },
   { value: 'problemas', label: 'Reembolsos e chargebacks' },
-  { value: 'desconhecidas', label: 'Oferta não cadastrada' },
+  { value: 'desconhecidas', label: 'Código sem oferta (todas as lojas)' },
   { value: 'teste', label: 'Teste' },
 ]
 
 const STATUS_STYLE: Record<string, string> = {
-  pendente: 'bg-zinc-100 text-zinc-700',
-  pago: 'bg-green-100 text-green-800',
-  cancelado: 'bg-zinc-200 text-zinc-700',
-  reembolsado: 'bg-amber-100 text-amber-800',
-  chargeback: 'bg-red-100 text-red-800',
+  pendente: 'bg-superficie-2 text-texto-suave',
+  pago: 'bg-sucesso/15 text-sucesso',
+  cancelado: 'bg-superficie-2 text-texto-suave',
+  reembolsado: 'bg-alerta/15 text-alerta',
+  chargeback: 'bg-destaque/15 text-destaque',
 }
 
-export default async function PedidosPage({ searchParams }: { searchParams: Promise<{ filtro?: string }> }) {
+export default async function PedidosPage({ searchParams }: PageProps<'/admin/pedidos'>) {
   await requireAdmin()
   const { filtro } = await searchParams
-  const filter = FILTERS.some((f) => f.value === filtro) ? (filtro as OrderFilter) : 'todos'
-  const store = await getDefaultStore()
+  const filter = FILTERS.find((f) => f.value === filtro)?.value ?? 'todos'
+  const store = await getAdminStore()
   const orders = await listOrders(store.id, filter)
 
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-bold">Pedidos</h1>
-      <nav className="mb-4 flex flex-wrap gap-2 text-sm">
+    <div className="flex flex-col gap-4">
+      <h1 className={ui.h1}>Pedidos — {store.name}</h1>
+      <nav className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
-          <Link
-            key={f.value}
-            href={`/admin/pedidos?filtro=${f.value}`}
-            className={`rounded-full px-3 py-1 ${f.value === filter ? 'bg-zinc-900 text-white' : 'bg-white text-zinc-700 ring-1 ring-zinc-200'}`}
-          >
-            {f.label}
-          </Link>
+          <Link key={f.value} href={`/admin/pedidos?filtro=${f.value}`} className={ui.chip(f.value === filter)}>{f.label}</Link>
         ))}
       </nav>
-      <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
-        <table className="w-full min-w-[640px] text-left text-sm">
-          <thead className="border-b border-zinc-200 text-zinc-500">
-            <tr>
-              <th className="px-4 py-2">Data</th>
-              <th className="px-4 py-2">Cliente</th>
-              <th className="px-4 py-2">Produto</th>
-              <th className="px-4 py-2">Status</th>
-            </tr>
+      <div className={`${ui.card} overflow-x-auto`}>
+        <table className={ui.table}>
+          <thead className="border-b border-borda">
+            <tr><th className={ui.th}>Data</th><th className={ui.th}>Cliente</th><th className={ui.th}>Produto</th><th className={ui.th}>Origem</th><th className={ui.th}>Status</th></tr>
           </thead>
-          <tbody className="divide-y divide-zinc-100">
+          <tbody className="divide-y divide-borda">
             {orders.map((o) => (
               <tr key={o.id}>
-                <td className="whitespace-nowrap px-4 py-2">{new Date(o.createdAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</td>
-                <td className="px-4 py-2">
-                  <Link href={`/admin/clientes?q=${encodeURIComponent(o.customerEmail)}`} className="underline">{o.customerEmail}</Link>
+                <td className={`${ui.td} whitespace-nowrap`}>{new Date(o.createdAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</td>
+                <td className={ui.td}><Link href={`/admin/clientes?q=${encodeURIComponent(o.customerEmail)}`} className="underline">{o.customerEmail}</Link></td>
+                <td className={ui.td}>
+                  {o.productName || o.productCode} <span className="text-texto-suave">({o.productCode})</span>
+                  {filter === 'desconhecidas' && (
+                    <Link href={`/admin/ofertas/novo?codigo=${encodeURIComponent(o.productCode)}`} className="ml-2 text-destaque hover:underline">criar oferta</Link>
+                  )}
+                  {o.isTest && <span className="ml-2 text-xs text-texto-suave">teste</span>}
                 </td>
-                <td className="px-4 py-2">
-                  {o.productName || o.productCode} <span className="text-zinc-400">({o.productCode})</span>
-                  {o.isTest && <span className="ml-2 text-xs text-zinc-500">teste</span>}
-                </td>
-                <td className="px-4 py-2">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[o.status]}`}>{o.status}</span>
-                </td>
+                <td className={ui.td}>{o.source}</td>
+                <td className={ui.td}><span className={`${ui.pill} ${STATUS_STYLE[o.status]}`}>{o.status}</span></td>
               </tr>
             ))}
-            {orders.length === 0 && (
-              <tr><td colSpan={4} className="px-4 py-3 text-zinc-500">Nenhum pedido.</td></tr>
-            )}
+            {orders.length === 0 && <tr><td colSpan={5} className={`${ui.td} text-texto-suave`}>Nenhum pedido.</td></tr>}
           </tbody>
         </table>
       </div>
