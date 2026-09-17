@@ -1,13 +1,7 @@
 import type { AccessEmail } from '@/lib/orders/process-postback'
+import { escapeHtml } from './html'
 
-export function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
+export { escapeHtml }
 
 export function accessGrantedEmail(input: AccessEmail & { loginUrl: string }): { subject: string; html: string } {
   const store = escapeHtml(input.storeName)
