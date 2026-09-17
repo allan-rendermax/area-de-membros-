@@ -2,6 +2,7 @@ import {
   STATUS_RANK,
   type AccessNotice,
   type CustomerRow,
+  type EmailKind,
   type NoticeResult,
   type OrderStatus,
   type StoreRef,
@@ -22,6 +23,9 @@ export class FakeRepo implements PostbackRepo {
   events: ({ id: string; payload: unknown } & Partial<EventFinish>)[] = []
   orders: FakeOrder[] = []
   customers: CustomerRow[] = []
+  notices: { customerId: string; storeId: string; status: 'falhou' | 'enviado'; toEmail?: string; kind?: EmailKind; error?: string }[] = []
+  failApplyOnCode: string | null = null
+  failLogFailedNotice = false
   failCreateCustomerTimes = 0
   hideCustomerFromLookupOnce = false
   failGetProductsForCode: string | null = null
@@ -38,6 +42,7 @@ export class FakeRepo implements PostbackRepo {
     return this.storesByCode[code] ?? null
   }
   async applyOrderStatus(input: ApplyOrderInput) {
+    if (this.failApplyOnCode === input.productCode) throw new Error('gravação indisponível')
     const existing = this.orders.find((o) => o.transactionId === input.transactionId && o.productCode === input.productCode)
     if (!existing) {
       const order = { ...input, id: `ord-${this.orders.length + 1}` }
@@ -71,6 +76,16 @@ export class FakeRepo implements PostbackRepo {
   async getProductsForCode(code: string) {
     if (this.failGetProductsForCode === code) throw new Error('produtos indisponíveis')
     return this.productsByCode[code] ?? []
+  }
+  async hasNoticeForStore(customerId: string, storeId: string) {
+    return this.notices.some((notice) => notice.customerId === customerId && notice.storeId === storeId)
+  }
+  async logFailedNotice(entry: { storeId: string; customerId: string; toEmail: string; kind: EmailKind; error: string }) {
+    if (this.failLogFailedNotice) throw new Error('registro indisponível')
+    this.notices.push({ ...entry, status: 'falhou' })
+  }
+  markNotified(customerId: string, storeId: string) {
+    this.notices.push({ customerId, storeId, status: 'enviado' })
   }
 }
 

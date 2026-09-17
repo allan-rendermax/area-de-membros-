@@ -34,12 +34,18 @@ const schema = z.object({
   order_bumps: z.unknown().optional(),
 })
 
+function firstNonEmptyCode(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value !== 'string' && typeof value !== 'number') continue
+    const code = String(value).trim()
+    if (code) return code
+  }
+}
+
 function lineFrom(value: unknown): PaytProductLine | null {
   if (!value || typeof value !== 'object') return null
   const v = value as Record<string, unknown>
-  const raw = v.code ?? v.sku ?? v.id
-  if (typeof raw !== 'string' && typeof raw !== 'number') return null
-  const code = String(raw).trim()
+  const code = firstNonEmptyCode(v.code, v.sku, v.id)
   if (!code) return null
   return {
     code,
@@ -55,7 +61,7 @@ export function parsePaytPostback(body: unknown): { ok: true; value: PaytPostbac
   if (!parsed.success) return { ok: false, error: z.prettifyError(parsed.error) }
 
   const data = parsed.data
-  const mainCode = (data.product.code ?? data.product.sku)?.trim()
+  const mainCode = firstNonEmptyCode(data.product.code, data.product.sku)
   if (!mainCode) return { ok: false, error: 'produto sem code/sku' }
 
   const candidates: PaytProductLine[] = [

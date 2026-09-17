@@ -30,6 +30,33 @@ describe('parsePaytPostback', () => {
     expect(result.ok && result.value.isTest).toBe(true)
   })
 
+  it.each(['', '  '])('usa sku quando o code principal é vazio (%j)', (code) => {
+    const result = parsePaytPostback({ ...paid, product: { code, sku: ' SKU-1 ' } })
+    expect(result.ok && result.value.products[0].code).toBe('SKU-1')
+  })
+
+  it.each(['items', 'order_bumps'])('usa sku e id quando code do bump é vazio em %s', (source) => {
+    const lines = [{ code: '  ', sku: ' B2 ' }, { code: '', id: 77 }]
+    const result = parsePaytPostback({
+      ...paid,
+      product: { ...paid.product, ...(source === 'items' ? { items: lines } : {}) },
+      ...(source === 'order_bumps' ? { order_bumps: lines } : {}),
+    })
+    expect(result.ok && result.value.products.map((p) => p.code)).toEqual(['ATLAS-COMPLETO', 'B2', '77'])
+  })
+
+  it('preserva a prioridade code, sku, id e ignora identificadores vazios', () => {
+    const result = parsePaytPostback({
+      ...paid, product: { code: ' MAIN ', sku: 'OTHER' },
+      order_bumps: [{ code: ' B1 ', sku: 'B2', id: 77 }, { code: ' ', sku: ' ', id: 0 }, { code: '', sku: ' ' }],
+    })
+    expect(result.ok && result.value.products.map((p) => p.code)).toEqual(['MAIN', 'B1', '0'])
+  })
+
+  it('mantém o erro quando code e sku principais estão vazios', () => {
+    expect(parsePaytPostback({ ...paid, product: { code: ' ', sku: '' } })).toEqual({ ok: false, error: 'produto sem code/sku' })
+  })
+
   it('falha sem email válido', () => {
     expect(parsePaytPostback({ ...paid, customer: { name: 'X', email: 'sem-email' } }).ok).toBe(false)
   })
