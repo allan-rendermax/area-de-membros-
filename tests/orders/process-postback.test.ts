@@ -105,6 +105,24 @@ describe('processPostback', () => {
     expect(repo.events[0]).toMatchObject({ outcome: 'liberado', error: 'falha no email: resend fora do ar' })
   })
 
+  it('notify lançando erro não derruba o processamento e fica registrado', async () => {
+    notifier.throwError = true
+    const result = await run(paid)
+    expect(result).toMatchObject({
+      kind: 'processed', outcome: 'liberado', status: 'pago', emailsSent: 0, emailErrors: ['notify indisponível'],
+    })
+    expect(repo.events[0]).toMatchObject({ outcome: 'liberado', error: 'falha no email: notify indisponível' })
+  })
+
+  it('getProductsForCode lançando erro não derruba o processamento e fica registrado', async () => {
+    repo.failGetProductsForCode = 'ATLAS-COMPLETO'
+    const result = await run(paid)
+    expect(result).toMatchObject({
+      kind: 'processed', outcome: 'liberado', status: 'pago', emailsSent: 0, emailErrors: ['produtos indisponíveis'],
+    })
+    expect(repo.events[0]).toMatchObject({ outcome: 'liberado', error: 'falha no email: produtos indisponíveis' })
+  })
+
   it('se criar o cliente falhar, a nova tentativa cria e envia o email', async () => {
     repo.failCreateCustomerTimes = 1
     await expect(run(paid)).rejects.toThrow('auth indisponível')

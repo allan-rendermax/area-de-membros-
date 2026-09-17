@@ -160,18 +160,22 @@ export async function processPostback(
         const storeLines = paid.filter((l) => l.store?.id === store.id)
         if (!customerCreated && !storeLines.some((l) => l.changed)) continue
         granted = true
-        const products = await productsFor(repo, storeLines)
-        if (products.length === 0) continue
-        const result = await deps.notify({
-          customerId: customer.id,
-          to: p.customerEmail,
-          customerName: p.customerName,
-          store,
-          products,
-          kind: customerCreated ? 'acesso_novo' : 'produto_novo',
-        })
-        if (result.ok) emailsSent++
-        else emailErrors.push(result.error)
+        try {
+          const products = await productsFor(repo, storeLines)
+          if (products.length === 0) continue
+          const result = await deps.notify({
+            customerId: customer.id,
+            to: p.customerEmail,
+            customerName: p.customerName,
+            store,
+            products,
+            kind: customerCreated ? 'acesso_novo' : 'produto_novo',
+          })
+          if (result.ok) emailsSent++
+          else emailErrors.push(result.error)
+        } catch (e) {
+          emailErrors.push(errorMessage(e))
+        }
       }
     }
 

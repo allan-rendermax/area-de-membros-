@@ -24,6 +24,7 @@ export class FakeRepo implements PostbackRepo {
   customers: CustomerRow[] = []
   failCreateCustomerTimes = 0
   hideCustomerFromLookupOnce = false
+  failGetProductsForCode: string | null = null
 
   async logEvent(payload: unknown) {
     const id = `ev-${this.events.length + 1}`
@@ -68,6 +69,7 @@ export class FakeRepo implements PostbackRepo {
     return { customer, created: true }
   }
   async getProductsForCode(code: string) {
+    if (this.failGetProductsForCode === code) throw new Error('produtos indisponíveis')
     return this.productsByCode[code] ?? []
   }
 }
@@ -75,7 +77,9 @@ export class FakeRepo implements PostbackRepo {
 export class FakeNotifier {
   sent: AccessNotice[] = []
   fail = false
+  throwError = false
   notify = async (notice: AccessNotice): Promise<NoticeResult> => {
+    if (this.throwError) throw new Error('notify indisponível')
     if (this.fail) return { ok: false, error: 'resend fora do ar' }
     this.sent.push(notice)
     return { ok: true }
