@@ -8,7 +8,7 @@ export function WhatsAppFloating({ href }: { href: string | null }) {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Falar com o suporte"
-      className="fixed right-5 bottom-5 z-40 grid h-14 w-14 place-items-center rounded-full bg-whatsapp text-white shadow-lg hover:brightness-110"
+      className="fixed right-5 bottom-5 z-40 grid h-14 w-14 place-items-center rounded-full bg-whatsapp text-texto shadow-lg hover:brightness-110"
     >
       <WhatsAppIcon />
     </a>

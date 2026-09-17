@@ -42,7 +42,7 @@ export function LockedPoster({ product, initiallyOpen = false }: { product: Shel
           role="dialog"
           aria-modal="true"
           aria-labelledby={`comprar-${product.id}`}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-fundo/80 sm:items-center sm:p-4"
           onClick={() => setOpen(false)}
         >
           <div className="painel-sobe w-full max-w-lg overflow-hidden rounded-t-xl bg-superficie sm:rounded-xl" onClick={(e) => e.stopPropagation()}>
@@ -56,7 +56,7 @@ export function LockedPoster({ product, initiallyOpen = false }: { product: Shel
                     href={product.checkoutUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-md bg-destaque px-4 py-3 text-center font-semibold text-white hover:bg-destaque-hover"
+                    className="rounded-md bg-destaque px-4 py-3 text-center font-semibold text-texto hover:bg-destaque-hover"
                   >
                     Quero acessar
                   </a>

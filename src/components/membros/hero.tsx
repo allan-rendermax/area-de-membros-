@@ -13,7 +13,7 @@ export function Hero({ product, storeSlug }: { product: ShelfProduct; storeSlug:
       <div className="absolute inset-x-0 bottom-0 px-4 pb-8 sm:px-8 sm:pb-14">
         <h1 className="max-w-2xl text-3xl leading-tight font-extrabold sm:text-5xl">{product.title}</h1>
         {product.description && <p className="mt-3 line-clamp-3 max-w-xl text-sm text-texto-suave sm:text-base">{product.description}</p>}
-        <Link href={href} className="mt-5 inline-flex items-center gap-2 rounded-md bg-destaque px-6 py-3 font-semibold text-white hover:bg-destaque-hover">
+        <Link href={href} className="mt-5 inline-flex items-center gap-2 rounded-md bg-destaque px-6 py-3 font-semibold text-texto hover:bg-destaque-hover">
           {product.unlocked ? <PlayIcon /> : <LockIcon />}
           {product.unlocked ? 'Acessar' : 'Quero acessar'}
         </Link>

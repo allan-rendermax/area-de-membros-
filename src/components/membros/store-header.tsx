@@ -18,7 +18,7 @@ export function StoreHeader({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={store.logoUrl} alt="" className="h-8 w-auto" />
           ) : (
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-destaque font-bold text-white">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-destaque font-bold text-texto">
               {store.name.charAt(0).toUpperCase()}
             </span>
           )}
