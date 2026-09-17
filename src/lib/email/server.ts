@@ -23,20 +23,29 @@ export function notifyAccess(notice: AccessNotice): Promise<NoticeOutcome> {
   })
 }
 
-export async function buildResendNotice(group: { storeId: string; customerId: string }): Promise<AccessNotice | null> {
+async function prepareResend(group: { storeId: string; customerId: string }): Promise<{ notice: AccessNotice } | { error: string }> {
   const [store, customer] = await Promise.all([getStoreById(group.storeId), getCustomer(group.customerId)])
-  if (!store || !customer || customer.blockedAt) return null
+  if (!store) return { error: 'Loja não encontrada.' }
+  if (!customer) return { error: 'Cliente não encontrado.' }
+  if (customer.blockedAt) return { error: 'Cliente bloqueado.' }
   const { products, granted } = await loadStoreAccess(store.id, customer.email)
   const unlocked = products.filter((p) => p.isPublished && granted.has(p.id)).sort((a, b) => a.sortOrder - b.sortOrder)
-  if (unlocked.length === 0) return null
+  if (unlocked.length === 0) return { error: 'Cliente sem produtos liberados nesta loja.' }
   return {
-    customerId: customer.id,
-    to: customer.email,
-    customerName: customer.name,
-    store: { id: store.id, slug: store.slug, name: store.name },
-    products: unlocked.map((p) => ({ id: p.id, title: p.title })),
-    kind: 'reenvio',
+    notice: {
+      customerId: customer.id,
+      to: customer.email,
+      customerName: customer.name,
+      store: { id: store.id, slug: store.slug, name: store.name },
+      products: unlocked.map((p) => ({ id: p.id, title: p.title })),
+      kind: 'reenvio',
+    },
   }
+}
+
+export async function buildResendNotice(group: { storeId: string; customerId: string }): Promise<AccessNotice | null> {
+  const result = await prepareResend(group)
+  return 'notice' in result ? result.notice : null
 }
 
 export function resendFailedEmails(): Promise<BatchSummary> {
@@ -52,9 +61,9 @@ export function resendFailedEmails(): Promise<BatchSummary> {
 
 async function sendReenvio(storeId: string, customerId: string): Promise<NoticeOutcome | NoticeResult> {
   if ((await countEmailsUsedToday()) >= env.emailDailyLimit) return { ok: false, error: 'Limite diário de e-mails atingido.' }
-  const notice = await buildResendNotice({ storeId, customerId })
-  if (!notice) return { ok: false, error: 'Cliente sem produtos liberados nesta loja.' }
-  return notifyAccess(notice)
+  const prepared = await prepareResend({ storeId, customerId })
+  if ('error' in prepared) return { ok: false, error: prepared.error }
+  return notifyAccess(prepared.notice)
 }
 
 export async function resendEmailLogEntry(logId: string): Promise<NoticeResult> {
