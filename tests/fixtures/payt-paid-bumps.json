@@ -1,0 +1,21 @@
+{
+  "integration_key": "chave-de-teste",
+  "transaction_id": "TX200",
+  "seller_id": "S1",
+  "status": "paid",
+  "type": "order",
+  "test": false,
+  "tangible": false,
+  "customer": { "name": "João Silva", "email": " Joao@Gmail.com " },
+  "product": {
+    "name": "Atlas Visual - Plano Completo",
+    "code": "ATLAS-COMPLETO",
+    "price": 4700,
+    "quantity": 1,
+    "items": [{ "name": "Checklist de Vistoria", "code": "BUMP-CHECKLIST", "price": 1700 }]
+  },
+  "order_bumps": [
+    { "name": "Pack de Detalhes", "code": "BUMP-PACK", "price": 1900 },
+    { "name": "Checklist de Vistoria", "code": "BUMP-CHECKLIST", "price": 1700 }
+  ]
+}

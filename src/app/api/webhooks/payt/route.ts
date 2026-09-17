@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createPostbackRepo } from '@/lib/data/postback-repo'
-import { createResendMailer } from '@/lib/email/resend-mailer'
+import { notifyAccess } from '@/lib/email/server'
 import { env } from '@/lib/env'
 import { processPostback } from '@/lib/orders/process-postback'
 
@@ -18,13 +18,12 @@ export async function POST(request: Request) {
   try {
     const result = await processPostback(body, {
       repo: createPostbackRepo(),
-      mailer: createResendMailer(),
+      notify: notifyAccess,
       integrationKey: env.paytIntegrationKey,
-      storeSlug: env.defaultStoreSlug,
     })
     if (result.kind === 'unauthorized') return NextResponse.json({ error: 'não autorizado' }, { status: 401 })
     if (result.kind === 'invalid') return NextResponse.json({ error: result.error }, { status: 400 })
-    return NextResponse.json({ ok: true, result: result.kind })
+    return NextResponse.json({ ok: true, result: result.kind === 'processed' ? result.outcome : result.kind })
   } catch {
     return NextResponse.json({ error: 'erro interno' }, { status: 500 })
   }

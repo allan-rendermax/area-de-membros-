@@ -1,33 +1,44 @@
-import { STATUS_RANK, type CustomerRow, type OrderStatus, type Store } from '@/lib/domain/types'
-import type { AccessEmail, ApplyOrderInput, EventOutcome, Mailer, PostbackRepo } from '@/lib/orders/process-postback'
+import {
+  STATUS_RANK,
+  type AccessNotice,
+  type CustomerRow,
+  type NoticeResult,
+  type OrderStatus,
+  type StoreRef,
+} from '@/lib/domain/types'
+import type { ApplyOrderInput, EventFinish, PostbackRepo } from '@/lib/orders/process-postback'
+
+export const ARQ: StoreRef = { id: 'store-1', slug: 'arquitetura', name: 'Arquitetura' }
 
 type FakeOrder = ApplyOrderInput & { id: string }
 
 export class FakeRepo implements PostbackRepo {
-  store: Store = { id: 'store-1', slug: 'arquitetura', name: 'Arquitetura', logoUrl: null, primaryColor: '#000', supportUrl: null, supportWhatsapp: null, loginImageUrl: null }
-  events: { id: string; payload: unknown; keyValid?: boolean; outcome?: EventOutcome; error?: string }[] = []
+  storesByCode: Record<string, StoreRef> = { 'ATLAS-COMPLETO': ARQ, 'BUMP-CHECKLIST': ARQ, 'BUMP-PACK': ARQ }
+  productsByCode: Record<string, { id: string; title: string }[]> = {
+    'ATLAS-COMPLETO': [{ id: 'p-atlas', title: 'Atlas Visual' }, { id: 'p-bonus1', title: 'Bônus 1' }],
+    'BUMP-CHECKLIST': [{ id: 'p-check', title: 'Checklist de Vistoria' }],
+    'BUMP-PACK': [{ id: 'p-pack', title: 'Pack de Detalhes' }],
+  }
+  events: ({ id: string; payload: unknown } & Partial<EventFinish>)[] = []
   orders: FakeOrder[] = []
   customers: CustomerRow[] = []
-  titles: Record<string, string[]> = { 'ATLAS-COMPLETO': ['Atlas Visual', 'Bônus 1'] }
   failCreateCustomerTimes = 0
-  // Simula outro aviso simultâneo que criou o cliente entre a busca e a criação.
   hideCustomerFromLookupOnce = false
+  failGetProductsForCode: string | null = null
 
   async logEvent(payload: unknown) {
     const id = `ev-${this.events.length + 1}`
     this.events.push({ id, payload })
     return id
   }
-  async finishEvent(id: string, result: { keyValid: boolean; outcome: EventOutcome; error?: string }) {
+  async finishEvent(id: string, result: EventFinish) {
     Object.assign(this.events.find((e) => e.id === id)!, result)
   }
-  async getStoreBySlug(slug: string) {
-    return slug === this.store.slug ? this.store : null
+  async findStoreForProductCode(code: string) {
+    return this.storesByCode[code] ?? null
   }
   async applyOrderStatus(input: ApplyOrderInput) {
-    const existing = this.orders.find(
-      (o) => o.transactionId === input.transactionId && o.productCode === input.productCode,
-    )
+    const existing = this.orders.find((o) => o.transactionId === input.transactionId && o.productCode === input.productCode)
     if (!existing) {
       const order = { ...input, id: `ord-${this.orders.length + 1}` }
       this.orders.push(order)
@@ -57,16 +68,20 @@ export class FakeRepo implements PostbackRepo {
     this.customers.push(customer)
     return { customer, created: true }
   }
-  async getMaterialTitlesForProduct(_storeId: string, productCode: string) {
-    return this.titles[productCode] ?? []
+  async getProductsForCode(code: string) {
+    if (this.failGetProductsForCode === code) throw new Error('produtos indisponíveis')
+    return this.productsByCode[code] ?? []
   }
 }
 
-export class FakeMailer implements Mailer {
-  sent: AccessEmail[] = []
+export class FakeNotifier {
+  sent: AccessNotice[] = []
   fail = false
-  async sendAccessGranted(email: AccessEmail) {
-    if (this.fail) throw new Error('resend fora do ar')
-    this.sent.push(email)
+  throwError = false
+  notify = async (notice: AccessNotice): Promise<NoticeResult> => {
+    if (this.throwError) throw new Error('notify indisponível')
+    if (this.fail) return { ok: false, error: 'resend fora do ar' }
+    this.sent.push(notice)
+    return { ok: true }
   }
 }

@@ -2,8 +2,7 @@ import { STATUS_RANK, type OrderStatus } from '@/lib/domain/types'
 import type { PostbackRepo } from '@/lib/orders/process-postback'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createCustomer, findCustomerByEmail } from './customers'
-import { getMaterialTitlesForProduct } from './orders'
-import { getStoreBySlug } from './stores'
+import { findStoreForProductCode, getProductsForCode } from './products'
 
 export function createPostbackRepo(): PostbackRepo {
   const db = createAdminClient()
@@ -22,13 +21,16 @@ export function createPostbackRepo(): PostbackRepo {
           key_valid: result.keyValid,
           outcome: result.outcome,
           error: result.error ?? null,
+          customer_email: result.customerEmail ?? null,
+          product_codes: result.productCodes ?? [],
+          payt_status: result.paytStatus ?? null,
           processed_at: new Date().toISOString(),
         })
         .eq('id', id)
       if (error) throw error
     },
 
-    getStoreBySlug,
+    findStoreForProductCode,
 
     async applyOrderStatus(input) {
       const { data, error } = await db
@@ -53,6 +55,6 @@ export function createPostbackRepo(): PostbackRepo {
 
     findCustomerByEmail,
     createCustomer,
-    getMaterialTitlesForProduct,
+    getProductsForCode,
   }
 }
