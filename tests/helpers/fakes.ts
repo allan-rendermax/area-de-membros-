@@ -4,7 +4,7 @@ import type { AccessEmail, ApplyOrderInput, EventOutcome, Mailer, PostbackRepo }
 type FakeOrder = ApplyOrderInput & { id: string }
 
 export class FakeRepo implements PostbackRepo {
-  store: Store = { id: 'store-1', slug: 'arquitetura', name: 'Arquitetura', logoUrl: null, primaryColor: '#000', supportUrl: null }
+  store: Store = { id: 'store-1', slug: 'arquitetura', name: 'Arquitetura', logoUrl: null, primaryColor: '#000', supportUrl: null, supportWhatsapp: null, loginImageUrl: null }
   events: { id: string; payload: unknown; keyValid?: boolean; outcome?: EventOutcome; error?: string }[] = []
   orders: FakeOrder[] = []
   customers: CustomerRow[] = []

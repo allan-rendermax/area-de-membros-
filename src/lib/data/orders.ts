@@ -11,6 +11,15 @@ export async function listOrderRefsByEmail(storeId: string, email: string): Prom
   return data.map((o) => ({ productCode: o.payt_product_code, status: o.status as OrderStatus }))
 }
 
+export async function listAllOrderRefsByEmail(email: string): Promise<OrderRef[]> {
+  const { data, error } = await createAdminClient()
+    .from('orders')
+    .select('payt_product_code, status')
+    .eq('customer_email', email)
+  if (error) throw error
+  return data.map((o) => ({ productCode: o.payt_product_code, status: o.status as OrderStatus }))
+}
+
 export async function getMaterialTitlesForProduct(storeId: string, productCode: string): Promise<string[]> {
   const { data, error } = await createAdminClient()
     .from('offers')

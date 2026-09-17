@@ -19,4 +19,11 @@ export const env = {
     return required('ADMIN_EMAILS').split(',').map(normalizeEmail).filter(Boolean)
   },
   get defaultStoreSlug() { return required('DEFAULT_STORE_SLUG') },
+  get emailDailyLimit() {
+    const value = Number(process.env.EMAIL_DAILY_LIMIT)
+    return Number.isFinite(value) && value > 0 ? value : 100
+  },
+  get loginGuardSecret() { return required('LOGIN_GUARD_SECRET') },
+  get turnstileSiteKey() { return process.env.TURNSTILE_SITE_KEY || null },
+  get turnstileSecretKey() { return process.env.TURNSTILE_SECRET_KEY || null },
 }
