@@ -2,9 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { getAdminStore } from '@/lib/admin/current-store'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { changeCustomerEmail, setCustomerBlocked } from '@/lib/data/customers'
-import { getDefaultStore } from '@/lib/data/stores'
 import { isValidEmail, normalizeEmail } from '@/lib/domain/email'
 import { resendAccessForCustomer } from '@/lib/email/server'
 
@@ -37,7 +37,7 @@ export async function corrigirEmail(formData: FormData) {
 export async function reenviarAcesso(formData: FormData) {
   await requireAdmin()
   const id = String(formData.get('id'))
-  const store = await getDefaultStore()
+  const store = await getAdminStore()
   const result = await resendAccessForCustomer(id, store.id)
   back(id, result.ok ? 'E-mail de acesso reenviado.' : `Falha ao enviar: ${result.error}`)
 }
