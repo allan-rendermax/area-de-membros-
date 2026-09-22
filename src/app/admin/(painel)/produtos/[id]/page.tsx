@@ -34,7 +34,7 @@ export default async function ProdutoAdminPage({ params, searchParams }: PagePro
         </nav>
       )}
       {typeof msg === 'string' && <p role="status" className={ui.notice}>{msg}</p>}
-      {product && showContent ? <ContentEditor productId={product.id} modules={modules} /> : <ProductForm product={product} tracks={tracks} />}
+      {product && showContent ? <ContentEditor productId={product.id} modules={modules} /> : <ProductForm product={product} tracks={tracks} storeId={store.id} />}
     </div>
   )
 }

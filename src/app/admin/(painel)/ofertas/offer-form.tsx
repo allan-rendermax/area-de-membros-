@@ -3,10 +3,11 @@ import type { AdminOffer } from '@/lib/data/products-admin'
 import type { Product } from '@/lib/domain/types'
 import { salvarOferta } from './actions'
 
-export function OfferForm({ offer, products, initialCode }: { offer: AdminOffer | null; products: Product[]; initialCode: string }) {
+export function OfferForm({ offer, products, initialCode, storeId }: { offer: AdminOffer | null; products: Product[]; initialCode: string; storeId: string }) {
   return (
     <form action={salvarOferta} className={`${ui.card} flex max-w-xl flex-col gap-4 p-5`}>
       <input type="hidden" name="id" value={offer?.id ?? ''} />
+      <input type="hidden" name="store_id" value={storeId} />
       <label className={ui.label}>Nome (ex.: Plano Completo)<input name="name" required defaultValue={offer?.name} className={ui.input} /></label>
       <label className={ui.label}>
         Código do produto na Payt

@@ -49,6 +49,7 @@ export default async function ClientePage({ params, searchParams }: PageProps<'/
         <Link href={`/admin/clientes/${id}/vitrine`} className={ui.buttonGhost}>Ver como aluno</Link>
         <form action={reenviarAcesso}>
           <input type="hidden" name="id" value={id} />
+          <input type="hidden" name="store_id" value={store.id} />
           <button type="submit" className={ui.button}>Reenviar acesso</button>
         </form>
         <form action={alternarBloqueio}>
@@ -71,6 +72,7 @@ export default async function ClientePage({ params, searchParams }: PageProps<'/
         <h2 className="mb-2 font-semibold">Acesso manual</h2>
         <form action={liberarAcessoManual} className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="id" value={id} />
+          <input type="hidden" name="store_id" value={store.id} />
           <label className="flex w-full max-w-sm flex-col gap-1 text-sm">
             Oferta
             <select name="offerId" required defaultValue="" className={ui.input} disabled={offers.length === 0}>
@@ -108,6 +110,7 @@ export default async function ClientePage({ params, searchParams }: PageProps<'/
               {order.storeId === store.id && canRevoke(order) && (
                 <form action={removerAcessoManual}>
                   <input type="hidden" name="id" value={id} />
+                  <input type="hidden" name="store_id" value={store.id} />
                   <input type="hidden" name="orderId" value={order.id} />
                   <button type="submit" className={ui.buttonDanger}>Remover acesso</button>
                 </form>

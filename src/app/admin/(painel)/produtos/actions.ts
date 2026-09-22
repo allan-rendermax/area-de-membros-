@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { errorText, uploadIfPresent, withMessage } from '@/lib/admin/action-helpers'
-import { getAdminStore } from '@/lib/admin/current-store'
+import { assertAdminStoreContext, getAdminStore } from '@/lib/admin/current-store'
 import { parseItemForm, parseModuleForm, parseProductForm } from '@/lib/admin/forms'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
@@ -45,6 +45,11 @@ export async function salvarProduto(formData: FormData) {
   await requireAdmin()
   const store = await getAdminStore()
   const currentId = field(formData, 'id') || 'novo'
+  try {
+    assertAdminStoreContext(formData, store.id)
+  } catch (e) {
+    redirect(withMessage(`/admin/produtos/${currentId}`, errorText(e)))
+  }
   if (currentId !== 'novo') await requireOwnProduct(currentId)
 
   let productId: string

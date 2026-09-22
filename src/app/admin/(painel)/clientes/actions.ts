@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { getAdminStore } from '@/lib/admin/current-store'
+import { assertAdminStoreContext, getAdminStore } from '@/lib/admin/current-store'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
 import { changeCustomerEmail, setCustomerBlocked } from '@/lib/data/customers'
@@ -40,6 +40,11 @@ export async function reenviarAcesso(formData: FormData) {
   await requireAdmin()
   const id = String(formData.get('id'))
   const store = await getAdminStore()
+  try {
+    assertAdminStoreContext(formData, store.id)
+  } catch (e) {
+    back(id, e instanceof Error ? e.message : 'Não foi possível reenviar o acesso.')
+  }
   const result = await resendAccessForCustomer(id, store.id)
   back(id, result.ok ? 'E-mail de acesso reenviado.' : `Falha ao enviar: ${result.error}`)
 }
@@ -51,6 +56,7 @@ export async function liberarAcessoManual(formData: FormData) {
   if (!isUuid(id) || !isUuid(offerId)) back(id, 'Cliente ou oferta inválidos.')
   const store = await getAdminStore()
   try {
+    assertAdminStoreContext(formData, store.id)
     await createManualOrder({
       storeId: store.id,
       offerId,
@@ -72,6 +78,7 @@ export async function removerAcessoManual(formData: FormData) {
   if (!isUuid(id) || !isUuid(orderId)) back(id, 'Cliente ou pedido inválidos.')
   const store = await getAdminStore()
   try {
+    assertAdminStoreContext(formData, store.id)
     await revokeManualOrder({ orderId, storeId: store.id, customerId: id })
   } catch (e) {
     back(id, e instanceof Error ? e.message : 'Não foi possível remover o acesso.')

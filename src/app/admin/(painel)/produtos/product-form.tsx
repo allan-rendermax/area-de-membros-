@@ -3,11 +3,12 @@ import { AutoCover } from '@/components/membros/auto-cover'
 import type { Product } from '@/lib/domain/types'
 import { salvarProduto } from './actions'
 
-export function ProductForm({ product, tracks }: { product: Product | null; tracks: string[] }) {
+export function ProductForm({ product, tracks, storeId }: { product: Product | null; tracks: string[]; storeId: string }) {
   const seed = product?.id ?? 'novo-produto'
   return (
     <form action={salvarProduto} className={`${ui.card} grid gap-6 p-5 lg:grid-cols-[240px_1fr]`}>
       <input type="hidden" name="id" value={product?.id ?? ''} />
+      <input type="hidden" name="store_id" value={storeId} />
       <input type="hidden" name="cover_url" value={product?.coverUrl ?? ''} />
       <input type="hidden" name="banner_url" value={product?.bannerUrl ?? ''} />
 

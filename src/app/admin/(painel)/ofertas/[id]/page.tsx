@@ -23,7 +23,7 @@ export default async function OfertaPage({ params, searchParams }: PageProps<'/a
       <Link href="/admin/ofertas" className="text-sm text-texto-suave hover:text-texto">← Ofertas</Link>
       <h1 className={ui.h1}>{offer ? 'Editar oferta' : `Nova oferta — ${store.name}`}</h1>
       {typeof msg === 'string' && <p role="status" className={ui.notice}>{msg}</p>}
-      <OfferForm offer={offer} products={products} initialCode={typeof codigo === 'string' ? codigo : ''} />
+      <OfferForm offer={offer} products={products} initialCode={typeof codigo === 'string' ? codigo : ''} storeId={store.id} />
     </div>
   )
 }

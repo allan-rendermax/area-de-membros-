@@ -168,14 +168,14 @@ const product: Product = {
 describe('formulário de oferta', () => {
   it('torna o código somente leitura na edição e orienta cadastrar outra oferta', () => {
     const offer: AdminOffer = { id: 'existing', name: 'Oferta', paytProductCode: 'OLD', productIds: ['product-1'] }
-    const form = OfferForm({ offer, products: [product], initialCode: '' })
+    const form = OfferForm({ offer, products: [product], initialCode: '', storeId: 'store-1' })
 
     expect(findInput(form, 'payt_product_code')).toMatchObject({ readOnly: true, defaultValue: 'OLD' })
     expect(textContent(form)).toContain('cadastre uma nova oferta')
   })
 
   it('mantém o código editável na criação', () => {
-    const form = OfferForm({ offer: null, products: [product], initialCode: 'NEW' })
+    const form = OfferForm({ offer: null, products: [product], initialCode: 'NEW', storeId: 'store-1' })
 
     expect(findInput(form, 'payt_product_code')).toMatchObject({ defaultValue: 'NEW' })
     expect(findInput(form, 'payt_product_code')?.readOnly).not.toBe(true)
