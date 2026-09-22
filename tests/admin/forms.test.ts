@@ -86,4 +86,8 @@ describe('parseOfferForm', () => {
     expect(() => parseOfferForm(fd({ name: 'X', payt_product_code: 'COM ESPACO' }), 's1')).toThrow('sem espaços')
     expect(() => parseOfferForm(fd({ name: 'X', payt_product_code: 'OK', product_ids: ['nao-uuid'] }), 's1')).toThrow('Produto inválido')
   })
+
+  it('recusa oferta sem produto', () => {
+    expect(() => parseOfferForm(fd({ name: 'X', payt_product_code: 'OK' }), 's1')).toThrow('produto')
+  })
 })

@@ -140,50 +140,16 @@ export async function getOffer(id: string, storeId: string): Promise<AdminOffer 
 }
 
 export async function saveOffer(input: OfferInput): Promise<void> {
-  const db = createAdminClient()
-  let offerId = input.id
-
-  if (offerId) {
-    const { data, error } = await db
-      .from('offers')
-      .select('payt_product_code')
-      .eq('id', offerId)
-      .eq('store_id', input.storeId)
-      .maybeSingle()
-    if (error) throw error
-    if (!data) throw new Error('Oferta não encontrada nesta loja. Recarregue a página.')
-    if (data.payt_product_code !== input.paytProductCode) {
-      throw new Error('O código da Payt não pode ser alterado. Cadastre uma nova oferta para usar outro código.')
-    }
+  if (input.productIds.length === 0) throw new Error('Selecione ao menos um produto para a oferta.')
+  const { error } = await createAdminClient().rpc('save_offer_atomic', {
+    p_id: input.id,
+    p_store_id: input.storeId,
+    p_name: input.name,
+    p_product_code: input.paytProductCode,
+    p_product_ids: input.productIds,
+  })
+  if (error?.code === 'PGRST202' || error?.code === '42883') {
+    throw new Error('A migração de persistência administrativa ainda não foi aplicada. A oferta não foi salva.')
   }
-
-  if (input.productIds.length) {
-    const { count, error } = await db.from('products').select('id', { count: 'exact', head: true }).eq('store_id', input.storeId).in('id', input.productIds)
-    if (error) throw error
-    if (count !== input.productIds.length) throw new Error('Há produto de outra loja na oferta.')
-  }
-
-  if (offerId) {
-    const { data, error } = await db.from('offers').update({ name: input.name }).eq('id', offerId).eq('store_id', input.storeId).select('id')
-    if (error) throw error
-    if (!data?.length) throw new Error('Oferta não encontrada nesta loja. Recarregue a página.')
-  } else {
-    const row = { store_id: input.storeId, name: input.name, payt_product_code: input.paytProductCode }
-    const { data, error } = await db.from('offers').insert(row).select('id').single()
-    if (error) throw friendly(error, 'Este código da Payt já está em outra oferta.')
-    offerId = data.id as string
-  }
-
-  // Grava os vínculos novos antes de remover os desmarcados: quem já comprou nunca perde acesso no meio.
-  if (input.productIds.length) {
-    const { error } = await db
-      .from('offer_products')
-      .upsert(input.productIds.map((productId) => ({ offer_id: offerId, product_id: productId })), { onConflict: 'offer_id,product_id', ignoreDuplicates: true })
-    if (error) throw error
-  }
-
-  let removal = db.from('offer_products').delete().eq('offer_id', offerId)
-  if (input.productIds.length) removal = removal.not('product_id', 'in', `(${input.productIds.join(',')})`)
-  const { error: deleteError } = await removal
-  if (deleteError) throw deleteError
+  if (error) throw friendly(error, 'Este código da Payt já está em outra oferta.')
 }

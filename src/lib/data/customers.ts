@@ -116,12 +116,41 @@ export async function changeCustomerEmail(id: string, newEmail: string): Promise
   if (current.email === newEmail) return
   if (await findCustomerByEmail(newEmail)) throw new Error('Já existe um cliente com este email')
 
-  // Ordem pensada para retentativa: o email do cliente muda por último, então se algo
-  // falhar no meio, repetir a ação com o mesmo email novo completa o que faltou.
   const { error: authError } = await db.auth.admin.updateUserById(id, { email: newEmail, email_confirm: true })
   if (authError) throw authError
-  const { error: ordersError } = await db.from('orders').update({ customer_email: newEmail }).eq('customer_email', current.email)
-  if (ordersError) throw ordersError
-  const { error: customerError } = await db.from('customers').update({ email: newEmail }).eq('id', id)
-  if (customerError) throw customerError
+
+  let rpcFailure: unknown
+  try {
+    const { error } = await db.rpc('change_customer_email_atomic', {
+      p_id: id,
+      p_expected_email: current.email,
+      p_new_email: newEmail,
+    })
+    if (error) rpcFailure = error
+  } catch (error) {
+    rpcFailure = error
+  }
+  if (!rpcFailure) return
+
+  // A resposta pode ter se perdido depois do commit. Só reverta Auth após ler
+  // o estado autoritativo da tabela pública; nunca desfaça um commit confirmado.
+  let persisted: CustomerRow | null
+  try {
+    persisted = await getCustomer(id)
+  } catch {
+    throw new Error('Falha ao confirmar a correção de email; é necessária reconciliação manual antes de tentar novamente.')
+  }
+  if (persisted?.email === newEmail) return
+  if (persisted?.email !== current.email) {
+    throw new Error('O email mudou durante a correção; é necessária reconciliação manual antes de tentar novamente.')
+  }
+
+  try {
+    const { error } = await db.auth.admin.updateUserById(id, { email: current.email, email_confirm: true })
+    if (error) throw error
+  } catch {
+    throw new Error('Falha ao reverter o email no Auth; é necessária reconciliação manual antes de tentar novamente.')
+  }
+  const reason = rpcFailure instanceof Error ? rpcFailure.message : String((rpcFailure as { message?: string }).message ?? rpcFailure)
+  throw new Error(`A correção de email não foi salva: ${reason}`)
 }

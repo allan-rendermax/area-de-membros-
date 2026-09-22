@@ -150,5 +150,6 @@ export function parseOfferForm(form: FormData, storeId: string): OfferInput {
   if (!paytProductCode || /\s/.test(paytProductCode)) throw new FormError('Informe o código do produto na Payt, sem espaços.')
   const productIds = form.getAll('product_ids').map(String)
   if (!productIds.every(isUuid)) throw new FormError('Produto inválido.')
+  if (productIds.length === 0) throw new FormError('Selecione ao menos um produto para a oferta.')
   return { id: optionalId(form, 'id'), storeId, name, paytProductCode, productIds }
 }
