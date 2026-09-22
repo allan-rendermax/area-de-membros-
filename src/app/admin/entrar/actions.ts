@@ -10,21 +10,28 @@ export type AdminLoginState = { step: 'email' | 'code'; email: string; error: st
 
 export async function enviarCodigo(_prev: AdminLoginState, formData: FormData): Promise<AdminLoginState> {
   const email = normalizeEmail(String(formData.get('email') ?? ''))
-  if (!isAdminEmail(email, env.adminEmails)) return { step: 'email', email, error: 'Email não autorizado.' }
+  if (!isAdminEmail(email, env.adminEmails)) return { step: 'code', email, error: null }
 
-  const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })
-  if (error) return { step: 'email', email, error: 'Não foi possível enviar o código. Tente novamente.' }
+  try {
+    const supabase = await createClient()
+    await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })
+  } catch {
+    return { step: 'code', email, error: null }
+  }
   return { step: 'code', email, error: null }
 }
 
 export async function verificarCodigo(_prev: AdminLoginState, formData: FormData): Promise<AdminLoginState> {
   const email = normalizeEmail(String(formData.get('email') ?? ''))
   const token = String(formData.get('token') ?? '').replace(/\D/g, '')
-  if (!isAdminEmail(email, env.adminEmails)) return { step: 'email', email, error: 'Email não autorizado.' }
+  if (!isAdminEmail(email, env.adminEmails)) return { step: 'code', email, error: 'Código inválido ou expirado.' }
 
-  const supabase = await createClient()
-  const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
-  if (error) return { step: 'code', email, error: 'Código inválido ou expirado.' }
+  try {
+    const supabase = await createClient()
+    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+    if (error) return { step: 'code', email, error: 'Código inválido ou expirado.' }
+  } catch {
+    return { step: 'code', email, error: 'Código inválido ou expirado.' }
+  }
   redirect('/admin')
 }

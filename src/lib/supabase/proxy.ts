@@ -25,7 +25,8 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname
 
   const storeSlug = protectedStoreSlug(path)
-  const needsAdmin = path.startsWith('/admin') && !path.startsWith('/admin/entrar')
+  const isAdminPath = path === '/admin' || path.startsWith('/admin/')
+  const needsAdmin = isAdminPath && path !== '/admin/entrar'
 
   if (!signedIn && (storeSlug || needsAdmin)) {
     const url = request.nextUrl.clone()

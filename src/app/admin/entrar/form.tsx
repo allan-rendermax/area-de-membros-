@@ -13,7 +13,7 @@ export function AdminLoginForm() {
   if (sent.step === 'code') {
     return (
       <form action={verify} className="flex flex-col gap-4">
-        <p className="text-sm text-texto-suave">Enviamos um código para {sent.email}.</p>
+        <p className="text-sm text-texto-suave">Se este e-mail estiver autorizado, você receberá um código em {sent.email}.</p>
         <input type="hidden" name="email" value={sent.email} />
         <input name="token" inputMode="numeric" autoComplete="one-time-code" maxLength={10} required className={ui.input} placeholder="Código recebido por e-mail" />
         {verified.error && <p role="alert" className="text-sm text-destaque">{verified.error}</p>}
