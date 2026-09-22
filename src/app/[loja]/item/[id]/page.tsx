@@ -7,7 +7,7 @@ import { toVideoEmbed } from '@/lib/content/video'
 import { isHttpUrl, isUuid } from '@/lib/content/url'
 import { loadGrantedProductIds } from '@/lib/data/access'
 import { recordItemAccess } from '@/lib/data/item-access'
-import { getItemWithContext, listModulesWithItems } from '@/lib/data/products'
+import { getItemWithContext, listPublishedItemsInModule } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
 
 export const dynamic = 'force-dynamic'
@@ -37,8 +37,7 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
     redirect(ctx.item.url)
   }
 
-  const modules = await listModulesWithItems(ctx.product.id, { publishedOnly: true })
-  const siblings = modules.find((m) => m.id === ctx.module.id)?.items ?? []
+  const siblings = await listPublishedItemsInModule(ctx.module.id)
   const index = siblings.findIndex((s) => s.id === ctx.item.id)
   const previous = index > 0 ? siblings[index - 1] : null
   const next = index >= 0 && index < siblings.length - 1 ? siblings[index + 1] : null

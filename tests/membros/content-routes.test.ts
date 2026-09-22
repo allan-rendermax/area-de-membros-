@@ -6,14 +6,19 @@ import ProdutoPage from '@/app/[loja]/produto/[slug]/page'
 import VitrinePage from '@/app/[loja]/page'
 import { loadGrantedProductIds, loadStoreAccess } from '@/lib/data/access'
 import { listRecentProductIds, recordItemAccess } from '@/lib/data/item-access'
-import { getItemWithContext, getProductBySlug, listModulesWithItems } from '@/lib/data/products'
+import { getItemWithContext, getProductBySlug, listModulesWithItems, listPublishedItemsInModule } from '@/lib/data/products'
 import type { CustomerRow, Item, Module, Product, Store } from '@/lib/domain/types'
 import { requireStoreSession } from '@/lib/membros/session'
 
 vi.mock('next/navigation', () => ({ notFound: vi.fn(), redirect: vi.fn() }))
 vi.mock('@/lib/data/access', () => ({ loadGrantedProductIds: vi.fn(), loadStoreAccess: vi.fn() }))
 vi.mock('@/lib/data/item-access', () => ({ listRecentProductIds: vi.fn(), recordItemAccess: vi.fn() }))
-vi.mock('@/lib/data/products', () => ({ getItemWithContext: vi.fn(), getProductBySlug: vi.fn(), listModulesWithItems: vi.fn() }))
+vi.mock('@/lib/data/products', () => ({
+  getItemWithContext: vi.fn(),
+  getProductBySlug: vi.fn(),
+  listModulesWithItems: vi.fn(),
+  listPublishedItemsInModule: vi.fn(),
+}))
 vi.mock('@/lib/membros/session', () => ({ requireStoreSession: vi.fn() }))
 
 const store: Store = {
@@ -177,6 +182,7 @@ describe('rota de item', () => {
     vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product], granted: new Set([product.id]) })
     vi.mocked(recordItemAccess).mockResolvedValue()
     vi.mocked(listModulesWithItems).mockResolvedValue([{ ...courseModule, items: [item] }])
+    vi.mocked(listPublishedItemsInModule).mockResolvedValue([item])
   })
 
   it('inicia contexto e permissão antes de qualquer um terminar', async () => {
@@ -257,5 +263,21 @@ describe('rota de item', () => {
     expect(recordItemAccess).toHaveBeenCalledOnce()
     expect(html).toContain(item.title)
     expect(html).toContain('youtube-nocookie.com/embed/dQw4w9WgXcQ')
+  })
+
+  it('renderiza anterior e próximo usando somente irmãos publicados do módulo atual', async () => {
+    const previous = { ...item, id: '22222222-2222-4222-8222-222222222222', title: 'Aula anterior', sortOrder: 0 }
+    const next = { ...item, id: '33333333-3333-4333-8333-333333333333', title: 'Próxima aula', sortOrder: 2 }
+    vi.mocked(listPublishedItemsInModule).mockResolvedValueOnce([previous, item, next])
+
+    const result = await ItemPage(itemProps())
+    const html = renderToStaticMarkup(result)
+
+    expect(html).toContain(`href="/${store.slug}/item/${previous.id}"`)
+    expect(html).toContain('← Anterior')
+    expect(html).toContain(`href="/${store.slug}/item/${next.id}"`)
+    expect(html).toContain('Próximo →')
+    expect(listPublishedItemsInModule).toHaveBeenCalledWith(courseModule.id)
+    expect(listModulesWithItems).not.toHaveBeenCalled()
   })
 })

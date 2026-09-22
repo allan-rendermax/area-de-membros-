@@ -120,18 +120,28 @@ export async function listModulesWithItems(productId: string, opts: { publishedO
 }
 
 export async function getItemWithContext(itemId: string): Promise<{ item: Item; module: Module; product: Product } | null> {
-  const db = createAdminClient()
-  const { data: itemRow, error } = await db.from('items').select(ITEM_COLUMNS).eq('id', itemId).maybeSingle()
+  type DbItemContext = DbItem & { modules: (DbModule & { products: DbProduct | null }) | null }
+  const { data, error } = await createAdminClient()
+    .from('items')
+    .select(`${ITEM_COLUMNS}, modules(${MODULE_COLUMNS}, products(${PRODUCT_COLUMNS}))`)
+    .eq('id', itemId)
+    .maybeSingle()
   if (error) throw error
-  if (!itemRow) return null
-  const item = toItem(itemRow as DbItem)
+  const row = data as DbItemContext | null
+  if (!row?.modules?.products) return null
+  return { item: toItem(row), module: toModule(row.modules), product: toProduct(row.modules.products) }
+}
 
-  const { data: moduleRow, error: moduleError } = await db.from('modules').select(MODULE_COLUMNS).eq('id', item.moduleId).single()
-  if (moduleError) throw moduleError
-  const parent = toModule(moduleRow as DbModule)
-
-  const product = await getProductById(parent.productId)
-  return product ? { item, module: parent, product } : null
+export async function listPublishedItemsInModule(moduleId: string): Promise<Item[]> {
+  const { data, error } = await createAdminClient()
+    .from('items')
+    .select(ITEM_COLUMNS)
+    .eq('module_id', moduleId)
+    .eq('is_published', true)
+    .order('sort_order')
+    .order('created_at')
+  if (error) throw error
+  return (data as DbItem[]).map(toItem)
 }
 
 export async function getProductLinks(storeId: string): Promise<ProductLink[]> {
