@@ -177,7 +177,7 @@ No matcher estático em `src/proxy.ts`, acrescentar `avif` à lista `svg|png|jpg
 
 - [x] Revisão independente por tarefa; correções voltam ao implementador e são reavaliadas.
 - [x] Repetir baseline com backend idêntico (100 ms por Auth/REST), mesmo navegador e três amostras aquecidas; registrar contagem de consultas e tempos completos.
-- [ ] agent-browser: 375×812 / 1440×1000, login/vitrine/produto/arquivo/vídeo, prev/next, isolamento/publicação, bloqueio/reembolso entre navegações, modal/URL/histórico, ausência de URLs privadas no HTML, imagens/overflow/erros. Fixture raster local demonstra srcset/bytes; imagens externas continuam acessíveis por fallback.
-- [ ] Rodar `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`; documentar saídas, avisos anteriores e limites da simulação.
-- [ ] Revisão final do conjunto no modelo mais capaz; resolver achados conforme SDD.
-- [ ] Escrever `docs/status-carregamento-2026-09-22.md`, integrar em main sem sobrescrever trabalho alheio, commit/push em português e confirmar árvore limpa/sincronizada.
+- [x] agent-browser: 375×812 / 1440×1000, login/vitrine/produto/arquivo/vídeo, prev/next, isolamento/publicação, bloqueio/reembolso entre navegações, modal/URL/histórico, ausência de URLs privadas no HTML, imagens/overflow/erros. Fixture raster local demonstra srcset/bytes; imagens externas continuam acessíveis por fallback.
+- [x] Rodar `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`; documentar saídas, avisos anteriores e limites da simulação.
+- [x] Revisão final do conjunto no modelo mais capaz; resolver achados conforme SDD.
+- [x] Escrever `docs/status-carregamento-2026-09-22.md`, integrar em main sem sobrescrever trabalho alheio, commit/push em português e confirmar árvore limpa/sincronizada.
