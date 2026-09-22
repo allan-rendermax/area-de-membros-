@@ -2,9 +2,9 @@
 
 ## Estado de publicação
 
-Esta revisão é feita na branch local `codex/prontidao-lancamento`. As migrações `20260922150000_order_payment_identity.sql` e `20260922210000_admin_atomic_mutations.sql` foram aplicadas ao Supabase de produção em 22/09/2026, após autorização explícita do usuário. A aplicação web ainda não recebeu deploy desta branch.
+Esta revisão foi integrada de `codex/prontidao-lancamento` para `main` por fast-forward e publicada após autorização explícita do usuário. As migrações `20260922150000_order_payment_identity.sql` e `20260922210000_admin_atomic_mutations.sql` foram aplicadas antes do deploy. A Vercel confirmou o commit `dd54b5b` como Ready / Production, com o domínio público atribuído.
 
-Não é uma certificação de “100% pronto”: deploy, compra real com bump/reembolso e confirmação de entrega pelo provedor continuam pendentes de validação operacional.
+Não é uma certificação de “100% pronto”: compra real com bump/reembolso e confirmação de entrega pelo provedor continuam pendentes de validação operacional.
 
 ## Auditoria e decisões
 
@@ -41,7 +41,7 @@ Capturas e fixture: `C:/Users/arqal/.codex/visualizations/2026/09/22/01a0cac0-9d
 ## Pendências operacionais e limites
 
 1. **Concluído:** aplicar as duas migrações no Supabase, na ordem dos timestamps. Backup das definições anteriores guardado; detalhes e verificações abaixo.
-2. Publicar somente a revisão validada depois do SQL e repetir smoke de login aluno/admin, oferta, correção de e-mail e download.
+2. **Deploy concluído:** revisão publicada depois do SQL. Smoke remoto de login aluno, vitrine, produtos, arquivos e bloqueio do admin confirmado. Login admin com OTP, gravação de oferta e correção de e-mail real não foram repetidos em produção; os testes anteriores desses fluxos usaram ambiente sintético.
 3. Conferir códigos de oferta com a Payt e executar compra autorizada com bump, reembolso só do bump e chargeback. Confirmar que o principal permanece acessível quando só o bump é reembolsado; o contrato real não é demonstrado pelo fixture.
 4. Confirmar recebimento do acesso e do código administrativo em uma caixa de teste do proprietário. O documento de e-mail anterior registra entrega, mas esta revisão não envia mensagens.
 5. Configurar suporte e checkout, se a intenção é permitir essas ações dentro da área.
@@ -95,7 +95,7 @@ As capturas `after-install-iphone.png`, `after-long-modal-375.png` e `after-admi
 ## Decisões de execução
 
 - Aprovação autônoma do desenho/plano conforme pedido; se o escopo estiver incorreto, o custo é revisão dos commits.
-- Código permanece em branch local aguardando publicação; o requisito de aplicação do SQL foi concluído no acompanhamento abaixo.
+- Código integrado em `main` e publicado no acompanhamento abaixo; worktree preservado com os registros locais de revisão.
 - Deduplicação durável de mensagens não foi incluída sem definir reserva/recuperação; o custo é possível aviso duplicado em reentrega simultânea.
 - Tarefas com arquivos independentes executadas em paralelo e commits coordenados; o custo de eventual conflito é reconciliação antes da entrega.
 - Happy-dom foi adicionado somente como dependência de desenvolvimento para testes reais de foco/portal; o custo é uma instalação de desenvolvimento maior, sem dependência de produção nova.
@@ -113,3 +113,15 @@ Aplicação autorizada pelo usuário e realizada pelo SQL Editor no Chrome auten
 - O MD5 de cada corpo remoto foi comparado ao corpo do arquivo local com as quebras CRLF inseridas pelo editor: `apply_order_status = 8a4b25e811a3f0ef68287c00dec4fb9e`, `save_offer_atomic = 49ffea6677fe86f34a5dcf4da4257386`, `change_customer_email_atomic = c295cab0789d4a2b0c40f074c539c269`. Todos coincidem.
 - Testes no banco remoto confirmaram a rejeição de oferta sem produtos e de correção de e-mail para cliente inexistente, com as mensagens esperadas. A transação de verificação foi encerrada com `ROLLBACK`; nenhum dado de teste ficou persistido.
 - Esta etapa não executou compra, envio de e-mail, alteração de cliente real, deploy ou push. O próximo passo operacional é publicar a revisão validada e realizar os smokes descritos acima.
+
+## Deploy e smoke de produção — 22/09/2026
+
+- Revisão publicada: `dd54b5bf6543f979aff80c22b23bff2680ee2114`, por push normal de `main` após fast-forward. Nenhum conflito ou force-push.
+- Deploy confirmado Ready / Production: https://vercel.com/rendermax/area-de-membros-/B9qWbjRfQV749cq7cvP9h1SpUabL. Domínio público: https://area-de-membros-taupe.vercel.app/arquitetura. Deploy anterior preservado para rollback: `7xMK5Xz7evYmUsFRGWYRwvH8Eyn5` (`c5e222f`).
+- Verificação local repetida antes do push: 370 testes / 49 arquivos, TypeScript e build concluídos, lint sem erros e com um aviso preexistente. O primeiro build não tinha ambiente no worktree; a tentativa com `--env-file` encontrou incompatibilidade com os workers do Next. O build final passou carregando o ambiente existente em memória e iniciando um processo filho. Nenhum arquivo `.env.local` ou variável da Vercel foi alterado.
+- Agent-browser Vercel 0.38.1: conta de aluno de teste existente entrou, abriu vitrine, Atlas e Bônus. Acesso aos sete itens confirmado pela sessão autenticada: quatro respostas PDF e três ZIP, todas HTTP 200 com bytes iniciais corretos. O comando automático de download não capturou o arquivo aberto em outra aba; a verificação alternativa confirmou o redirecionamento HTML e a resposta do arquivo, sem prometer validação de salvamento completo em disco.
+- Vitrine em iPhone 15 emulado sem overflow horizontal. Captura inspecionada: `C:/Users/arqal/.codex/visualizations/2026/09/22/01a0cac0-9d43-71d3-a285-20fb7f70f43a/lancamento/producao-vitrine-mobile.png`. O clique de instalação não abriu o diálogo HTML nessa execução; a cobertura de foco/portal permanece a dos testes anteriores, sem afirmar nova validação em Safari físico.
+- O aluno acessando `/admin` foi redirecionado a `/admin/entrar`. Tela administrativa abriu, sem solicitar OTP. Nenhum erro de página foi reportado pelo navegador.
+- Smoke HTTP: `/` e `/admin` redirecionam como esperado; login aluno/admin, manifesto, ícone 192, service worker e página offline retornam 200.
+- O login de teste registrou tentativa/dispositivo; o acesso aos itens registrou progresso normal da conta de teste. Nenhuma compra, e-mail, correção de identidade ou edição de oferta real foi efetuada.
+- Este acompanhamento altera apenas documentação; o código da aplicação permanece idêntico ao commit publicado e testado acima.
