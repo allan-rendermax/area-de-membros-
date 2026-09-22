@@ -129,10 +129,11 @@ export async function changeCustomerEmail(id: string, newEmail: string): Promise
     })
     if (error) {
       rpcFailure = error
-      // SQLSTATE means PostgreSQL rejected the statement. PGRST202 means the
-      // function was not found, so no statement ran. Other PostgREST/transport
-      // errors can arrive while the server is still committing the request.
-      definitelyRejected = error.code === 'PGRST202' || /^[0-9A-Z]{5}$/.test(error.code ?? '')
+      // These codes represent a rejected statement in this RPC: uniqueness
+      // violation or our explicit validation exception. PGRST202 means the
+      // function was not found, so no statement ran. Other codes, including
+      // SQLSTATE 08007/40003, cannot prove the transaction did not commit.
+      definitelyRejected = ['23505', 'P0001', 'PGRST202'].includes(error.code ?? '')
     }
   } catch (error) {
     rpcFailure = error

@@ -62,6 +62,12 @@ describe('correção de email', () => {
     expect(io.authUpdate).toHaveBeenCalledTimes(1)
   })
 
+  it.each(['08007', '40003'])('não compensa Auth para SQLSTATE %s de conclusão incerta', async (code) => {
+    io.rpc.mockResolvedValue({ error: { code, message: 'completion unknown' } })
+    await expect(changeCustomerEmail('customer', 'new@example.com')).rejects.toThrow('reconciliação')
+    expect(io.authUpdate).toHaveBeenCalledTimes(1)
+  })
+
   it('sinaliza reconciliação quando não consegue conhecer estado após falha da RPC', async () => {
     io.rpc.mockRejectedValue(new Error('network'))
     io.customerRead.mockResolvedValueOnce({ data: { id: 'customer', email: 'old@example.com', name: 'Name', blocked_at: null }, error: null })
