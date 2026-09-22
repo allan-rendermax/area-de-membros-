@@ -1,6 +1,6 @@
 # Segurança e rotas — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Corrigir falhas comprovadas de login, roteamento e entrega mantendo contratos e visual existentes.
 
@@ -29,24 +29,24 @@
 
 ### Task 1: Corrigir fronteira admin/loja e privacidade do login
 
-**Files:** `src/lib/supabase/proxy.ts`, `src/app/admin/entrar/actions.ts`, novos `tests/auth/proxy.test.ts`, `tests/auth/admin-login-action.test.ts`.
+**Files:** `src/lib/supabase/proxy.ts`, `src/app/admin/entrar/actions.ts`, `src/app/admin/entrar/form.tsx` (texto neutro), novos `tests/auth/proxy.test.ts`, `tests/auth/admin-login-action.test.ts`.
 
 **Interfaces:** Mantém `updateSession(request)` e actions `enviarCodigo`/`verificarCodigo` e `AdminLoginState`.
 
-- [ ] Escrever testes com `NextRequest` real e `createServerClient` simulado:
+- [x] Escrever testes com `NextRequest` real e `createServerClient` simulado:
 ```ts
 expect((await updateSession(new NextRequest('http://localhost/admin-loja/entrar'))).headers.get('location')).toBeNull()
 expect((await updateSession(new NextRequest('http://localhost/admin-loja'))).headers.get('location')).toBe('http://localhost/admin-loja/entrar')
 ```
 Cobrir `administracao`, manifesto, `/admin`, `/admin/pedidos`, `/admin/entrar`, `/admin/entrar-extra`, sessão válida e renovação de cookies existente. Testar actions com `vi.mock`: desconhecido e autorizado têm `{step:'code',email,error:null}` ao solicitar; verificação inválida tem mesmo erro, sem chamada a Supabase para desconhecido; admin verificado redireciona.
-- [ ] Rodar `npx vitest run tests/auth/proxy.test.ts tests/auth/admin-login-action.test.ts` e registrar falhas originais.
-- [ ] Implementar fronteira exata:
+- [x] Rodar `npx vitest run tests/auth/proxy.test.ts tests/auth/admin-login-action.test.ts` e registrar falhas originais.
+- [x] Implementar fronteira exata:
 ```ts
 const isAdminPath = path === '/admin' || path.startsWith('/admin/')
 const needsAdmin = isAdminPath && path !== '/admin/entrar'
 ```
 Para solicitação de OTP, apenas allowlist pode chamar provedor, mas retorno público é uniforme inclusive erro do provedor. Para verificação não autorizada, retornar `{step:'code',email,error:'Código inválido ou expirado.'}`. Manter sucesso autenticado e validação allowlist.
-- [ ] Rodar testes focados e salvar relatório com comandos e RED/GREEN no workspace SDD. Controlador revisa e commita em português.
+- [x] Rodar testes focados e salvar relatório com comandos e RED/GREEN no workspace SDD. Controlador revisa e commita em português.
 
 ### Task 2: Recuperar avisos de produtos novos e destravar lote
 
@@ -54,13 +54,13 @@ Para solicitação de OTP, apenas allowlist pode chamar provedor, mas retorno p�
 
 **Interfaces:** substituir `hasNoticeForStore(customerId,storeId)` por `hasNoticeForProducts(customerId:string,storeId:string,productIds:string[]):Promise<boolean>`; fallback `logFailedNotice` recebe `productIds:string[]`. Nenhuma mudança de schema.
 
-- [ ] Acrescentar reprodução: compra anterior PACK na loja A; nova compra ATLAS em A e bump em B; primeira execução falha em B após gravar A; retry envia A e B; segunda repetição não envia. FakeNotifier deve persistir productIds reais em notices.
+- [x] Acrescentar reprodução: compra anterior PACK na loja A; nova compra ATLAS em A e bump em B; primeira execução falha em B após gravar A; retry envia A e B; segunda repetição não envia. FakeNotifier deve persistir productIds reais em notices.
 ```ts
 expect(notifier.sent.filter(n => n.store.id === ARQ.id).at(-1)?.products.map(p => p.id)).toContain('p-atlas')
 ```
 Cobrir cobertura parcial, separação cliente/loja, vazio não cobre produtos, erro de leitura, fallback com IDs quando conhecidos, statuses já registrados preservados. Para lote: inelegível seguido de elegível e um slot envia segundo; falhas de envio consomem tentativa; limite 100 e cota zero.
-- [ ] Rodar `npx vitest run tests/orders tests/email/batch.test.ts` e registrar RED.
-- [ ] Carregar produtos antes de decidir skip; verificar cada produto por consulta `email_log` com `.eq('customer_id',customerId).eq('store_id',storeId).contains('product_ids',[productId]).limit(1)`, retornando false quando falta cobertura. Sem query que trunque uma união de registros a 1000. Reusar IDs conhecidos em `logFailedNotice`. Recuperação não deve declarar sucesso quando houve erro. Produtos vazios não geram envio.
+- [x] Rodar `npx vitest run tests/orders tests/email/batch.test.ts` e registrar RED.
+- [x] Carregar produtos antes de decidir skip; verificar cada produto por consulta `email_log` com `.eq('customer_id',customerId).eq('store_id',storeId).contains('product_ids',[productId]).limit(1)`, retornando false quando falta cobertura. Sem query que trunque uma união de registros a 1000. Reusar IDs conhecidos em `logFailedNotice`. Recuperação não deve declarar sucesso quando houve erro. Produtos vazios não geram envio.
 ```ts
 let attempted = 0
 for (const group of groups) {
@@ -72,7 +72,7 @@ for (const group of groups) {
 }
 ```
 Calcular remaining como grupos ainda não visitados, preservando resumo anterior; skipped é visitado e não resolvido.
-- [ ] Rodar testes focados, registrar RED/GREEN e diff para revisão/commit pelo controlador.
+- [x] Rodar testes focados, registrar RED/GREEN e diff para revisão/commit pelo controlador.
 
 ### Task 3: Preservar código de oferta cadastrada
 
@@ -80,14 +80,14 @@ Calcular remaining como grupos ainda não visitados, preservando resumo anterior
 
 **Interfaces:** `saveOffer(input:OfferInput):Promise<void>` preservada. Novas ofertas inalteradas.
 
-- [ ] Mockar Supabase e reproduzir alteração OLD → NEW em id existente; esperar rejeição antes de `update`, `upsert` ou `delete`. Cobrir nome editável com mesmo código, criação, oferta ausente, falha na leitura.
+- [x] Mockar Supabase e reproduzir alteração OLD → NEW em id existente; esperar rejeição antes de `update`, `upsert` ou `delete`. Cobrir nome editável com mesmo código, criação, oferta ausente, falha na leitura.
 ```ts
 await expect(saveOffer({ ...input, id:'existing', paytProductCode:'NEW' })).rejects.toThrow('código')
 expect(update).not.toHaveBeenCalled()
 ```
-- [ ] Rodar `npx vitest run tests/admin/offer-persistence.test.ts` e confirmar RED.
-- [ ] Antes de qualquer escrita, consultar oferta por id+loja e impedir mudança de código; update existente não envia `payt_product_code` no payload, evitando sobrescrever valor por corrida. Mostrar campo readonly em edição e instrução textual curta de criar nova oferta para outro código, mantendo estilo. Criação continua com código.
-- [ ] Rodar teste focado e registrar relatório. Controlador revisa e commita.
+- [x] Rodar `npx vitest run tests/admin/offer-persistence.test.ts` e confirmar RED.
+- [x] Antes de qualquer escrita, consultar oferta por id+loja e impedir mudança de código; update existente não envia `payt_product_code` no payload, evitando sobrescrever valor por corrida. Mostrar campo readonly em edição e instrução textual curta de criar nova oferta para outro código, mantendo estilo. Criação continua com código.
+- [x] Rodar teste focado e registrar relatório. Controlador revisa e commita.
 
 ### Task 4: Preparar migração de titularidade e testá-la localmente
 
@@ -95,24 +95,24 @@ expect(update).not.toHaveBeenCalled()
 
 **Interfaces:** assinatura/retorno/grants de `apply_order_status` inalterados. Nenhuma dependência do aplicativo na migração.
 
-- [ ] Instalar `@electric-sql/pglite` como devDependency. Criar banco local em memória com tabela mínima orders compatível com a função, roles anon/authenticated/service_role. Testes executam função anterior e depois migration de arquivo; primeira execução sem migration deve reproduzir e-mail antigo.
+- [x] Instalar `@electric-sql/pglite` como devDependency. Criar banco local em memória com tabela mínima orders compatível com a função, roles anon/authenticated/service_role. Testes executam função anterior e depois migration de arquivo; primeira execução sem migration deve reproduzir e-mail antigo.
 ```ts
 expect(rows[0].customer_email).toBe('novo@example.com')
 ```
 Casos: pendente antigo → pago novo normaliza email e atualiza nome; duplicata e pendente atrasado não sobrescrevem titular; alteração administrativa seguida por duplicata antiga preservada; reembolso e chargeback mantêm titular e revogam; ranks não retrocedem; grant somente service_role.
-- [ ] Verificar RED com função anterior e salvar saída.
-- [ ] Criar `CREATE OR REPLACE FUNCTION` preservando função atual e adicionando ao update:
+- [x] Verificar RED com função anterior e salvar saída.
+- [x] Criar `CREATE OR REPLACE FUNCTION` preservando função atual e adicionando ao update:
 ```sql
 customer_email = case when o.status = 'pendente' and p_status = 'pago' then lower(btrim(p_customer_email)) else o.customer_email end,
 customer_name = case when o.status = 'pendente' and p_status = 'pago' then p_customer_name else o.customer_name end,
 ```
 Normalizar email também na inserção. Preservar SQL security definer, search_path vazio, assinatura e revoke/grant. Não corrigir histórico por heurística. Não executar contra Supabase.
-- [ ] Rodar `npx vitest run tests/orders/payment-identity-sql.test.ts`, registrar GREEN; documentar que depende de aplicação manual. Controlador avisa, revisa e commita arquivo sem aplicar.
+- [x] Rodar `npx vitest run tests/orders/payment-identity-sql.test.ts`, registrar GREEN; documentar que depende de aplicação manual. Controlador avisa, revisa e commita arquivo sem aplicar.
 
 ## Validação integrada e entrega
 
-- [ ] Revisão independente por tarefa, com TDD verificado; revisão final do conjunto.
-- [ ] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build` (separados, não pipeline).
-- [ ] Aplicativo real com fixture backend HTTP local; `agent-browser` em 375px e 1440px. Navegar login, vitrine, produto e item, negar outra loja e painel, abrir compra bloqueada e verificar inexistentes. Evidências fora do código ou relatório em docs.
-- [ ] Registrar resultados e decisões em `docs/status-seguranca-2026-09-22.md`, incluindo SQL pendente e limitações da simulação.
-- [ ] Integrar somente após verificações; commit/push autorizados. Não aplicar SQL nem publicar código que dependa dele.
+- [x] Revisão independente por tarefa, com TDD verificado; revisão final do conjunto.
+- [x] `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build` (separados, não pipeline).
+- [x] Aplicativo real com fixture backend HTTP local; `agent-browser` em 375px e 1440px. Navegar login, vitrine, produto e item, negar outra loja e painel, abrir compra bloqueada e verificar inexistentes. Evidências fora do código ou relatório em docs.
+- [x] Registrar resultados e decisões em `docs/status-seguranca-2026-09-22.md`, incluindo SQL pendente e limitações da simulação.
+- [x] Confirmar integração somente após verificações e autorização de commit/push. O código não depende da migração; SQL não aplicado. Push é a etapa operacional final da sessão.
