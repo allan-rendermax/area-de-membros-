@@ -30,4 +30,3 @@ Confirmar dados publicados, ofertas com conteúdo, links e suporte por leitura q
 ## Validação e entrega
 Baseline 323 testes em 44 arquivos, npm audit produção sem vulnerabilidades conhecidas.
 TDD por correção, revisão independente por tarefa, revisão final. npm test, tsc --noEmit, lint e build. agent-browser com backend sintético: login, vitrine, compra, produto/arquivo/vídeo, revogação/bloqueio, admin CRUD/contexto, mobile, erros/404/PWA. Relatório aponta cobertura e limitações, SQL necessário e ordem de publicação. Não declarar 100% pronto com dependências externas pendentes.
-
