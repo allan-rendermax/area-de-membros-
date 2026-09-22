@@ -7,7 +7,7 @@ export function Hero({ product, storeSlug }: { product: ShelfProduct; storeSlug:
   const href = product.unlocked ? `/${storeSlug}/produto/${product.slug}` : `/${storeSlug}?comprar=${product.slug}`
   return (
     <section className="relative">
-      <AutoCover seed={product.id} title="" imageUrl={product.bannerUrl ?? product.coverUrl} aspect="banner" className="max-h-[72vh] w-full rounded-none sm:aspect-[21/9]" />
+      <AutoCover seed={product.id} title="" imageUrl={product.bannerUrl ?? product.coverUrl} aspect="banner" className="max-h-[72vh] w-full rounded-none sm:aspect-[21/9]" eager />
       <div className="absolute inset-0 bg-gradient-to-t from-fundo via-fundo/40 to-transparent" aria-hidden />
       <div className="absolute inset-0 bg-gradient-to-r from-fundo/80 via-transparent to-transparent" aria-hidden />
       <div className="absolute inset-x-0 bottom-0 px-4 pb-8 sm:px-8 sm:pb-14">

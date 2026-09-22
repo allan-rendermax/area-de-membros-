@@ -1,6 +1,6 @@
 'use client'
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ShelfProduct } from '@/lib/access/access'
 import { AutoCover } from './auto-cover'
@@ -8,7 +8,6 @@ import { LockIcon } from './icons'
 import { POSTER_WIDTH } from './poster-card'
 
 export function LockedPoster({ product, initiallyOpen = false }: { product: ShelfProduct; initiallyOpen?: boolean }) {
-  const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [open, setOpen] = useState(initiallyOpen)
@@ -20,8 +19,8 @@ export function LockedPoster({ product, initiallyOpen = false }: { product: Shel
     const params = new URLSearchParams(searchParams.toString())
     params.delete('comprar')
     const query = params.toString()
-    router.replace(`${pathname}${query ? `?${query}` : ''}${window.location.hash}`, { scroll: false })
-  }, [pathname, router, searchParams])
+    window.history.replaceState(null, '', `${pathname}${query ? `?${query}` : ''}${window.location.hash}`)
+  }, [pathname, searchParams])
 
   useEffect(() => {
     if (!open) return

@@ -32,7 +32,7 @@ export default async function ProdutoPage({ params }: PageProps<'/[loja]/produto
       <StoreHeader store={store} email={customer.email} actions={<InstallAppButton />} />
       <main className="pb-24">
         <section className="relative">
-          <AutoCover seed={product.id} title="" imageUrl={product.bannerUrl ?? product.coverUrl} aspect="banner" className="max-h-[55vh] w-full rounded-none sm:aspect-[21/9]" />
+          <AutoCover seed={product.id} title="" imageUrl={product.bannerUrl ?? product.coverUrl} aspect="banner" className="max-h-[55vh] w-full rounded-none sm:aspect-[21/9]" eager />
           <div className="absolute inset-0 bg-gradient-to-t from-fundo via-fundo/50 to-transparent" aria-hidden />
           <div className="absolute inset-x-0 bottom-0 px-4 pb-6 sm:px-8 sm:pb-10">
             <Link href={`/${store.slug}`} className="text-sm text-texto-suave hover:text-texto">

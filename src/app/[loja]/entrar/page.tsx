@@ -1,5 +1,6 @@
 import { InstallAppButton } from '@/components/membros/install-app-button'
 import { WhatsAppFloating } from '@/components/membros/whatsapp-button'
+import { ContentImage } from '@/components/membros/content-image'
 import { freshFormStamp } from '@/lib/auth/login-guard'
 import { coverGradient } from '@/lib/content/cover'
 import { env } from '@/lib/env'
@@ -10,10 +11,11 @@ import { EntrarForm } from './form'
 
 export const dynamic = 'force-dynamic'
 
+const BACKDROP_SIZES = '(min-width: 1280px) calc(100vw - 34rem), (min-width: 1024px) calc(100vw - 30rem), 100vw'
+
 function Backdrop({ imageUrl, seed }: { imageUrl: string | null; seed: string }) {
   return imageUrl ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={imageUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+    <ContentImage src={imageUrl} sizes={BACKDROP_SIZES} eager className="absolute inset-0 h-full w-full object-cover" />
   ) : (
     <div className="absolute inset-0" style={{ backgroundImage: coverGradient(seed) }} />
   )
