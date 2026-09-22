@@ -89,19 +89,53 @@ function json(body: unknown, status = 200) {
   })
 }
 
-function useResponses(...responses: Response[]) {
+function useTransport(handle: (request: Request) => Response | Promise<Response>) {
   const requests: Request[] = []
   const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    requests.push(new Request(input, init))
-    const response = responses.shift()
-    if (!response) throw new Error('Resposta HTTP falsa não configurada')
-    return response
+    const request = new Request(input, init)
+    requests.push(request)
+    return handle(request)
   })
   admin.createAdminClient.mockImplementation(() => createClient('https://project.supabase.co', 'service-role-test', {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { fetch },
   }))
   return requests
+}
+
+function useResponses(...responses: Response[]) {
+  return useTransport(() => {
+    const response = responses.shift()
+    if (!response) throw new Error('Resposta HTTP falsa não configurada')
+    return response
+  })
+}
+
+function useItemsTable(rows: Record<string, unknown>[]) {
+  return useTransport((request) => {
+    const url = new URL(request.url)
+    const filtered = [...rows]
+
+    for (const [column, expression] of url.searchParams) {
+      if (column === 'select' || column === 'order' || !expression.startsWith('eq.')) continue
+      const expected = expression.slice(3)
+      for (let index = filtered.length - 1; index >= 0; index -= 1) {
+        if (String(filtered[index][column]) !== expected) filtered.splice(index, 1)
+      }
+    }
+
+    const ordering = url.searchParams.get('order')?.split(',') ?? []
+    filtered.sort((left, right) => {
+      for (const clause of ordering) {
+        const [column, direction = 'asc'] = clause.split('.')
+        const comparison = String(left[column]).localeCompare(String(right[column]), undefined, { numeric: true })
+        if (comparison !== 0) return direction === 'desc' ? -comparison : comparison
+      }
+      return 0
+    })
+
+    return json(filtered)
+  })
 }
 
 describe('consultas de conteúdo', () => {
@@ -143,7 +177,24 @@ describe('consultas de conteúdo', () => {
   })
 
   it('busca somente irmãos publicados do módulo na ordem estável', async () => {
-    const requests = useResponses(json([firstRow, secondRow]))
+    const requests = useItemsTable([
+      { ...secondRow, created_at: '2026-09-22T11:00:00Z' },
+      {
+        ...firstRow,
+        id: 'item-hidden',
+        title: 'Aula oculta',
+        is_published: false,
+        created_at: '2026-09-22T09:00:00Z',
+      },
+      {
+        ...firstRow,
+        id: 'item-other-module',
+        module_id: 'module-b',
+        title: 'Aula de outro módulo',
+        created_at: '2026-09-22T08:00:00Z',
+      },
+      { ...firstRow, created_at: '2026-09-22T10:00:00Z' },
+    ])
 
     await expect(listPublishedItemsInModule(moduleRow.id)).resolves.toEqual([
       item,
@@ -159,7 +210,10 @@ describe('consultas de conteúdo', () => {
   })
 
   it('retorna vazio para módulo sem itens publicados', async () => {
-    const requests = useResponses(json([]))
+    const requests = useItemsTable([
+      { ...firstRow, created_at: '2026-09-22T10:00:00Z' },
+      { ...secondRow, module_id: 'module-b', created_at: '2026-09-22T11:00:00Z' },
+    ])
 
     await expect(listPublishedItemsInModule('module-empty')).resolves.toEqual([])
     expect(new URL(requests[0].url).searchParams.get('module_id')).toBe('eq.module-empty')
