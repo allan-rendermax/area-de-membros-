@@ -20,6 +20,17 @@ Medidas e larguras responsivas anteriores preservadas. Produtos, pedidos, oferta
 
 ## Limites
 
-QA visual executado em desenvolvimento local. Build de produção validado separadamente. Nenhuma migração ou alteração no banco de produção. Nenhuma publicação realizada nesta tarefa.
+QA visual autenticado executado em desenvolvimento local. Build de produção validado separadamente. Nenhuma migração ou alteração no banco de produção. A publicação posterior autorizada está registrada abaixo.
 
 Prévia local: http://127.0.0.1:3105/arquitetura. Dados e sessão fictícios; não representa os acessos de clientes reais. Worktree mantido enquanto a prévia estiver aberta.
+
+## Publicação autorizada — 22/09/2026
+
+- Commit publicado: a456e18, enviado por push normal de main ao repositório já conectado à Vercel. Sem force-push, alterações de DNS ou variáveis de produção.
+- Loja confirmada por consulta somente leitura: Arquitetura, slug arquitetura, ID 8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234.
+- Endereço: https://area-de-membros-taupe.vercel.app/arquitetura.
+- Login de arquitetura retornou HTTP 200 com data-member-theme="arquitetura" e a nova apresentação. Conferido visualmente no navegador de produção.
+- hero.webp, atlas.webp e bonus.webp retornaram HTTP 200; SHA-256 de cada resposta coincide com o arquivo local aprovado.
+- A rota /arquitetura sem sessão segue redirecionando ao login (307).
+- /admin/entrar retornou HTTP 200 sem o atributo de tema nem o novo título. O tema permanece restrito ao slug exato arquitetura; os testes anteriores verificaram outra loja sem alterações visuais.
+- Não houve novo login de aluno nem navegação autenticada em produção nesta etapa; catálogo, produto e modal haviam sido validados com fixture local. Não foram modificados clientes, compras ou permissões.
