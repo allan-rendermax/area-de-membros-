@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-fundo: #0b0b0c;
-  --color-superficie: #141414;
-  --color-superficie-2: #1c1c1f;
-  --color-borda: #2a2a2e;
-  --color-texto: #f5f5f5;
-  --color-texto-suave: #a1a1aa;
-  --color-destaque: #e11d2e;
-  --color-destaque-hover: #f43f5e;
+  --color-fundo: var(--member-fundo, #0b0b0c);
+  --color-superficie: var(--member-superficie, #141414);
+  --color-superficie-2: var(--member-superficie-2, #1c1c1f);
+  --color-borda: var(--member-borda, #2a2a2e);
+  --color-texto: var(--member-texto, #f5f5f5);
+  --color-texto-suave: var(--member-texto-suave, #a1a1aa);
+  --color-destaque: var(--member-destaque, #e11d2e);
+  --color-destaque-hover: var(--member-destaque-hover, #f43f5e);
   --color-sucesso: #22c55e;
   --color-alerta: #f59e0b;
   --color-whatsapp: #25d366;
@@ -20,13 +20,13 @@
 }
 
 body {
-  background-color: var(--color-fundo);
-  color: var(--color-texto);
+  background-color: var(--member-fundo, #0b0b0c);
+  color: var(--member-texto, #f5f5f5);
   font-family: var(--font-sans);
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-destaque);
+  outline: 2px solid var(--member-focus, #e11d2e);
   outline-offset: 2px;
 }
 

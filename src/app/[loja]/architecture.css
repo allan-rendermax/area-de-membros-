@@ -1,0 +1,85 @@
+/* Every rule is rooted in the store theme, including portals. Other stores keep their original defaults. */
+[data-member-theme="arquitetura"] {
+  --member-fundo: #111214;
+  --member-superficie: #1c2024;
+  --member-superficie-2: #272d33;
+  --member-borda: #434b54;
+  --member-texto: #f8f9fa;
+  --member-texto-suave: #bdc5cf;
+  --member-destaque: #ff5a16;
+  --member-destaque-hover: #ff783e;
+  --member-focus: #ffd53d;
+  --arq-action: #ffd53d;
+  --arq-action-hover: #ffe477;
+  --arq-ink: #171717;
+  --arq-display: var(--font-arquitetura-display, Impact), 'Arial Narrow', sans-serif;
+}
+[data-member-theme="arquitetura"] :is(a, button).bg-destaque {
+  background-color: var(--arq-action);
+  color: var(--arq-ink);
+  font-weight: 800;
+}
+[data-member-theme="arquitetura"] :is(a, button).bg-destaque:hover { background-color: var(--arq-action-hover); }
+[data-member-theme="arquitetura"] [role="alert"] { color: #ffb4ab; border-color: #a9453e; background: #381a19; }
+[data-member-theme="arquitetura"] [role="dialog"] { border: 1px solid var(--member-borda); box-shadow: 0 24px 100px #0009; }
+[data-member-theme="arquitetura"] .member-header { border-bottom: 1px solid #ffffff12; }
+[data-member-theme="arquitetura"] .member-brand { font-weight: 850; letter-spacing: -.04em; }
+[data-member-theme="arquitetura"] .member-brand-mark { background: var(--member-destaque); color: var(--arq-ink); font-weight: 900; border-radius: 6px 0 6px 0; }
+[data-member-theme="arquitetura"] .arq-nav { display: flex; align-items: center; gap: 24px; margin-left: 32px; font-size: 13px; font-weight: 600; }
+[data-member-theme="arquitetura"] .arq-nav a { padding: 12px 0; }
+[data-member-theme="arquitetura"] .arq-nav a:hover { color: var(--arq-action); }
+[data-member-theme="arquitetura"] .arq-hero { position: relative; isolation: isolate; width: 100%; aspect-ratio: 16/9; max-height: 72vh; overflow: hidden; background: #53210e; }
+[data-member-theme="arquitetura"] .arq-hero-image { object-position: 66% center; }
+[data-member-theme="arquitetura"] .arq-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #111214b0, #11121420 65%, transparent), linear-gradient(0deg, #11121440, transparent 35%); z-index: 1; pointer-events: none; }
+[data-member-theme="arquitetura"] .arq-hero-copy { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding: 20px 16px; }
+[data-member-theme="arquitetura"] .arq-kicker { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; font-weight: 700; }
+[data-member-theme="arquitetura"] .arq-headline { margin-top: 16px; font-family: var(--arq-display); font-weight: 800; font-size: clamp(38px, 5.8vw, 92px); line-height: .96; letter-spacing: -.025em; text-transform: uppercase; max-width: 72%; text-wrap: balance; }
+[data-member-theme="arquitetura"] .arq-headline span { display: block; color: var(--arq-action); }
+[data-member-theme="arquitetura"] .arq-hero-description { max-width: 540px; margin-top: 20px; font-size: clamp(14px, 1.35vw, 20px); line-height: 1.5; }
+[data-member-theme="arquitetura"] .arq-cta { display: inline-flex; align-items: center; justify-content: center; gap: 20px; margin-top: 24px; border-radius: 999px; background: var(--arq-action); color: var(--arq-ink); padding: 14px 26px; font-size: 14px; font-weight: 800; }
+[data-member-theme="arquitetura"] .arq-cta:hover { background: var(--arq-action-hover); }
+[data-member-theme="arquitetura"] .arq-hero-footer { font-size: 9px; letter-spacing: .22em; text-transform: uppercase; margin-top: 26px; font-weight: 600; }
+[data-member-theme="arquitetura"] .arq-library-heading { padding: 30px 16px 18px; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; scroll-margin-top: 100px; }
+[data-member-theme="arquitetura"] .arq-library-heading h2 { font-size: clamp(20px, 2.1vw, 30px); font-weight: 800; letter-spacing: -.035em; }
+[data-member-theme="arquitetura"] .arq-library-heading h2::before { content: ''; width: 28px; height: 6px; background: var(--member-destaque); display: inline-block; margin-right: 12px; vertical-align: middle; border-radius: 3px; }
+[data-member-theme="arquitetura"] .arq-library-heading p { color: var(--member-texto-suave); font-size: 13px; }
+[data-member-theme="arquitetura"] .member-shelf-title { font-weight: 750; letter-spacing: -.025em; }
+[data-member-theme="arquitetura"] .member-poster { border-radius: 6px; }
+[data-member-theme="arquitetura"] .member-poster > p { color: var(--member-texto); font-weight: 600; }
+[data-member-theme="arquitetura"] .member-cover { box-shadow: 0 10px 24px #0003; }
+[data-member-theme="arquitetura"] .arq-auto-cover { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; padding: 8%; background: linear-gradient(135deg, #ff7b17, #ff4b0a 65%, #ffd53d); color: var(--arq-ink); }
+[data-member-theme="arquitetura"] .arq-auto-cover::after { content: ''; position: absolute; width: 70%; height: 115%; top: 10%; right: -44%; transform: rotate(28deg); background: #ffd53d; opacity: .85; }
+[data-member-theme="arquitetura"] .arq-auto-cover small { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; font-weight: 800; z-index: 1; }
+[data-member-theme="arquitetura"] .arq-auto-cover strong { font-family: var(--arq-display); text-transform: uppercase; font-size: clamp(20px, 2.5vw, 36px); font-weight: 800; line-height: 1.02; z-index: 1; overflow-wrap: anywhere; }
+[data-member-theme="arquitetura"] .arq-auto-cover[data-aspect="episode"] strong { font-size: clamp(20px, 1.8vw, 28px); padding-bottom: 22px; }
+[data-member-theme="arquitetura"] .arq-auto-cover[data-aspect="episode"] { background: linear-gradient(120deg, #faf9f4 0 70%, #ffd53d 70% 80%, #ff5a16 80%); }
+[data-member-theme="arquitetura"] .arq-auto-cover[data-muted="true"] { filter: saturate(.6); opacity: .7; }
+[data-member-theme="arquitetura"] .member-product-banner h1 { font-family: var(--arq-display); font-weight: 800; text-transform: uppercase; font-size: clamp(30px, 4vw, 64px); }
+[data-member-theme="arquitetura"] .member-login-copy h2 { font-family: var(--arq-display); text-transform: uppercase; font-size: clamp(48px, 4.5vw, 76px); line-height: 1; }
+[data-member-theme="arquitetura"] .member-login-copy h2 span { color: var(--arq-action); }
+[data-member-theme="arquitetura"] .member-login-panel h1 { font-weight: 800; font-size: 28px; letter-spacing: -.04em; }
+[data-member-theme="arquitetura"] .member-login-panel input:focus { border-color: var(--arq-action); }
+[data-member-theme="arquitetura"] [aria-current="page"] { box-shadow: inset 3px 0 var(--member-destaque); }
+@media (min-width: 640px) {
+  [data-member-theme="arquitetura"] .arq-hero { aspect-ratio: 21/9; }
+  [data-member-theme="arquitetura"] .arq-hero-copy { padding: 32px; }
+  [data-member-theme="arquitetura"] .arq-library-heading { padding-left: 32px; padding-right: 32px; }
+}
+@media (max-width: 900px) {
+  [data-member-theme="arquitetura"] .arq-hero-footer { display: none; }
+  [data-member-theme="arquitetura"] .arq-nav { gap: 16px; margin-left: 12px; }
+}
+@media (max-width: 639px) {
+  [data-member-theme="arquitetura"] .arq-nav { display: none; }
+  [data-member-theme="arquitetura"] .arq-headline { font-size: clamp(29px, 7.3vw, 46px); max-width: 85%; margin-top: 8px; }
+  [data-member-theme="arquitetura"] .arq-kicker { font-size: 9px; letter-spacing: .16em; }
+  [data-member-theme="arquitetura"] .arq-hero-description { display: none; }
+  [data-member-theme="arquitetura"] .arq-cta { margin-top: 15px; padding: 10px 16px; min-height: 42px; font-size: 12px; gap: 12px; }
+  [data-member-theme="arquitetura"] .arq-hero::after { background: linear-gradient(90deg, #111214bf, #11121445); }
+  [data-member-theme="arquitetura"] .arq-auto-cover strong { font-size: 25px; }
+  [data-member-theme="arquitetura"] .member-product-banner .member-product-description { -webkit-line-clamp: 2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-member-theme="arquitetura"] *, [data-member-theme="arquitetura"] *::before, [data-member-theme="arquitetura"] *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+  [data-member-theme="arquitetura"] .member-poster:hover { transform: none; }
+}

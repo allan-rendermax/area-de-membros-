@@ -38,7 +38,7 @@ export function LockedPoster({ product, initiallyOpen = false }: { product: Shel
           setOpen(true)
         }}
         aria-label={`${product.title} — bloqueado, ver detalhes`}
-        className={`${POSTER_WIDTH} group block text-left transition-transform duration-200 hover:scale-[1.04]`}
+        className={`member-poster ${POSTER_WIDTH} group block text-left transition-transform duration-200 hover:scale-[1.04]`}
       >
         <div className="relative">
           <AutoCover seed={product.id} title={product.title} imageUrl={product.coverUrl} aspect="poster" muted />

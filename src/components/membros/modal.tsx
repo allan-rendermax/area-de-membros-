@@ -2,6 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useSyncExternalStore, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useMemberTheme } from './member-theme'
 
 type ModalProps = {
   open: boolean
@@ -46,6 +47,7 @@ function controls(panel: HTMLElement) {
 }
 
 function ModalContent({ onClose, labelledBy, children, className = 'max-w-lg', backdropClassName = 'bg-fundo/80' }: Omit<ModalProps, 'open'>) {
+  const theme = useMemberTheme()
   const panelRef = useRef<HTMLDivElement>(null)
   const close = useEffectEvent(onClose)
 
@@ -99,6 +101,7 @@ function ModalContent({ onClose, labelledBy, children, className = 'max-w-lg', b
 
   return (
     <div
+      data-member-theme={theme}
       className={`fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4 ${backdropClassName}`}
       onClick={(event) => { if (event.target === event.currentTarget) onClose() }}
     >

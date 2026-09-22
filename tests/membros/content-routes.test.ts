@@ -107,6 +107,25 @@ describe('vitrine do aluno', () => {
 
     expect(loadStoreAccess).toHaveBeenCalledWith(store.id, customer)
   })
+
+  it('mostra identidade e arte só na arquitetura sem inventar produtos', async () => {
+    const arq = { ...store, slug: 'arquitetura' }
+    vi.mocked(requireStoreSession).mockResolvedValue({ store: arq, customer })
+    vi.mocked(loadStoreAccess).mockResolvedValue({
+      customer, products: [{ ...product, slug: 'atlas-visual-das-patologias' }], granted: new Set([product.id]),
+    })
+    const html = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: arq.slug }), searchParams: Promise.resolve({}) }))
+    expect(html).toContain('Menos tempo no zero.')
+    expect(html).toContain('atlas.webp')
+    expect(html).toContain('/arquitetura/produto/atlas-visual-das-patologias')
+    expect(html).not.toContain('PROJETOS RESIDENCIAIS')
+
+    vi.mocked(requireStoreSession).mockResolvedValue({ store, customer })
+    const other = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({}) }))
+    expect(other).not.toContain('Menos tempo no zero.')
+    expect(other).not.toContain('/themes/arquitetura/')
+    expect(other).not.toContain('Meus materiais')
+  })
 })
 
 describe('rota de produto', () => {

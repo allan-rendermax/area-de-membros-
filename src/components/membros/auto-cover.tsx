@@ -1,5 +1,8 @@
+'use client'
+
 import { coverGradient } from '@/lib/content/cover'
 import { ContentImage } from './content-image'
+import { useMemberTheme } from './member-theme'
 
 const ASPECT = { poster: 'aspect-[2/3]', banner: 'aspect-video', episode: 'aspect-video' } as const
 const SIZES = {
@@ -27,8 +30,9 @@ export function AutoCover({
   eager?: boolean
   sizes?: string
 }) {
+  const theme = useMemberTheme()
   return (
-    <div className={`relative overflow-hidden rounded-md bg-superficie-2 ${ASPECT[aspect]} ${className}`}>
+    <div className={`member-cover relative overflow-hidden rounded-md bg-superficie-2 ${ASPECT[aspect]} ${className}`}>
       {imageUrl ? (
         <ContentImage
           src={imageUrl}
@@ -36,6 +40,11 @@ export function AutoCover({
           eager={eager}
           className={`h-full w-full object-cover ${muted ? 'opacity-40 grayscale' : ''}`}
         />
+      ) : theme === 'arquitetura' ? (
+        <div className="arq-auto-cover" data-aspect={aspect} data-muted={muted}>
+          <small>Arquitetura · Seu acervo</small>
+          {title && <strong className="line-clamp-4">{title}</strong>}
+        </div>
       ) : (
         <div className={`flex h-full w-full items-end p-3 ${muted ? 'opacity-50' : ''}`} style={{ backgroundImage: coverGradient(seed) }}>
           {title && <span className="line-clamp-3 text-sm leading-tight font-bold text-texto sm:text-base">{title}</span>}

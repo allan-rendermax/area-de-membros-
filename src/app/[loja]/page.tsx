@@ -10,6 +10,8 @@ import { loadStoreAccess } from '@/lib/data/access'
 import { listRecentProductIds } from '@/lib/data/item-access'
 import { requireStoreSession } from '@/lib/membros/session'
 import { supportHref } from '@/lib/support/whatsapp'
+import { getMemberTheme, withMemberArtwork } from '@/lib/membros/theme'
+import { ArchitectureHero } from '@/components/membros/architecture-hero'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +22,8 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
     loadStoreAccess(store.id, customer),
     listRecentProductIds(customer.id, store.id),
   ])
-  const shelf = buildShelf(products, granted)
+  const architecture = getMemberTheme(store.slug) === 'arquitetura'
+  const shelf = buildShelf(products.map((product) => withMemberArtwork(product, store.slug)), granted)
   const tracks = buildTracks(shelf)
   const continuing = recentIds.flatMap((id) => shelf.unlocked.filter((p) => p.id === id))
   const openSlug = typeof comprar === 'string' ? comprar : null
@@ -30,8 +33,14 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
     <>
       <StoreHeader store={store} email={customer.email} actions={<InstallAppButton />} />
       <main className="pb-24">
-        {shelf.featured && <Hero product={shelf.featured} storeSlug={store.slug} />}
-        <div className={`relative flex flex-col gap-8 ${shelf.featured ? '-mt-2 sm:-mt-8' : 'pt-6'}`}>
+        {architecture ? <ArchitectureHero /> : shelf.featured && <Hero product={shelf.featured} storeSlug={store.slug} />}
+        {architecture && (
+          <div id="materiais" className="arq-library-heading">
+            <h2>Tudo pronto para você criar</h2>
+            <p>Seu acervo de arquitetura, em um só lugar.</p>
+          </div>
+        )}
+        <div className={`relative flex flex-col gap-8 ${architecture ? '' : shelf.featured ? '-mt-2 sm:-mt-8' : 'pt-6'}`}>
           {continuing.length > 0 && (
             <Carousel title="Continuar">
               {continuing.map((p) => (

@@ -1,17 +1,20 @@
 'use client'
 
 import { useRef } from 'react'
+import { useMemberTheme } from './member-theme'
 
 export function Carousel({ title, children }: { title: string; children: React.ReactNode }) {
   const track = useRef<HTMLDivElement>(null)
+  const theme = useMemberTheme()
   const scroll = (direction: 1 | -1) => {
     const el = track.current
-    if (el) el.scrollBy({ left: direction * el.clientWidth * 0.9, behavior: 'smooth' })
+    const reducedMotion = theme === 'arquitetura' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (el) el.scrollBy({ left: direction * el.clientWidth * 0.9, behavior: reducedMotion ? 'auto' : 'smooth' })
   }
 
   return (
     <section className="group/row relative" aria-label={title}>
-      <h2 className="mb-3 px-4 text-lg font-semibold sm:px-8 sm:text-xl">{title}</h2>
+      <h2 className="member-shelf-title mb-3 px-4 text-lg font-semibold sm:px-8 sm:text-xl">{title}</h2>
       <div ref={track} className="sem-barra flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pt-1 pb-4 sm:scroll-px-8 sm:gap-4 sm:px-8">
         {children}
       </div>

@@ -10,6 +10,7 @@ import { loadGrantedProductIds } from '@/lib/data/access'
 import { getProductBySlug, listModulesWithItems } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
 import { supportHref } from '@/lib/support/whatsapp'
+import { withMemberArtwork } from '@/lib/membros/theme'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,20 +27,21 @@ export default async function ProdutoPage({ params }: PageProps<'/[loja]/produto
 
   const modules = (await listModulesWithItems(product.id, { publishedOnly: true })).filter((m) => m.items.length > 0)
   const support = supportHref(store, 'geral', customer.email)
+  const artwork = withMemberArtwork(product, store.slug)
 
   return (
     <>
       <StoreHeader store={store} email={customer.email} actions={<InstallAppButton />} />
       <main className="pb-24">
-        <section className="relative">
-          <AutoCover seed={product.id} title="" imageUrl={product.bannerUrl ?? product.coverUrl} aspect="banner" className="max-h-[55vh] w-full rounded-none sm:aspect-[21/9]" eager />
+        <section className="member-product-banner relative">
+          <AutoCover seed={product.id} title="" imageUrl={artwork.bannerUrl ?? artwork.coverUrl} aspect="banner" className="max-h-[55vh] w-full rounded-none sm:aspect-[21/9]" eager />
           <div className="absolute inset-0 bg-gradient-to-t from-fundo via-fundo/50 to-transparent" aria-hidden />
           <div className="absolute inset-x-0 bottom-0 px-4 pb-6 sm:px-8 sm:pb-10">
             <Link href={`/${store.slug}`} className="text-sm text-texto-suave hover:text-texto">
               ← Voltar
             </Link>
             <h1 className="mt-2 max-w-3xl text-3xl leading-tight font-extrabold sm:text-5xl">{product.title}</h1>
-            {product.description && <p className="mt-3 line-clamp-4 max-w-2xl text-sm text-texto-suave sm:text-base">{product.description}</p>}
+            {product.description && <p className="member-product-description mt-3 line-clamp-4 max-w-2xl text-sm text-texto-suave sm:text-base">{product.description}</p>}
           </div>
         </section>
 
