@@ -70,6 +70,7 @@ export type ProductInput = {
   storeId: string
   slug: string
   title: string
+  track: string
   description: string
   coverUrl: string | null
   bannerUrl: string | null
@@ -90,6 +91,7 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
     storeId,
     slug,
     title,
+    track: text(form, 'track'),
     description: text(form, 'description'),
     coverUrl: optionalUrl(form, 'cover_url', 'Capa'),
     bannerUrl: optionalUrl(form, 'banner_url', 'Banner'),

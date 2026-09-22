@@ -5,6 +5,7 @@ import { getAdminStore } from '@/lib/admin/current-store'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
 import { getProductById, listModulesWithItems } from '@/lib/data/products'
+import { listTracks } from '@/lib/data/products-admin'
 import { ContentEditor } from '../content-editor'
 import { ProductForm } from '../product-form'
 
@@ -17,6 +18,7 @@ export default async function ProdutoAdminPage({ params, searchParams }: PagePro
 
   const showContent = Boolean(product) && aba === 'conteudo'
   const modules = product && showContent ? await listModulesWithItems(product.id, { publishedOnly: false }) : []
+  const tracks = showContent ? [] : await listTracks(store.id)
 
   return (
     <div className="flex flex-col gap-4">
@@ -32,7 +34,7 @@ export default async function ProdutoAdminPage({ params, searchParams }: PagePro
         </nav>
       )}
       {typeof msg === 'string' && <p role="status" className={ui.notice}>{msg}</p>}
-      {product && showContent ? <ContentEditor productId={product.id} modules={modules} /> : <ProductForm product={product} />}
+      {product && showContent ? <ContentEditor productId={product.id} modules={modules} /> : <ProductForm product={product} tracks={tracks} />}
     </div>
   )
 }

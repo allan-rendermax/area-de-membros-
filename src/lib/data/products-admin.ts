@@ -10,12 +10,24 @@ function friendly(error: { code?: string; message: string }, duplicateMessage: s
 
 const now = () => new Date().toISOString()
 
+export async function listTracks(storeId: string): Promise<string[]> {
+  const { data, error } = await createAdminClient()
+    .from('products')
+    .select('track')
+    .eq('store_id', storeId)
+    .neq('track', '')
+  if (error) throw error
+  return [...new Set(data.map((row) => (row.track as string).trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+}
+
 export async function saveProduct(input: ProductInput): Promise<string> {
   const db = createAdminClient()
   const row = {
     store_id: input.storeId,
     slug: input.slug,
     title: input.title,
+    track: input.track,
     description: input.description,
     cover_url: input.coverUrl,
     banner_url: input.bannerUrl,

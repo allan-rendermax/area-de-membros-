@@ -36,6 +36,7 @@ export type Product = {
   storeId: string
   slug: string
   title: string
+  track: string
   description: string
   coverUrl: string | null
   bannerUrl: string | null

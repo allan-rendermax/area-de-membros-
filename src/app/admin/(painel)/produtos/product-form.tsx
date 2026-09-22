@@ -3,7 +3,7 @@ import { AutoCover } from '@/components/membros/auto-cover'
 import type { Product } from '@/lib/domain/types'
 import { salvarProduto } from './actions'
 
-export function ProductForm({ product }: { product: Product | null }) {
+export function ProductForm({ product, tracks }: { product: Product | null; tracks: string[] }) {
   const seed = product?.id ?? 'novo-produto'
   return (
     <form action={salvarProduto} className={`${ui.card} grid gap-6 p-5 lg:grid-cols-[240px_1fr]`}>
@@ -26,6 +26,13 @@ export function ProductForm({ product }: { product: Product | null }) {
 
       <div className="flex flex-col gap-4">
         <label className={ui.label}>Título<input name="title" required defaultValue={product?.title} className={ui.input} /></label>
+        <label className={ui.label}>
+          Trilha
+          <input name="track" list="product-tracks" defaultValue={product?.track ?? ''} className={ui.input} />
+        </label>
+        <datalist id="product-tracks">
+          {tracks.map((track) => <option key={track} value={track} />)}
+        </datalist>
         <label className={ui.label}>
           Endereço (vazio = gerado do título)
           <input name="slug" defaultValue={product?.slug} pattern="[a-z0-9]+(-[a-z0-9]+)*" className={ui.input} />

@@ -20,7 +20,7 @@ export default async function ProdutosPage() {
         <table className={ui.table}>
           <thead className="border-b border-borda">
             <tr>
-              <th className={ui.th}>Capa</th><th className={ui.th}>Título</th><th className={ui.th}>Endereço</th>
+              <th className={ui.th}>Capa</th><th className={ui.th}>Título</th><th className={ui.th}>Trilha</th><th className={ui.th}>Endereço</th>
               <th className={ui.th}>Ordem</th><th className={ui.th}>Situação</th>
             </tr>
           </thead>
@@ -29,6 +29,7 @@ export default async function ProdutosPage() {
               <tr key={p.id}>
                 <td className={ui.td}><div className="w-10"><AutoCover seed={p.id} title="" imageUrl={p.coverUrl} aspect="poster" /></div></td>
                 <td className={ui.td}><Link href={`/admin/produtos/${p.id}`} className="font-medium hover:text-destaque">{p.title}</Link></td>
+                <td className={ui.td}>{p.track || '—'}</td>
                 <td className={`${ui.td} text-texto-suave`}>/{p.slug}</td>
                 <td className={ui.td}>{p.sortOrder}</td>
                 <td className={ui.td}>
@@ -38,7 +39,7 @@ export default async function ProdutosPage() {
               </tr>
             ))}
             {products.length === 0 && (
-              <tr><td colSpan={5} className={`${ui.td} text-texto-suave`}>Nenhum produto nesta loja.</td></tr>
+              <tr><td colSpan={6} className={`${ui.td} text-texto-suave`}>Nenhum produto nesta loja.</td></tr>
             )}
           </tbody>
         </table>

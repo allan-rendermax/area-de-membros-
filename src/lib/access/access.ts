@@ -15,6 +15,8 @@ export type ShelfProduct = {
   id: string
   slug: string
   title: string
+  track: string
+  sortOrder: number
   description: string
   coverUrl: string | null
   bannerUrl: string | null
@@ -32,6 +34,8 @@ export function buildShelf(products: Product[], granted: Set<string>): Shelf {
       id: p.id,
       slug: p.slug,
       title: p.title,
+      track: p.track,
+      sortOrder: p.sortOrder,
       description: p.description,
       coverUrl: p.coverUrl,
       bannerUrl: p.bannerUrl,
@@ -44,4 +48,30 @@ export function buildShelf(products: Product[], granted: Set<string>): Shelf {
   const featuredId = visible.find((p) => p.isFeatured)?.id
   const featured = all.find((p) => p.id === featuredId) ?? unlocked[0] ?? locked[0] ?? null
   return { featured, unlocked, locked }
+}
+
+export type Track = { name: string; products: ShelfProduct[] }
+
+export function buildTracks(shelf: Shelf): Track[] {
+  const products = [...shelf.unlocked, ...shelf.locked]
+  const allUntracked = products.every((p) => !p.track.trim())
+  const groups = new Map<string, ShelfProduct[]>()
+
+  for (const product of products) {
+    const name = product.track.trim() || (allUntracked ? 'Seus produtos' : 'Outros')
+    const group = groups.get(name)
+    if (group) group.push(product)
+    else groups.set(name, [product])
+  }
+
+  return [...groups].map(([name, products]) => ({
+    name,
+    products: products.sort((a, b) => Number(b.unlocked) - Number(a.unlocked) || a.sortOrder - b.sortOrder),
+    hasUnlocked: products.some((p) => p.unlocked),
+    minSortOrder: products.reduce((min, p) => Math.min(min, p.sortOrder), Infinity),
+  })).sort((a, b) =>
+    Number(b.hasUnlocked) - Number(a.hasUnlocked)
+    || a.minSortOrder - b.minSortOrder
+    || a.name.localeCompare(b.name, 'pt-BR'),
+  ).map(({ name, products }) => ({ name, products }))
 }

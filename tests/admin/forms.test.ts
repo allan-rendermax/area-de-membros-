@@ -31,13 +31,15 @@ describe('parseProductForm', () => {
   it('lê campos, marcações e ordem', () => {
     expect(
       parseProductForm(
-        fd({ title: 'Atlas Visual', description: ' texto ', checkout_url: 'https://payt.com/x', sort_order: '3', is_featured: 'on', is_published: 'on' }),
+        fd({ title: 'Atlas Visual', track: ' Patologias ', description: ' texto ', checkout_url: 'https://payt.com/x', sort_order: '3', is_featured: 'on', is_published: 'on' }),
         's1',
       ),
     ).toEqual({
-      id: null, storeId: 's1', slug: 'atlas-visual', title: 'Atlas Visual', description: 'texto',
+      id: null, storeId: 's1', slug: 'atlas-visual', title: 'Atlas Visual', track: 'Patologias', description: 'texto',
       coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', isFeatured: true, sortOrder: 3, isPublished: true,
     })
+    expect(parseProductForm(fd({ title: 'Atlas Visual' }), 's1').track).toBe('')
+    expect(parseProductForm(fd({ title: 'Atlas Visual', track: '   ' }), 's1').track).toBe('')
   })
 
   it('recusa título vazio e endereço inválido', () => {

@@ -11,7 +11,7 @@ const links: ProductLink[] = [
 
 function product(id: string, sortOrder: number, extra: Partial<Product> = {}): Product {
   return {
-    id, storeId: 's1', slug: id, title: id, description: `sobre ${id}`,
+    id, storeId: 's1', slug: id, title: id, track: '', description: `sobre ${id}`,
     coverUrl: null, bannerUrl: null, checkoutUrl: `https://payt/${id}`,
     isFeatured: false, sortOrder, isPublished: true, ...extra,
   }

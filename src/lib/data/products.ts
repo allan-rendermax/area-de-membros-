@@ -2,7 +2,7 @@ import type { Item, ItemKind, Module, ModuleWithItems, Product, ProductLink, Sto
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const PRODUCT_COLUMNS =
-  'id, store_id, slug, title, description, cover_url, banner_url, checkout_url, is_featured, sort_order, is_published'
+  'id, store_id, slug, title, track, description, cover_url, banner_url, checkout_url, is_featured, sort_order, is_published'
 export const MODULE_COLUMNS = 'id, product_id, title, sort_order, is_published'
 export const ITEM_COLUMNS = 'id, module_id, title, kind, url, cover_url, sort_order, is_published'
 
@@ -11,6 +11,7 @@ export type DbProduct = {
   store_id: string
   slug: string
   title: string
+  track: string
   description: string
   cover_url: string | null
   banner_url: string | null
@@ -39,6 +40,7 @@ export function toProduct(row: DbProduct): Product {
     storeId: row.store_id,
     slug: row.slug,
     title: row.title,
+    track: row.track,
     description: row.description,
     coverUrl: row.cover_url,
     bannerUrl: row.banner_url,
