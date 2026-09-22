@@ -2,9 +2,9 @@
 
 ## Estado de publicação
 
-Esta revisão é feita na branch local `codex/prontidao-lancamento`. A produção não foi alterada. O usuário confirmou que `20260922150000_order_payment_identity.sql` ainda não foi aplicada. A publicação das novas operações administrativas também depende da migração `20260922210000_admin_atomic_mutations.sql`, entregue localmente. Não publicar esta branch antes das duas migrações.
+Esta revisão é feita na branch local `codex/prontidao-lancamento`. As migrações `20260922150000_order_payment_identity.sql` e `20260922210000_admin_atomic_mutations.sql` foram aplicadas ao Supabase de produção em 22/09/2026, após autorização explícita do usuário. A aplicação web ainda não recebeu deploy desta branch.
 
-Não é uma certificação de “100% pronto”: aplicação do SQL, compra real com bump/reembolso e confirmação de entrega pelo provedor dependem de validação operacional.
+Não é uma certificação de “100% pronto”: deploy, compra real com bump/reembolso e confirmação de entrega pelo provedor continuam pendentes de validação operacional.
 
 ## Auditoria e decisões
 
@@ -40,7 +40,7 @@ Capturas e fixture: `C:/Users/arqal/.codex/visualizations/2026/09/22/01a0cac0-9d
 
 ## Pendências operacionais e limites
 
-1. Aplicar as duas migrações acima no Supabase, na ordem dos timestamps, antes do deploy. A segunda é aditiva e concede execução das RPCs somente ao service_role. Guardar backup operacional antes da aplicação.
+1. **Concluído:** aplicar as duas migrações no Supabase, na ordem dos timestamps. Backup das definições anteriores guardado; detalhes e verificações abaixo.
 2. Publicar somente a revisão validada depois do SQL e repetir smoke de login aluno/admin, oferta, correção de e-mail e download.
 3. Conferir códigos de oferta com a Payt e executar compra autorizada com bump, reembolso só do bump e chargeback. Confirmar que o principal permanece acessível quando só o bump é reembolsado; o contrato real não é demonstrado pelo fixture.
 4. Confirmar recebimento do acesso e do código administrativo em uma caixa de teste do proprietário. O documento de e-mail anterior registra entrega, mas esta revisão não envia mensagens.
@@ -50,7 +50,7 @@ Reentregas simultâneas podem duplicar e-mails; os pedidos continuam únicos. N�
 
 ## Validação final do código
 
-Código validado: `9734282`. Nenhuma migração foi aplicada remotamente, nenhuma mensagem real foi enviada e nenhum deploy/push foi executado.
+Código validado: `9734282`. Na revisão inicial, nenhuma migração havia sido aplicada remotamente. As duas foram aplicadas posteriormente conforme registro abaixo. Nenhuma mensagem real foi enviada e nenhum deploy/push foi executado nesta revisão.
 
 | Verificação | Resultado observado |
 |---|---|
@@ -95,9 +95,21 @@ As capturas `after-install-iphone.png`, `after-long-modal-375.png` e `after-admi
 ## Decisões de execução
 
 - Aprovação autônoma do desenho/plano conforme pedido; se o escopo estiver incorreto, o custo é revisão dos commits.
-- Código fica em branch local até aplicação do SQL; o custo é adiar publicação.
+- Código permanece em branch local aguardando publicação; o requisito de aplicação do SQL foi concluído no acompanhamento abaixo.
 - Deduplicação durável de mensagens não foi incluída sem definir reserva/recuperação; o custo é possível aviso duplicado em reentrega simultânea.
 - Tarefas com arquivos independentes executadas em paralelo e commits coordenados; o custo de eventual conflito é reconciliação antes da entrega.
 - Happy-dom foi adicionado somente como dependência de desenvolvimento para testes reais de foco/portal; o custo é uma instalação de desenvolvimento maior, sem dependência de produção nova.
 - O limite de agentes impediu retomar o primeiro implementador; seu revisor fez uma correção delimitada e outro agente a revisou. O custo foi menor isolamento de contexto nessa correção, compensado pela nova revisão independente.
 - A paleta foi preservada e o achado de contraste registrado; o custo é manter essa limitação de acessibilidade até ajuste visual autorizado.
+
+## Aplicação das migrações — acompanhamento de 22/09/2026
+
+Aplicação autorizada pelo usuário e realizada pelo SQL Editor no Chrome autenticado, no projeto `area-de-membros` (`tujtwlrxpetpiatlbrps`), branch `main / PRODUCTION`.
+
+- Antes da execução, somente `apply_order_status` existia entre as três funções. A definição e a ACL anteriores foram consultadas e guardadas em `C:/Users/arqal/.codex/visualizations/2026/09/22/01a0cac0-9d43-71d3-a285-20fb7f70f43a/migracoes/pre-migration-functions.sql`. É backup das funções afetadas, não backup completo do banco.
+- Os dois scripts foram executados na ordem, dentro de uma transação com `BEGIN`/`COMMIT`. Foi emitido `NOTIFY pgrst, 'reload schema'`.
+- As versões `20260922150000` (`order_payment_identity`) e `20260922210000` (`admin_atomic_mutations`) foram registradas em `supabase_migrations.schema_migrations`, com o SQL correspondente. Consulta posterior confirmou os dois registros.
+- As três funções permitem execução ao `service_role`; `anon` e `authenticated` retornaram `false` para `has_function_privilege`. ACLs contêm apenas `postgres` e `service_role`. `search_path` vazio confirmado em todas; somente `apply_order_status` usa `SECURITY DEFINER`.
+- O MD5 de cada corpo remoto foi comparado ao corpo do arquivo local com as quebras CRLF inseridas pelo editor: `apply_order_status = 8a4b25e811a3f0ef68287c00dec4fb9e`, `save_offer_atomic = 49ffea6677fe86f34a5dcf4da4257386`, `change_customer_email_atomic = c295cab0789d4a2b0c40f074c539c269`. Todos coincidem.
+- Testes no banco remoto confirmaram a rejeição de oferta sem produtos e de correção de e-mail para cliente inexistente, com as mensagens esperadas. A transação de verificação foi encerrada com `ROLLBACK`; nenhum dado de teste ficou persistido.
+- Esta etapa não executou compra, envio de e-mail, alteração de cliente real, deploy ou push. O próximo passo operacional é publicar a revisão validada e realizar os smokes descritos acima.
