@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from 'react'
 import { DownloadIcon } from './icons'
+import { Modal } from './modal'
 
 type InstallPromptEvent = Event & {
   prompt(): Promise<void>
@@ -75,34 +76,27 @@ export function InstallAppButton({ className = '' }: { className?: string }) {
     <>
       <button
         type="button"
-        onClick={install}
+        onClick={(event) => {
+          event.currentTarget.focus({ preventScroll: true })
+          void install()
+        }}
         className={`inline-flex items-center gap-2 rounded-full border border-borda bg-superficie-2 px-3 py-1.5 text-sm font-medium text-texto hover:bg-borda ${className}`}
       >
         <DownloadIcon />
         Instalar app
       </button>
 
-      {helpOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="instalar-titulo"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-fundo/70 sm:items-center sm:p-4"
-          onClick={() => setHelpOpen(false)}
-        >
-          <div className="painel-sobe w-full max-w-md rounded-t-xl bg-superficie p-6 sm:rounded-xl" onClick={(e) => e.stopPropagation()}>
-            <h2 id="instalar-titulo" className="text-xl font-bold">Instalar no iPhone</h2>
-            <ol className="mt-4 list-decimal space-y-2 pl-5 text-texto-suave">
-              <li>Abra este site no <strong className="text-texto">Safari</strong>.</li>
-              <li>Toque em <strong className="text-texto">Compartilhar</strong> (o quadrado com uma seta para cima).</li>
-              <li>Escolha <strong className="text-texto">Adicionar à Tela de Início</strong> e toque em <strong className="text-texto">Adicionar</strong>.</li>
-            </ol>
-            <button type="button" onClick={() => setHelpOpen(false)} className="mt-6 w-full rounded-md bg-destaque px-4 py-3 font-semibold text-texto hover:bg-destaque-hover">
-              Entendi
-            </button>
-          </div>
-        </div>
-      )}
+      <Modal open={helpOpen} onClose={() => setHelpOpen(false)} labelledBy="instalar-titulo" className="max-w-md p-6" backdropClassName="bg-fundo/70">
+        <h2 id="instalar-titulo" className="text-xl font-bold">Instalar no iPhone</h2>
+        <ol className="mt-4 list-decimal space-y-2 pl-5 text-texto-suave">
+          <li>Abra este site no <strong className="text-texto">Safari</strong>.</li>
+          <li>Toque em <strong className="text-texto">Compartilhar</strong> (o quadrado com uma seta para cima).</li>
+          <li>Escolha <strong className="text-texto">Adicionar à Tela de Início</strong> e toque em <strong className="text-texto">Adicionar</strong>.</li>
+        </ol>
+        <button type="button" onClick={() => setHelpOpen(false)} className="mt-6 w-full rounded-md bg-destaque px-4 py-3 font-semibold text-texto hover:bg-destaque-hover">
+          Entendi
+        </button>
+      </Modal>
     </>
   )
 }
