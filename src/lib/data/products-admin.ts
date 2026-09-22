@@ -141,6 +141,21 @@ export async function getOffer(id: string, storeId: string): Promise<AdminOffer 
 
 export async function saveOffer(input: OfferInput): Promise<void> {
   const db = createAdminClient()
+  let offerId = input.id
+
+  if (offerId) {
+    const { data, error } = await db
+      .from('offers')
+      .select('payt_product_code')
+      .eq('id', offerId)
+      .eq('store_id', input.storeId)
+      .maybeSingle()
+    if (error) throw error
+    if (!data) throw new Error('Oferta não encontrada nesta loja. Recarregue a página.')
+    if (data.payt_product_code !== input.paytProductCode) {
+      throw new Error('O código da Payt não pode ser alterado. Cadastre uma nova oferta para usar outro código.')
+    }
+  }
 
   if (input.productIds.length) {
     const { count, error } = await db.from('products').select('id', { count: 'exact', head: true }).eq('store_id', input.storeId).in('id', input.productIds)
@@ -148,13 +163,12 @@ export async function saveOffer(input: OfferInput): Promise<void> {
     if (count !== input.productIds.length) throw new Error('Há produto de outra loja na oferta.')
   }
 
-  const row = { store_id: input.storeId, name: input.name, payt_product_code: input.paytProductCode }
-  let offerId = input.id
   if (offerId) {
-    const { data, error } = await db.from('offers').update(row).eq('id', offerId).eq('store_id', input.storeId).select('id')
-    if (error) throw friendly(error, 'Este código da Payt já está em outra oferta.')
+    const { data, error } = await db.from('offers').update({ name: input.name }).eq('id', offerId).eq('store_id', input.storeId).select('id')
+    if (error) throw error
     if (!data?.length) throw new Error('Oferta não encontrada nesta loja. Recarregue a página.')
   } else {
+    const row = { store_id: input.storeId, name: input.name, payt_product_code: input.paytProductCode }
     const { data, error } = await db.from('offers').insert(row).select('id').single()
     if (error) throw friendly(error, 'Este código da Payt já está em outra oferta.')
     offerId = data.id as string

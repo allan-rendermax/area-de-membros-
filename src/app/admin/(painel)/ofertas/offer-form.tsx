@@ -10,7 +10,8 @@ export function OfferForm({ offer, products, initialCode }: { offer: AdminOffer 
       <label className={ui.label}>Nome (ex.: Plano Completo)<input name="name" required defaultValue={offer?.name} className={ui.input} /></label>
       <label className={ui.label}>
         Código do produto na Payt
-        <input name="payt_product_code" required defaultValue={offer?.paytProductCode ?? initialCode} className={ui.input} />
+        <input name="payt_product_code" required readOnly={Boolean(offer)} defaultValue={offer?.paytProductCode ?? initialCode} className={ui.input} />
+        {offer && <span className="text-sm text-texto-suave">Para usar outro código, cadastre uma nova oferta.</span>}
       </label>
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-medium text-texto-suave">Produtos liberados</legend>
