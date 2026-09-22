@@ -1,13 +1,17 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ui } from '@/components/admin/ui'
+import { getAdminStore } from '@/lib/admin/current-store'
 import { formatDateTime } from '@/lib/admin/labels'
+import { canRevoke } from '@/lib/admin/manual-access'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
 import { getCustomer, listDevices } from '@/lib/data/customers'
 import { listOrdersByEmail } from '@/lib/data/orders'
+import { listOffers } from '@/lib/data/products-admin'
 import { listEmailsForCustomer, listItemOpensForCustomer } from '@/lib/data/success'
 import { buildTimeline } from '@/lib/success/timeline'
-import { alternarBloqueio, corrigirEmail, reenviarAcesso } from '../actions'
+import { alternarBloqueio, corrigirEmail, liberarAcessoManual, reenviarAcesso, removerAcessoManual } from '../actions'
 
 const KIND_STYLE: Record<string, string> = {
   pedido: 'bg-sucesso/15 text-sucesso',
@@ -23,11 +27,13 @@ export default async function ClientePage({ params, searchParams }: PageProps<'/
   const customer = await getCustomer(id)
   if (!customer) notFound()
 
-  const [orders, devices, emails, itemOpens] = await Promise.all([
+  const store = await getAdminStore()
+  const [orders, devices, emails, itemOpens, offers] = await Promise.all([
     listOrdersByEmail(customer.email),
     listDevices(id),
     listEmailsForCustomer(id),
     listItemOpensForCustomer(id),
+    listOffers(store.id),
   ])
   const timeline = buildTimeline({ orders, emails, devices, itemOpens })
 
@@ -40,6 +46,7 @@ export default async function ClientePage({ params, searchParams }: PageProps<'/
       </div>
 
       <section className="flex flex-wrap gap-2">
+        <Link href={`/admin/clientes/${id}/vitrine`} className={ui.buttonGhost}>Ver como aluno</Link>
         <form action={reenviarAcesso}>
           <input type="hidden" name="id" value={id} />
           <button type="submit" className={ui.button}>Reenviar acesso</button>
@@ -58,6 +65,57 @@ export default async function ClientePage({ params, searchParams }: PageProps<'/
           <input name="email" type="email" required defaultValue={customer.email} className={`${ui.input} w-full max-w-sm`} />
           <button type="submit" className={ui.buttonGhost}>Salvar e-mail</button>
         </form>
+      </section>
+
+      <section>
+        <h2 className="mb-2 font-semibold">Acesso manual</h2>
+        <form action={liberarAcessoManual} className="flex flex-wrap items-end gap-3">
+          <input type="hidden" name="id" value={id} />
+          <label className="flex w-full max-w-sm flex-col gap-1 text-sm">
+            Oferta
+            <select name="offerId" required defaultValue="" className={ui.input} disabled={offers.length === 0}>
+              <option value="" disabled>Selecione uma oferta</option>
+              {offers.map((offer) => <option key={offer.id} value={offer.id}>{offer.name} ({offer.paytProductCode})</option>)}
+            </select>
+          </label>
+          <label className="flex w-full max-w-sm flex-col gap-1 text-sm">
+            Motivo (opcional)
+            <input type="text" name="note" className={ui.input} />
+          </label>
+          <button type="submit" className={ui.button} disabled={offers.length === 0}>Liberar acesso</button>
+        </form>
+        {offers.length === 0 && <p className="mt-2 text-sm text-texto-suave">Nenhuma oferta cadastrada na loja atual.</p>}
+      </section>
+
+      <section>
+        <h2 className="mb-2 font-semibold">Pedidos</h2>
+        <ul className={`${ui.card} divide-y divide-borda text-sm`}>
+          {orders.map((order) => (
+            <li key={order.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <div className="min-w-0">
+                <p className="flex flex-wrap items-center gap-2">
+                  <span>{order.productName || order.productCode} ({order.productCode}) — {order.status}</span>
+                  {order.source === 'manual' && <span className={`${ui.pill} bg-sucesso/15 text-sucesso`}>manual</span>}
+                </p>
+                <p className="text-texto-suave">{formatDateTime(order.createdAt)}</p>
+                {order.source === 'manual' && (
+                  <>
+                    {order.note && <p className="whitespace-pre-wrap break-words">Motivo: {order.note}</p>}
+                    {order.createdBy && <p className="break-words text-texto-suave">Liberado por: {order.createdBy}</p>}
+                  </>
+                )}
+              </div>
+              {order.storeId === store.id && canRevoke(order) && (
+                <form action={removerAcessoManual}>
+                  <input type="hidden" name="id" value={id} />
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <button type="submit" className={ui.buttonDanger}>Remover acesso</button>
+                </form>
+              )}
+            </li>
+          ))}
+          {orders.length === 0 && <li className="px-4 py-3 text-texto-suave">Nenhum pedido registrado.</li>}
+        </ul>
       </section>
 
       <section>

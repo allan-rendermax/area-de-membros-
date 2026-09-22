@@ -1,5 +1,8 @@
 import type { OrderRef, OrderStatus } from '@/lib/domain/types'
+import { buildManualOrder, canRevoke } from '@/lib/admin/manual-access'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getCustomer } from './customers'
+import { getOffer } from './products-admin'
 
 export async function listAllOrderRefsByEmail(email: string): Promise<OrderRef[]> {
   const { data, error } = await createAdminClient()
@@ -12,6 +15,7 @@ export async function listAllOrderRefsByEmail(email: string): Promise<OrderRef[]
 
 export type AdminOrder = {
   id: string
+  storeId: string | null
   createdAt: string
   customerEmail: string
   productCode: string
@@ -20,14 +24,17 @@ export type AdminOrder = {
   isTest: boolean
   amountCents: number | null
   source: string
+  note: string
+  createdBy: string
 }
 
 export type OrderFilter = 'todos' | 'problemas' | 'desconhecidas' | 'teste'
 
-const ORDER_COLUMNS = 'id, created_at, customer_email, payt_product_code, payt_product_name, status, is_test, amount_cents, source'
+const ORDER_COLUMNS = 'id, store_id, created_at, customer_email, payt_product_code, payt_product_name, status, is_test, amount_cents, source, note, created_by'
 
 type DbOrder = {
   id: string
+  store_id: string | null
   created_at: string
   customer_email: string
   payt_product_code: string
@@ -36,11 +43,14 @@ type DbOrder = {
   is_test: boolean
   amount_cents: number | null
   source: string
+  note: string
+  created_by: string
 }
 
 function toAdminOrder(o: DbOrder): AdminOrder {
   return {
     id: o.id,
+    storeId: o.store_id,
     createdAt: o.created_at,
     customerEmail: o.customer_email,
     productCode: o.payt_product_code,
@@ -49,6 +59,8 @@ function toAdminOrder(o: DbOrder): AdminOrder {
     isTest: o.is_test,
     amountCents: o.amount_cents,
     source: o.source,
+    note: o.note,
+    createdBy: o.created_by,
   }
 }
 
@@ -100,4 +112,56 @@ export async function hasPaidOrderInStore(email: string, storeId: string): Promi
     .in('payt_product_code', codes)
   if (offersError) throw offersError
   return (count ?? 0) > 0
+}
+
+export async function createManualOrder(input: {
+  storeId: string
+  offerId: string
+  customerId: string
+  adminEmail: string
+  note: string
+}): Promise<void> {
+  const [offer, customer] = await Promise.all([
+    getOffer(input.offerId, input.storeId),
+    getCustomer(input.customerId),
+  ])
+  if (!offer) throw new Error('Oferta não encontrada na loja atual.')
+  if (!customer) throw new Error('Cliente não encontrado.')
+  const row = buildManualOrder({
+    storeId: input.storeId,
+    offer,
+    customer,
+    adminEmail: input.adminEmail,
+    note: input.note,
+    transactionId: 'MANUAL-' + crypto.randomUUID(),
+    now: new Date().toISOString(),
+  })
+  const { error } = await createAdminClient().from('orders').insert(row)
+  if (error) throw error
+}
+
+export async function revokeManualOrder(input: { orderId: string; storeId: string; customerId: string }): Promise<void> {
+  const customer = await getCustomer(input.customerId)
+  if (!customer) throw new Error('Cliente não encontrado.')
+  const db = createAdminClient()
+  const { data: order, error } = await db.from('orders')
+    .select('source, status')
+    .eq('id', input.orderId)
+    .eq('store_id', input.storeId)
+    .eq('customer_email', customer.email)
+    .maybeSingle()
+  if (error) throw error
+  if (!order || !canRevoke(order)) throw new Error('Só é possível remover um pedido manual pago deste cliente na loja atual.')
+
+  // Repete as condições na escrita para proteger contra mudanças simultâneas.
+  const { data, error: updateError } = await db.from('orders')
+    .update({ status: 'cancelado', status_rank: 2 })
+    .eq('id', input.orderId)
+    .eq('store_id', input.storeId)
+    .eq('customer_email', customer.email)
+    .eq('source', 'manual')
+    .eq('status', 'pago')
+    .select('id')
+  if (updateError) throw updateError
+  if (!data.length) throw new Error('O pedido mudou. Recarregue a ficha do cliente.')
 }
