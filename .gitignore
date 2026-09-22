@@ -43,3 +43,6 @@ next-env.d.ts
 
 # playwright
 .playwright-mcp/
+.vercel
+.env*
+!.env.example
