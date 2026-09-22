@@ -14,6 +14,10 @@ export async function salvarOferta(formData: FormData) {
   const currentId = String(formData.get('id') ?? '') || 'novo'
   try {
     assertAdminStoreContext(formData, store.id)
+  } catch (e) {
+    redirect(withMessage(currentId === 'novo' ? '/admin/ofertas/novo' : '/admin/ofertas', errorText(e)))
+  }
+  try {
     await saveOffer(parseOfferForm(formData, store.id))
   } catch (e) {
     redirect(withMessage(`/admin/ofertas/${currentId}`, errorText(e)))

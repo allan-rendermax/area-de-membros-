@@ -48,7 +48,7 @@ export async function salvarProduto(formData: FormData) {
   try {
     assertAdminStoreContext(formData, store.id)
   } catch (e) {
-    redirect(withMessage(`/admin/produtos/${currentId}`, errorText(e)))
+    redirect(withMessage(currentId === 'novo' ? '/admin/produtos/novo' : '/admin/produtos', errorText(e)))
   }
   if (currentId !== 'novo') await requireOwnProduct(currentId)
 

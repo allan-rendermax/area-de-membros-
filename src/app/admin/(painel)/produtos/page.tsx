@@ -5,8 +5,9 @@ import { getAdminStore } from '@/lib/admin/current-store'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { listProducts } from '@/lib/data/products'
 
-export default async function ProdutosPage() {
+export default async function ProdutosPage({ searchParams }: PageProps<'/admin/produtos'>) {
   await requireAdmin()
+  const { msg } = await searchParams
   const store = await getAdminStore()
   const products = await listProducts(store.id)
 
@@ -16,6 +17,7 @@ export default async function ProdutosPage() {
         <h1 className={ui.h1}>Produtos — {store.name}</h1>
         <Link href="/admin/produtos/novo" className={ui.button}>Novo produto</Link>
       </div>
+      {typeof msg === 'string' && <p role="status" className={ui.notice}>{msg}</p>}
       <div className={`${ui.card} overflow-x-auto`}>
         <table className={ui.table}>
           <thead className="border-b border-borda">
