@@ -120,13 +120,20 @@ export async function changeCustomerEmail(id: string, newEmail: string): Promise
   if (authError) throw authError
 
   let rpcFailure: unknown
+  let definitelyRejected = false
   try {
     const { error } = await db.rpc('change_customer_email_atomic', {
       p_id: id,
       p_expected_email: current.email,
       p_new_email: newEmail,
     })
-    if (error) rpcFailure = error
+    if (error) {
+      rpcFailure = error
+      // SQLSTATE means PostgreSQL rejected the statement. PGRST202 means the
+      // function was not found, so no statement ran. Other PostgREST/transport
+      // errors can arrive while the server is still committing the request.
+      definitelyRejected = error.code === 'PGRST202' || /^[0-9A-Z]{5}$/.test(error.code ?? '')
+    }
   } catch (error) {
     rpcFailure = error
   }
@@ -143,6 +150,9 @@ export async function changeCustomerEmail(id: string, newEmail: string): Promise
   if (persisted?.email === newEmail) return
   if (persisted?.email !== current.email) {
     throw new Error('O email mudou durante a correção; é necessária reconciliação manual antes de tentar novamente.')
+  }
+  if (!definitelyRejected) {
+    throw new Error('O resultado da correção de email é incerto; é necessária reconciliação manual antes de tentar novamente.')
   }
 
   try {

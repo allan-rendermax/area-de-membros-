@@ -45,6 +45,23 @@ describe('correção de email', () => {
     expect(io.authUpdate).toHaveBeenCalledTimes(1)
   })
 
+  it('não compensa Auth se transporte falha enquanto RPC ainda pode concluir', async () => {
+    io.rpc.mockImplementation(async () => {
+      setTimeout(() => { io.email = 'new@example.com' }, 0)
+      throw new Error('network timeout')
+    })
+    await expect(changeCustomerEmail('customer', 'new@example.com')).rejects.toThrow('reconciliação')
+    expect(io.authUpdate).toHaveBeenCalledTimes(1)
+    await new Promise((resolve) => setTimeout(resolve, 1))
+    expect(io.email).toBe('new@example.com')
+  })
+
+  it('não compensa Auth se PostgREST retorna falha de transporte sem SQLSTATE', async () => {
+    io.rpc.mockResolvedValue({ error: { code: 'PGRST000', message: 'upstream unavailable' } })
+    await expect(changeCustomerEmail('customer', 'new@example.com')).rejects.toThrow('reconciliação')
+    expect(io.authUpdate).toHaveBeenCalledTimes(1)
+  })
+
   it('sinaliza reconciliação quando não consegue conhecer estado após falha da RPC', async () => {
     io.rpc.mockRejectedValue(new Error('network'))
     io.customerRead.mockResolvedValueOnce({ data: { id: 'customer', email: 'old@example.com', name: 'Name', blocked_at: null }, error: null })
