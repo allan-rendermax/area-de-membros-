@@ -18,6 +18,9 @@ export function AdminLoginForm() {
         <input name="token" inputMode="numeric" autoComplete="one-time-code" maxLength={10} required className={ui.input} placeholder="Código recebido por e-mail" />
         {verified.error && <p role="alert" className="text-sm text-destaque">{verified.error}</p>}
         <button type="submit" disabled={verifying} className={ui.button}>{verifying ? 'Verificando…' : 'Entrar'}</button>
+        <button type="submit" formAction={send} formNoValidate disabled={sending} className="text-sm text-texto-suave underline underline-offset-4 disabled:opacity-60">
+          {sending ? 'Reenviando…' : 'Reenviar código'}
+        </button>
       </form>
     )
   }
