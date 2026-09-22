@@ -57,15 +57,20 @@ export function createPostbackRepo(): PostbackRepo {
     createCustomer,
     getProductsForCode,
 
-    async hasNoticeForStore(customerId, storeId) {
-      const { data, error } = await db
-        .from('email_log')
-        .select('id')
-        .eq('customer_id', customerId)
-        .eq('store_id', storeId)
-        .limit(1)
-      if (error) throw error
-      return data.length > 0
+    async hasNoticeForProducts(customerId, storeId, productIds) {
+      if (productIds.length === 0) return false
+      for (const productId of productIds) {
+        const { data, error } = await db
+          .from('email_log')
+          .select('id')
+          .eq('customer_id', customerId)
+          .eq('store_id', storeId)
+          .contains('product_ids', [productId])
+          .limit(1)
+        if (error) throw error
+        if (!data || data.length === 0) return false
+      }
+      return true
     },
 
     async logFailedNotice(entry) {
@@ -74,7 +79,7 @@ export function createPostbackRepo(): PostbackRepo {
         customer_id: entry.customerId,
         to_email: entry.toEmail,
         kind: entry.kind,
-        product_ids: [],
+        product_ids: entry.productIds,
         status: 'falhou',
         error: entry.error,
       })

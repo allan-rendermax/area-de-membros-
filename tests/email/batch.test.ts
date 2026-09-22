@@ -81,6 +81,18 @@ describe('runResendBatch', () => {
     expect(await runResendBatch(deps)).toEqual({ sent: 0, failed: 0, skipped: 0, remaining: 3 })
   })
 
+  it('grupo bloqueado sem produtos não gasta o único slot do pagante seguinte', async () => {
+    const { deps, sentTo } = setup({ failed: list, usedToday: 99, dailyLimit: 100, noProductsFor: ['c1'] })
+    expect(await runResendBatch(deps)).toEqual({ sent: 1, failed: 0, skipped: 1, remaining: 1 })
+    expect(sentTo).toEqual(['c2'])
+  })
+
+  it('falha de envio gasta o slot e deixa os grupos não visitados para depois', async () => {
+    const { deps, sentTo } = setup({ failed: list, usedToday: 99, dailyLimit: 100, failFor: ['c1'] })
+    expect(await runResendBatch(deps)).toEqual({ sent: 0, failed: 1, skipped: 0, remaining: 2 })
+    expect(sentTo).toEqual([])
+  })
+
   it('conta falhas e clientes sem produtos sem marcar como resolvidos', async () => {
     const { deps, resolved } = setup({ failed: list, failFor: ['c2'], noProductsFor: ['c3'] })
     expect(await runResendBatch(deps)).toEqual({ sent: 1, failed: 1, skipped: 1, remaining: 0 })
@@ -91,5 +103,13 @@ describe('runResendBatch', () => {
     const many = Array.from({ length: 120 }, (_, i) => failed(`l${i}`, `c${i}`, 's1', new Date(Date.UTC(2026, 8, 16, 0, i)).toISOString()))
     const { deps } = setup({ failed: many, dailyLimit: 1000 })
     expect(await runResendBatch(deps)).toEqual({ sent: 100, failed: 0, skipped: 0, remaining: 20 })
+  })
+
+  it('ignora inelegíveis antes de contar no máximo 100 tentativas reais', async () => {
+    const many = Array.from({ length: 125 }, (_, i) => failed(`l${i}`, `c${i}`, 's1', new Date(Date.UTC(2026, 8, 16, 0, i)).toISOString()))
+    const noProductsFor = Array.from({ length: 25 }, (_, i) => `c${i}`)
+    const { deps, sentTo } = setup({ failed: many, dailyLimit: 1000, noProductsFor })
+    expect(await runResendBatch(deps)).toEqual({ sent: 100, failed: 0, skipped: 25, remaining: 0 })
+    expect(sentTo).toHaveLength(100)
   })
 })

@@ -13,7 +13,7 @@ function run(body: unknown) {
     repo,
     notify: async (notice) => {
       const result = await notifier.notify(notice)
-      if (result.ok) repo.markNotified(notice.customerId, notice.store.id)
+      if (result.ok) repo.markNotified(notice.customerId, notice.store.id, notice.products.map((product) => product.id))
       return result
     },
     integrationKey: KEY,
@@ -59,7 +59,9 @@ describe('processPostback', () => {
 
   it('aviso repetido não duplica cliente nem email', async () => {
     await run(paid)
-    expect(repo.notices).toEqual([{ customerId: 'cus-1', storeId: ARQ.id, status: 'enviado' }])
+    expect(repo.notices).toEqual([{
+      customerId: 'cus-1', storeId: ARQ.id, productIds: ['p-atlas', 'p-bonus1'], status: 'enviado',
+    }])
     expect(await run(paid)).toMatchObject({ outcome: 'sem_mudanca', customerCreated: false, emailsSent: 0 })
     expect(repo.customers).toHaveLength(1)
     expect(notifier.sent).toHaveLength(1)
@@ -122,7 +124,8 @@ describe('processPostback', () => {
     })
     expect(repo.events[0]).toMatchObject({ outcome: 'liberado', error: 'falha no email: notify indisponível' })
     expect(repo.notices).toEqual([{
-      customerId: 'cus-1', storeId: ARQ.id, status: 'falhou', toEmail: 'joao@gmail.com', kind: 'acesso_novo', error: 'notify indisponível',
+      customerId: 'cus-1', storeId: ARQ.id, productIds: ['p-atlas', 'p-bonus1'], status: 'falhou',
+      toEmail: 'joao@gmail.com', kind: 'acesso_novo', error: 'notify indisponível',
     }])
   })
 
@@ -134,7 +137,8 @@ describe('processPostback', () => {
     })
     expect(repo.events[0]).toMatchObject({ outcome: 'liberado', error: 'falha no email: produtos indisponíveis' })
     expect(repo.notices).toEqual([{
-      customerId: 'cus-1', storeId: ARQ.id, status: 'falhou', toEmail: 'joao@gmail.com', kind: 'acesso_novo', error: 'produtos indisponíveis',
+      customerId: 'cus-1', storeId: ARQ.id, productIds: [], status: 'falhou',
+      toEmail: 'joao@gmail.com', kind: 'acesso_novo', error: 'produtos indisponíveis',
     }])
   })
 
@@ -189,13 +193,35 @@ describe('processPostback', () => {
     expect(notifier.sent).toHaveLength(2)
   })
 
+  it('compra anterior na loja não suprime produtos novos após falha parcial multiloja', async () => {
+    await run({ ...paid, transaction_id: 'TX-PACK', product: { name: 'Pack', code: 'BUMP-PACK' } })
+
+    const otherStore = { id: 'store-2', slug: 'outra', name: 'Outra loja' }
+    repo.storesByCode['BUMP-CHECKLIST'] = otherStore
+    const atlasWithOtherStoreBump = {
+      ...paid,
+      transaction_id: 'TX-MULTILOJA',
+      order_bumps: [{ name: 'Checklist', code: 'BUMP-CHECKLIST', price: 900 }],
+    }
+    repo.failApplyOnCode = 'BUMP-CHECKLIST'
+    await expect(run(atlasWithOtherStoreBump)).rejects.toThrow('gravação indisponível')
+
+    repo.failApplyOnCode = null
+    expect(await run(atlasWithOtherStoreBump)).toMatchObject({ emailsSent: 2 })
+    expect(notifier.sent.filter((notice) => notice.store.id === ARQ.id).at(-1)?.products.map((product) => product.id)).toContain('p-atlas')
+    expect(notifier.sent.find((notice) => notice.store.id === otherStore.id)?.products.map((product) => product.id)).toEqual(['p-check'])
+
+    expect(await run(atlasWithOtherStoreBump)).toMatchObject({ emailsSent: 0 })
+    expect(notifier.sent).toHaveLength(3)
+  })
+
   it('registro de outro cliente ou loja não impede recuperar acesso sem mudanças', async () => {
     await repo.createCustomer('joao@gmail.com', 'João Silva')
     notifier.throwError = true
     await run(paid)
     repo.notices = [
-      { customerId: 'outro-cliente', storeId: ARQ.id, status: 'enviado' },
-      { customerId: 'cus-1', storeId: 'outra-loja', status: 'enviado' },
+      { customerId: 'outro-cliente', storeId: ARQ.id, productIds: ['p-atlas', 'p-bonus1'], status: 'enviado' },
+      { customerId: 'cus-1', storeId: 'outra-loja', productIds: ['p-atlas', 'p-bonus1'], status: 'enviado' },
     ]
     expect(await run(paid)).toMatchObject({ emailsSent: 0, emailErrors: ['notify indisponível'] })
     expect(repo.notices[2]).toMatchObject({ customerId: 'cus-1', storeId: ARQ.id, kind: 'produto_novo', status: 'falhou' })

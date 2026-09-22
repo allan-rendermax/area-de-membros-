@@ -32,15 +32,19 @@ export async function runResendBatch(deps: {
 }): Promise<BatchSummary> {
   const groups = groupFailedEmails(await deps.listUnresolvedFailed())
   const slots = Math.max(0, Math.min(deps.dailyLimit - (await deps.countUsedToday()), MAX_RESEND_PER_RUN))
-  const batch = groups.slice(0, slots)
-  const summary: BatchSummary = { sent: 0, failed: 0, skipped: 0, remaining: groups.length - batch.length }
+  const summary: BatchSummary = { sent: 0, failed: 0, skipped: 0, remaining: groups.length }
+  let attempted = 0
+  let visited = 0
 
-  for (const group of batch) {
+  for (const group of groups) {
+    if (attempted >= slots) break
+    visited++
     const notice = await deps.buildNotice(group)
     if (!notice) {
       summary.skipped++
       continue
     }
+    attempted++
     const result = await deps.send(notice)
     if (result.ok) {
       summary.sent++
@@ -49,5 +53,6 @@ export async function runResendBatch(deps: {
       summary.failed++
     }
   }
+  summary.remaining = groups.length - visited
   return summary
 }

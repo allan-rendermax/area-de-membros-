@@ -23,7 +23,15 @@ export class FakeRepo implements PostbackRepo {
   events: ({ id: string; payload: unknown } & Partial<EventFinish>)[] = []
   orders: FakeOrder[] = []
   customers: CustomerRow[] = []
-  notices: { customerId: string; storeId: string; status: 'falhou' | 'enviado'; toEmail?: string; kind?: EmailKind; error?: string }[] = []
+  notices: {
+    customerId: string
+    storeId: string
+    productIds: string[]
+    status: 'pendente' | 'falhou' | 'enviado'
+    toEmail?: string
+    kind?: EmailKind
+    error?: string
+  }[] = []
   failApplyOnCode: string | null = null
   failLogFailedNotice = false
   failCreateCustomerTimes = 0
@@ -77,15 +85,30 @@ export class FakeRepo implements PostbackRepo {
     if (this.failGetProductsForCode === code) throw new Error('produtos indisponíveis')
     return this.productsByCode[code] ?? []
   }
-  async hasNoticeForStore(customerId: string, storeId: string) {
-    return this.notices.some((notice) => notice.customerId === customerId && notice.storeId === storeId)
+  async hasNoticeForProducts(customerId: string, storeId: string, productIds: string[]) {
+    if (productIds.length === 0) return false
+    return productIds.every((productId) =>
+      this.notices.some(
+        (notice) =>
+          notice.customerId === customerId &&
+          notice.storeId === storeId &&
+          notice.productIds.includes(productId),
+      ),
+    )
   }
-  async logFailedNotice(entry: { storeId: string; customerId: string; toEmail: string; kind: EmailKind; error: string }) {
+  async logFailedNotice(entry: {
+    storeId: string
+    customerId: string
+    toEmail: string
+    kind: EmailKind
+    productIds?: string[]
+    error: string
+  }) {
     if (this.failLogFailedNotice) throw new Error('registro indisponível')
-    this.notices.push({ ...entry, status: 'falhou' })
+    this.notices.push({ ...entry, productIds: entry.productIds ?? [], status: 'falhou' })
   }
-  markNotified(customerId: string, storeId: string) {
-    this.notices.push({ customerId, storeId, status: 'enviado' })
+  markNotified(customerId: string, storeId: string, productIds: string[]) {
+    this.notices.push({ customerId, storeId, productIds, status: 'enviado' })
   }
 }
 

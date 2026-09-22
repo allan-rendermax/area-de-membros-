@@ -44,8 +44,15 @@ export interface PostbackRepo {
   // created = false quando outro aviso simultâneo criou o cliente primeiro.
   createCustomer(email: string, name: string): Promise<{ customer: CustomerRow; created: boolean }>
   getProductsForCode(code: string): Promise<{ id: string; title: string }[]>
-  hasNoticeForStore(customerId: string, storeId: string): Promise<boolean>
-  logFailedNotice(entry: { storeId: string; customerId: string; toEmail: string; kind: EmailKind; error: string }): Promise<void>
+  hasNoticeForProducts(customerId: string, storeId: string, productIds: string[]): Promise<boolean>
+  logFailedNotice(entry: {
+    storeId: string
+    customerId: string
+    toEmail: string
+    kind: EmailKind
+    productIds: string[]
+    error: string
+  }): Promise<void>
 }
 
 export type ProcessedLine = { code: string; storeId: string | null; orderId: string; changed: boolean; status: OrderStatus }
@@ -160,11 +167,22 @@ export async function processPostback(
 
       for (const store of storesOf(paid)) {
         const storeLines = paid.filter((l) => l.store?.id === store.id)
-        if (!customerCreated && !storeLines.some((l) => l.changed) && (await repo.hasNoticeForStore(customer.id, store.id))) continue
-        granted = true
+        let products: { id: string; title: string }[] = []
         try {
-          const products = await productsFor(repo, storeLines)
-          if (products.length === 0) continue
+          products = await productsFor(repo, storeLines)
+          if (products.length === 0) {
+            granted = true
+            continue
+          }
+          const productIds = products.map((product) => product.id)
+          if (
+            !customerCreated &&
+            !storeLines.some((line) => line.changed) &&
+            (await repo.hasNoticeForProducts(customer.id, store.id, productIds))
+          ) {
+            continue
+          }
+          granted = true
           const result = await deps.notify({
             customerId: customer.id,
             to: p.customerEmail,
@@ -176,6 +194,7 @@ export async function processPostback(
           if (result.ok) emailsSent++
           else emailErrors.push(result.error)
         } catch (e) {
+          granted = true
           emailErrors.push(errorMessage(e))
           try {
             await repo.logFailedNotice({
@@ -183,6 +202,7 @@ export async function processPostback(
               customerId: customer.id,
               toEmail: p.customerEmail,
               kind: customerCreated ? 'acesso_novo' : 'produto_novo',
+              productIds: products.map((product) => product.id),
               error: errorMessage(e),
             })
           } catch {
