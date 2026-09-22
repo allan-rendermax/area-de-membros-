@@ -45,6 +45,15 @@
 
 ## Pendências concretas
 
+### Rechecagem em 17/09/2026 pela manhã
+
+- Cerca de 11 horas após o cadastro, API e painel do Resend mostravam domínio `failed`, DKIM `failed` e ambos os CNAMEs `verified`.
+- Comparação atual confirmou os três valores exatos em Google DNS (`8.8.8.8`) e Cloudflare DNS (`1.1.1.1`).
+- Os servidores autoritativos `aurora.dns-parking.com` e `nebula.dns-parking.com` também retornam a chave DKIM correta, sem registro TXT duplicado na resposta.
+- Página oficial https://resend-status.com/ informava operação normal. Isso não exclui falha específica de domínio.
+- Executado **Restart** uma vez no domínio existente, sem editar DNS. Estado imediato: `pending`. Evidências sugerem problema no processo de validação do Resend; causa interna não confirmada.
+- Se a nova tentativa não concluir, encaminhar ao suporte Resend: domínio e ID acima, região `sa-east-1`, DKIM falhando apesar de igualdade exata do TXT em ambos os servidores autoritativos e resolvedores públicos, CNAMEs verificados, e histórico `pending` → `not_started` → `failed`. Nenhum chamado foi enviado.
+
 1. **Concluir verificação do Resend.** DNS, SMTP, templates e remetente já estão configurados. Consultar o domínio existente; não recriar registros nem domínio. Após intervalo de propagação, tentar novamente; se continuar voltando a `not_started`, investigar com suporte Resend usando o ID acima e a evidência de TXT correto. Quando estiver `verified`, repetir o teste de email.
 2. **Concluir teste do admin e entrega ao cliente de teste.** Solicitar código em `/admin/entrar` para `arq.allanp@gmail.com`, usar o código recebido e confirmar acesso ao painel. Repetir email de teste para `grupoelevamax@gmail.com` e conferir entrega. O código não deve ser registrado no relatório.
 3. **Aprovação visual do dono.** Prints em `docs/design/`; a direção visual existente foi preservada.

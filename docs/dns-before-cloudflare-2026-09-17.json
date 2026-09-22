@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-09-17T19:38:23.199Z",
+  "dns": [
+    {
+      "name": "grupoelevamax.com",
+      "type": "NS",
+      "status": 0,
+      "answers": [
+        {
+          "name": "grupoelevamax.com.",
+          "type": 2,
+          "TTL": 21600,
+          "data": "aurora.dns-parking.com."
+        },
+        {
+          "name": "grupoelevamax.com.",
+          "type": 2,
+          "TTL": 21600,
+          "data": "nebula.dns-parking.com."
+        }
+      ]
+    },
+    {
+      "name": "grupoelevamax.com",
+      "type": "DS",
+      "status": 0,
+      "answers": []
+    },
+    {
+      "name": "grupoelevamax.com",
+      "type": "MX",
+      "status": 0,
+      "answers": []
+    },
+    {
+      "name": "grupoelevamax.com",
+      "type": "TXT",
+      "status": 0,
+      "answers": []
+    },
+    {
+      "name": "resend._domainkey.grupoelevamax.com",
+      "type": "TXT",
+      "status": 3,
+      "answers": []
+    },
+    {
+      "name": "rsend.grupoelevamax.com",
+      "type": "CNAME",
+      "status": 3,
+      "answers": []
+    },
+    {
+      "name": "send.grupoelevamax.com",
+      "type": "CNAME",
+      "status": 3,
+      "answers": []
+    }
+  ],
+  "resend": {
+    "statusCode": 404,
+    "message": "Domain not found",
+    "name": "not_found"
+  }
+}
