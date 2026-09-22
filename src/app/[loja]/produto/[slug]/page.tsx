@@ -6,7 +6,7 @@ import { Carousel } from '@/components/membros/carousel'
 import { EPISODE_WIDTH, EpisodeCard } from '@/components/membros/episode-card'
 import { StoreHeader } from '@/components/membros/store-header'
 import { WhatsAppFloating } from '@/components/membros/whatsapp-button'
-import { loadStoreAccess } from '@/lib/data/access'
+import { loadGrantedProductIds } from '@/lib/data/access'
 import { getProductBySlug, listModulesWithItems } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
 import { supportHref } from '@/lib/support/whatsapp'
@@ -16,10 +16,12 @@ export const dynamic = 'force-dynamic'
 export default async function ProdutoPage({ params }: PageProps<'/[loja]/produto/[slug]'>) {
   const { loja, slug } = await params
   const { store, customer } = await requireStoreSession(loja)
-  const product = await getProductBySlug(store.id, slug)
+  const [product, granted] = await Promise.all([
+    getProductBySlug(store.id, slug),
+    loadGrantedProductIds(store.id, customer),
+  ])
   if (!product || !product.isPublished) notFound()
 
-  const { granted } = await loadStoreAccess(store.id, customer.email)
   if (!granted.has(product.id)) redirect(`/${store.slug}?comprar=${product.slug}`)
 
   const modules = (await listModulesWithItems(product.id, { publishedOnly: true })).filter((m) => m.items.length > 0)

@@ -17,7 +17,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
   const [{ loja }, { comprar }] = await Promise.all([params, searchParams])
   const { store, customer } = await requireStoreSession(loja)
   const [{ products, granted }, recentIds] = await Promise.all([
-    loadStoreAccess(store.id, customer.email),
+    loadStoreAccess(store.id, customer),
     listRecentProductIds(customer.id, store.id),
   ])
   const shelf = buildShelf(products, granted)

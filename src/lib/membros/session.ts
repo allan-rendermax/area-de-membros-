@@ -14,9 +14,14 @@ export const getStore = cache(async (slug: string): Promise<Store> => {
 })
 
 export async function requireStoreSession(slug: string): Promise<{ store: Store; customer: CustomerRow }> {
-  const store = await getStore(slug)
-  const supabase = await createClient()
-  const { data } = await supabase.auth.getUser()
+  const [store, { supabase, data }] = await Promise.all([
+    getStore(slug),
+    (async () => {
+      const supabase = await createClient()
+      const { data } = await supabase.auth.getUser()
+      return { supabase, data }
+    })(),
+  ])
   const email = data.user?.email
   if (!email) redirect(`/${store.slug}/entrar`)
 

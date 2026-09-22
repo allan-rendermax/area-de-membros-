@@ -5,7 +5,7 @@ import { ItemAnchor } from '@/components/membros/episode-card'
 import { StoreHeader } from '@/components/membros/store-header'
 import { toVideoEmbed } from '@/lib/content/video'
 import { isHttpUrl, isUuid } from '@/lib/content/url'
-import { loadStoreAccess } from '@/lib/data/access'
+import { loadGrantedProductIds } from '@/lib/data/access'
 import { recordItemAccess } from '@/lib/data/item-access'
 import { getItemWithContext, listModulesWithItems } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
@@ -19,12 +19,14 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
   if (!isUuid(id)) notFound()
   const { store, customer } = await requireStoreSession(loja)
 
-  const ctx = await getItemWithContext(id)
+  const [ctx, granted] = await Promise.all([
+    getItemWithContext(id),
+    loadGrantedProductIds(store.id, customer),
+  ])
   if (!ctx || ctx.product.storeId !== store.id || !ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished) {
     notFound()
   }
 
-  const { granted } = await loadStoreAccess(store.id, customer.email)
   if (!granted.has(ctx.product.id)) redirect(`/${store.slug}?comprar=${ctx.product.slug}`)
 
   await recordItemAccess({ customerId: customer.id, storeId: store.id, productId: ctx.product.id, itemId: ctx.item.id, kind: ctx.item.kind })
