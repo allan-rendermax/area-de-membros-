@@ -40,7 +40,7 @@ Vídeo busca somente itens publicados do módulo atual, ordenados por `sort_orde
 
 ### Imagens e modal
 
-Adicionar componente compartilhado de imagem de conteúdo usando `next/image` com `fill`, qualidade padrão 75 e `sizes` adequados ao layout existente. Otimizar somente imagens raster locais de caminho absoluto e imagens HTTPS de `*.supabase.co/storage/v1/object/public/covers/**`, sem query, fragmento, credenciais ou porta. A configuração do otimizador deve corresponder à política do componente. PNG/JPG/JPEG/WebP/AVIF são elegíveis; GIF, SVG, URLs assinadas, fontes externas ou outras pastas mantêm `<img>` direto. Nenhum acesso a service role no cliente.
+Adicionar componente compartilhado de imagem de conteúdo usando `next/image` com `fill`, qualidade padrão 75 e `sizes` adequados ao layout existente. Otimizar somente imagens raster locais de caminho absoluto e imagens HTTPS de `*.supabase.co/storage/v1/object/public/covers/**`, sem query, fragmento, credenciais ou porta. A configuração do otimizador deve corresponder à política do componente. PNG/JPG/JPEG/WebP/AVIF são elegíveis (extensão local minúscula; local maiúscula mantém imagem direta para respeitar o matcher); GIF, SVG, URLs assinadas, fontes externas ou outras pastas mantêm `<img>` direto. Nenhum acesso a service role no cliente.
 
 Hero e banner de produto usam `loading="eager"` e `fetchPriority="high"`; demais capas ficam lazy/async. Preservar proporções, recorte, gradiente de fallback, opacidade, cores, textos e carrosséis. Os fundos de login podem usar o mesmo componente, com sizes considerando painel lateral desktop e viewport mobile. Logos de dimensões intrínsecas ficam inalterados.
 
