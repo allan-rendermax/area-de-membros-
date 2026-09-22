@@ -11,7 +11,14 @@ export function LockedPoster({ product, initiallyOpen = false }: { product: Shel
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [open, setOpen] = useState(initiallyOpen)
+  const requestedSlug = searchParams.get('comprar')
+  const [previousRequestedSlug, setPreviousRequestedSlug] = useState(requestedSlug)
   const closeButton = useRef<HTMLButtonElement>(null)
+
+  if (requestedSlug !== previousRequestedSlug) {
+    setPreviousRequestedSlug(requestedSlug)
+    setOpen(requestedSlug === product.slug)
+  }
 
   const close = useCallback(() => {
     setOpen(false)
