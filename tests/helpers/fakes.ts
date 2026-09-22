@@ -37,6 +37,7 @@ export class FakeRepo implements PostbackRepo {
   failCreateCustomerTimes = 0
   hideCustomerFromLookupOnce = false
   failGetProductsForCode: string | null = null
+  failReadOrder = false
 
   async logEvent(payload: unknown) {
     const id = `ev-${this.events.length + 1}`
@@ -51,17 +52,25 @@ export class FakeRepo implements PostbackRepo {
   }
   async applyOrderStatus(input: ApplyOrderInput) {
     if (this.failApplyOnCode === input.productCode) throw new Error('gravação indisponível')
+    const effectiveEmail = input.customerEmail.trim().toLowerCase()
     const existing = this.orders.find((o) => o.transactionId === input.transactionId && o.productCode === input.productCode)
     if (!existing) {
-      const order = { ...input, id: `ord-${this.orders.length + 1}` }
+      const order = { ...input, customerEmail: effectiveEmail, id: `ord-${this.orders.length + 1}` }
       this.orders.push(order)
-      return { orderId: order.id, changed: true, status: order.status }
+      if (this.failReadOrder) throw new Error('leitura do pedido indisponível')
+      return { orderId: order.id, changed: true, status: order.status, customerEmail: order.customerEmail, customerName: order.customerName }
     }
     if (STATUS_RANK[input.status] > STATUS_RANK[existing.status]) {
+      if (existing.status === 'pendente' && input.status === 'pago') {
+        existing.customerEmail = effectiveEmail
+        existing.customerName = input.customerName
+      }
       existing.status = input.status
-      return { orderId: existing.id, changed: true, status: existing.status as OrderStatus }
+      if (this.failReadOrder) throw new Error('leitura do pedido indisponível')
+      return { orderId: existing.id, changed: true, status: existing.status as OrderStatus, customerEmail: existing.customerEmail, customerName: existing.customerName }
     }
-    return { orderId: existing.id, changed: false, status: existing.status as OrderStatus }
+    if (this.failReadOrder) throw new Error('leitura do pedido indisponível')
+    return { orderId: existing.id, changed: false, status: existing.status as OrderStatus, customerEmail: existing.customerEmail, customerName: existing.customerName }
   }
   async findCustomerByEmail(email: string) {
     if (this.hideCustomerFromLookupOnce) {

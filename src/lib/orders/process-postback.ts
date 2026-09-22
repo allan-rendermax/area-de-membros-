@@ -39,7 +39,7 @@ export interface PostbackRepo {
   logEvent(payload: unknown): Promise<string>
   finishEvent(id: string, result: EventFinish): Promise<void>
   findStoreForProductCode(code: string): Promise<StoreRef | null>
-  applyOrderStatus(input: ApplyOrderInput): Promise<{ orderId: string; changed: boolean; status: OrderStatus }>
+  applyOrderStatus(input: ApplyOrderInput): Promise<{ orderId: string; changed: boolean; status: OrderStatus; customerEmail: string; customerName: string }>
   findCustomerByEmail(email: string): Promise<CustomerRow | null>
   // created = false quando outro aviso simultâneo criou o cliente primeiro.
   createCustomer(email: string, name: string): Promise<{ customer: CustomerRow; created: boolean }>
@@ -72,7 +72,7 @@ export type ProcessResult =
       emailErrors: string[]
     }
 
-type Line = { product: PaytProductLine; store: StoreRef | null; orderId: string; changed: boolean; status: OrderStatus }
+type Line = { product: PaytProductLine; store: StoreRef | null; orderId: string; changed: boolean; status: OrderStatus; customerEmail: string; customerName: string }
 
 function errorMessage(e: unknown): string {
   if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message)
@@ -147,7 +147,7 @@ export async function processPostback(
         isTest: p.isTest,
         amountCents: product.amountCents,
       })
-      lines.push({ product, store, orderId: order.orderId, changed: order.changed, status: order.status })
+      lines.push({ product, store, orderId: order.orderId, changed: order.changed, status: order.status, customerEmail: order.customerEmail, customerName: order.customerName })
     }
 
     const unknownCodes = lines.filter((l) => !l.store).map((l) => l.product.code)
@@ -158,55 +158,69 @@ export async function processPostback(
     const emailErrors: string[] = []
 
     if (paid.length > 0) {
-      let customer = await repo.findCustomerByEmail(p.customerEmail)
-      if (!customer) {
-        const created = await repo.createCustomer(p.customerEmail, p.customerName)
-        customer = created.customer
-        customerCreated = created.created
+      const identities = new Map<string, Line[]>()
+      for (const line of paid) {
+        const email = line.customerEmail.trim().toLowerCase()
+        const group = identities.get(email) ?? []
+        group.push(line)
+        identities.set(email, group)
       }
 
-      for (const store of storesOf(paid)) {
-        const storeLines = paid.filter((l) => l.store?.id === store.id)
-        let products: { id: string; title: string }[] = []
-        try {
-          products = await productsFor(repo, storeLines)
-          if (products.length === 0) {
-            granted = true
-            continue
-          }
-          const productIds = products.map((product) => product.id)
-          if (
-            !customerCreated &&
-            !storeLines.some((line) => line.changed) &&
-            (await repo.hasNoticeForProducts(customer.id, store.id, productIds))
-          ) {
-            continue
-          }
-          granted = true
-          const result = await deps.notify({
-            customerId: customer.id,
-            to: p.customerEmail,
-            customerName: p.customerName,
-            store,
-            products,
-            kind: customerCreated ? 'acesso_novo' : 'produto_novo',
-          })
-          if (result.ok) emailsSent++
-          else emailErrors.push(result.error)
-        } catch (e) {
-          granted = true
-          emailErrors.push(errorMessage(e))
+      for (const [email, identityLines] of identities) {
+        // A primeira linha define o nome quando o mesmo titular tem nomes distintos no pedido.
+        const name = identityLines[0].customerName
+        let customer = await repo.findCustomerByEmail(email)
+        let createdForIdentity = false
+        if (!customer) {
+          const created = await repo.createCustomer(email, name)
+          customer = created.customer
+          createdForIdentity = created.created
+          customerCreated ||= created.created
+        }
+
+        for (const store of storesOf(identityLines)) {
+          const storeLines = identityLines.filter((l) => l.store?.id === store.id)
+          let products: { id: string; title: string }[] = []
           try {
-            await repo.logFailedNotice({
-              storeId: store.id,
+            products = await productsFor(repo, storeLines)
+            if (products.length === 0) {
+              emailErrors.push(`nenhum produto publicado para a loja ${store.id}`)
+              continue
+            }
+            const productIds = products.map((product) => product.id)
+            if (
+              !createdForIdentity &&
+              !storeLines.some((line) => line.changed) &&
+              (await repo.hasNoticeForProducts(customer.id, store.id, productIds))
+            ) {
+              continue
+            }
+            granted = true
+            const result = await deps.notify({
               customerId: customer.id,
-              toEmail: p.customerEmail,
-              kind: customerCreated ? 'acesso_novo' : 'produto_novo',
-              productIds: products.map((product) => product.id),
-              error: errorMessage(e),
+              to: email,
+              customerName: name,
+              store,
+              products,
+              kind: createdForIdentity ? 'acesso_novo' : 'produto_novo',
             })
-          } catch {
-            // O erro original continua no evento mesmo se o registro de email falhar.
+            if (result.ok) emailsSent++
+            else emailErrors.push(result.error)
+          } catch (e) {
+            granted = true
+            emailErrors.push(errorMessage(e))
+            try {
+              await repo.logFailedNotice({
+                storeId: store.id,
+                customerId: customer.id,
+                toEmail: email,
+                kind: createdForIdentity ? 'acesso_novo' : 'produto_novo',
+                productIds: products.map((product) => product.id),
+                error: errorMessage(e),
+              })
+            } catch {
+              // O erro original continua no evento mesmo se o registro de email falhar.
+            }
           }
         }
       }

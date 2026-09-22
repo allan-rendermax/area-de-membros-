@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPostbackRepo } from '@/lib/data/postback-repo'
 
-const { from, select, eq, contains, limit, insert } = vi.hoisted(() => ({
-  from: vi.fn(), select: vi.fn(), eq: vi.fn(), contains: vi.fn(), limit: vi.fn(), insert: vi.fn(),
+const { from, select, eq, contains, limit, insert, rpc, single } = vi.hoisted(() => ({
+  from: vi.fn(), select: vi.fn(), eq: vi.fn(), contains: vi.fn(), limit: vi.fn(), insert: vi.fn(), rpc: vi.fn(), single: vi.fn(),
 }))
-vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ from }) }))
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ from, rpc }) }))
 vi.mock('@/lib/data/customers', () => ({ createCustomer: vi.fn(), findCustomerByEmail: vi.fn() }))
 vi.mock('@/lib/data/products', () => ({ findStoreForProductCode: vi.fn(), getProductsForCode: vi.fn() }))
 
@@ -14,6 +14,46 @@ beforeEach(() => {
   select.mockReturnValue({ eq })
   eq.mockReturnValue({ eq, contains })
   contains.mockReturnValue({ limit })
+})
+
+describe('resultado efetivo do pedido', () => {
+  const input = {
+    storeId: 'store-1', transactionId: 'tx-1', productCode: 'ATLAS-COMPLETO', productName: 'Atlas',
+    customerEmail: 'antigo@example.test', customerName: 'Nome Antigo', status: 'pago' as const,
+    paytType: 'order', isTest: false, amountCents: 4700,
+  }
+
+  it('lê titular e status persistidos pelo ID devolvido pela RPC', async () => {
+    rpc.mockReturnValue({ single: vi.fn().mockResolvedValue({ data: {
+      out_order_id: 'ord-1', out_changed: false, out_status: 'pago',
+    }, error: null }) })
+    from.mockImplementation((table) => table === 'orders' ? { select } : { insert })
+    select.mockReturnValue({ eq })
+    eq.mockReturnValue({ single })
+    single.mockResolvedValue({ data: {
+      id: 'ord-1', customer_email: 'corrigido@example.test', customer_name: 'Titular Corrigido', status: 'reembolsado',
+    }, error: null })
+
+    await expect(createPostbackRepo().applyOrderStatus(input)).resolves.toEqual({
+      orderId: 'ord-1', changed: false, status: 'reembolsado',
+      customerEmail: 'corrigido@example.test', customerName: 'Titular Corrigido',
+    })
+    expect(from).toHaveBeenCalledWith('orders')
+    expect(select).toHaveBeenCalledWith('id, customer_email, customer_name, status')
+    expect(eq).toHaveBeenCalledWith('id', 'ord-1')
+  })
+
+  it('propaga falha do SELECT e não devolve identidade do payload', async () => {
+    rpc.mockReturnValue({ single: vi.fn().mockResolvedValue({ data: {
+      out_order_id: 'ord-1', out_changed: true, out_status: 'pago',
+    }, error: null }) })
+    from.mockReturnValue({ select })
+    select.mockReturnValue({ eq })
+    eq.mockReturnValue({ single })
+    single.mockResolvedValue({ data: null, error: new Error('leitura indisponível') })
+
+    await expect(createPostbackRepo().applyOrderStatus(input)).rejects.toThrow('leitura indisponível')
+  })
 })
 
 describe('registro de avisos por cliente, loja e produtos', () => {

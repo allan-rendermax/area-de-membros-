@@ -67,6 +67,73 @@ describe('processPostback', () => {
     expect(notifier.sent).toHaveLength(1)
   })
 
+  it('aviso pago antigo usa titular corrigido e não recria o titular original', async () => {
+    await run(paid)
+    repo.orders[0].customerEmail = 'corrigido@example.test'
+    repo.orders[0].customerName = 'Titular Corrigido'
+    repo.customers = []
+    notifier.sent = []
+
+    expect(await run(paid)).toMatchObject({ emailsSent: 1, customerCreated: true })
+    expect(notifier.sent[0]).toMatchObject({ to: 'corrigido@example.test', customerName: 'Titular Corrigido' })
+    expect(repo.customers.map((customer) => customer.email)).toEqual(['corrigido@example.test'])
+  })
+
+  it('separa produtos de titulares efetivos distintos na mesma transação', async () => {
+    repo.orders.push(
+      {
+        id: 'ord-1', storeId: ARQ.id, transactionId: bumps.transaction_id, productCode: 'ATLAS-COMPLETO',
+        productName: 'Atlas', customerEmail: 'a@example.test', customerName: 'Titular A',
+        status: 'pago', paytType: 'order', isTest: false, amountCents: 4700,
+      },
+      {
+        id: 'ord-2', storeId: ARQ.id, transactionId: bumps.transaction_id, productCode: 'BUMP-CHECKLIST',
+        productName: 'Checklist', customerEmail: 'b@example.test', customerName: 'Titular B',
+        status: 'pago', paytType: 'order', isTest: false, amountCents: 900,
+      },
+      {
+        id: 'ord-3', storeId: ARQ.id, transactionId: bumps.transaction_id, productCode: 'BUMP-PACK',
+        productName: 'Pack', customerEmail: 'b@example.test', customerName: 'Titular B',
+        status: 'pago', paytType: 'order', isTest: false, amountCents: 900,
+      },
+    )
+
+    expect(await run(bumps)).toMatchObject({ emailsSent: 2 })
+    expect(notifier.sent).toHaveLength(2)
+    expect(notifier.sent[0]).toMatchObject({ to: 'a@example.test', products: [{ id: 'p-atlas' }, { id: 'p-bonus1' }] })
+    expect(notifier.sent[1]).toMatchObject({ to: 'b@example.test', products: [{ id: 'p-check' }, { id: 'p-pack' }] })
+  })
+
+  it('falha na leitura da identidade persistida interrompe o aviso para retentativa', async () => {
+    repo.failReadOrder = true
+    await expect(run(paid)).rejects.toThrow('leitura do pedido indisponível')
+    expect(notifier.sent).toHaveLength(0)
+    expect(repo.customers).toHaveLength(0)
+    expect(repo.events[0]).toMatchObject({ outcome: 'erro', error: 'leitura do pedido indisponível' })
+    repo.failReadOrder = false
+    expect(await run(paid)).toMatchObject({ emailsSent: 1 })
+  })
+
+  it('pagamento atualiza a identidade do pedido pendente e pendente atrasado não a reverte', async () => {
+    const pending = withStatus('waiting_payment')
+    await run(pending)
+    const corrected = { ...paid, customer: { name: 'Titular Final', email: ' FINAL@Example.test ' } }
+    await run(corrected)
+    expect(repo.orders[0]).toMatchObject({ customerEmail: 'final@example.test', customerName: 'Titular Final', status: 'pago' })
+    await run(pending)
+    expect(repo.orders[0]).toMatchObject({ customerEmail: 'final@example.test', customerName: 'Titular Final', status: 'pago' })
+    expect(notifier.sent).toHaveLength(1)
+    expect(notifier.sent[0]).toMatchObject({ to: 'final@example.test' })
+  })
+
+  it('pedido pago sem produtos publicados registra erro e não declara liberação', async () => {
+    repo.productsByCode['ATLAS-COMPLETO'] = []
+    const result = await run(paid)
+    expect(result).toMatchObject({ emailsSent: 0, emailErrors: [expect.stringMatching(/nenhum produto publicado/i)] })
+    expect(result).not.toMatchObject({ outcome: 'liberado' })
+    expect(repo.events[0]).toMatchObject({ error: expect.stringMatching(/nenhum produto publicado/i) })
+  })
+
   it('aviso pendente atrasado não retrocede pedido pago', async () => {
     await run(paid)
     expect(await run(withStatus('waiting_payment'))).toMatchObject({ status: 'pago', outcome: 'sem_mudanca' })

@@ -50,7 +50,20 @@ export function createPostbackRepo(): PostbackRepo {
         .single()
       if (error) throw error
       const row = data as { out_order_id: string; out_changed: boolean; out_status: OrderStatus }
-      return { orderId: row.out_order_id, changed: row.out_changed, status: row.out_status }
+      const { data: persisted, error: readError } = await db
+        .from('orders')
+        .select('id, customer_email, customer_name, status')
+        .eq('id', row.out_order_id)
+        .single()
+      if (readError) throw readError
+      if (!persisted) throw new Error(`Pedido ${row.out_order_id} não encontrado após atualização`)
+      return {
+        orderId: persisted.id,
+        changed: row.out_changed,
+        status: persisted.status as OrderStatus,
+        customerEmail: persisted.customer_email,
+        customerName: persisted.customer_name,
+      }
     },
 
     findCustomerByEmail,
