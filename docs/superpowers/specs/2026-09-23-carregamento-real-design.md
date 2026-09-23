@@ -47,7 +47,13 @@ Testes de transporte da consulta relacional (uma requisição, filtro/ordem, mó
 
 ## Entrega
 
-Código testado, revisão por tarefa e revisão final, relatório com medições e limitações. Integração local preservando alterações existentes; publicação em produção não é necessária para validar o código e não será presumida como feita. Região segue iad1 enquanto não houver evidência suficiente para mudança.
+Código testado, revisão por tarefa e revisão final, relatório com medições e limitações. Integração local preservando alterações existentes; publicação em produção não é necessária para validar o código e não será presumida como feita. Configuração versionada aponta para gru1 conforme evidência adicional abaixo; produção permanece iad1 até um próximo deploy.
+
+### Evidência adicional: região do banco
+
+Durante a investigação, DNS de db.tujtwlrxpetpiatlbrps.supabase.co resolveu para 2600:1f1e:b2a:a301:c879:17f4:a2b6:52f5. O arquivo oficial https://ip-ranges.amazonaws.com/ip-ranges.json, createDate 2026-09-23-18-47-06, associa esse IP a 2600:1f1e::/36, region sa-east-1, network_border_group sa-east-1 (AMAZON/EC2). Essa evidência vincula o endpoint do banco a São Paulo. Vercel inspect confirma iad1 na aplicação atual.
+
+Adicionar vercel.json mínimo com $schema=https://openapi.vercel.sh/vercel.json e regions=['gru1'] para aproximar a execução do banco no próximo deploy. A configuração não altera recursos remotos nesta sessão. Validar JSON contra schema oficial e reconhecer que teste local não mede o ganho geográfico nem confirma a região de um deploy que ainda não aconteceu. Sem mudança de plano pago ou banco.
 
 ## Aprovação
 

@@ -126,7 +126,7 @@ const [siblingItems] = await Promise.all([
   ctx.item.kind === 'video' ? recordItemAccess({ customerId: customer.id, storeId: store.id,
     productId: ctx.product.id, itemId: ctx.item.id, kind: ctx.item.kind }) : Promise.resolve(),
 ])
-const siblings = siblingItems.filter(/* validação atual de URL */)
+const siblings = siblingItems.filter((item) => item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))
 ```
 
 - [ ] **Step 4: Adicionar LessonSkeleton conforme padrão de skeletons existente.** Cabeçalho, retângulo aspect-video e lateral; role=status com texto `Carregando material…`, formas decorativas aria-hidden. Loading de produto/item retorna o mesmo componente. Ler docs de loading e linking-and-navigating; manter prefetch=false em links de itens.
@@ -161,6 +161,28 @@ node '<visualizations>/browser-fixture.mjs' --production
 - [ ] **Step 3: Após tarefas 1 e 2 revisadas, executar** `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`; repetir o mesmo protocolo no build final. Verificar backend sem novas leituras de stores após aquecimento, e novas leituras depois de salvar/renomear/criar via admin.
 - [ ] **Step 4: QA funcional agent-browser:** login; vitrine->produto->vídeo->próximo/voltar; abrir recursos; modal fechar/reabrir; capturas responsivas; erro JS/overflow; aluno bloqueado, pedido reembolsado, conteúdo oculto/outra loja; cold/warm de cache; store edit/create/rename. Não executar login nem alteração em dados reais.
 - [ ] **Step 5: Relatório e revisão final.** Documentar números e método, limites da medição sintética, estado de produção/região e avisos preexistentes. Revisão ampla por subagente distinto, corrigir achados e repetir apenas checks afetados. Integrar localmente com fast-forward somente se seguro e preservar todos os arquivos preexistentes. Não declarar publicado sem deploy confirmado.
+
+### Task 4: Colocalização para o próximo deploy
+
+**Files:**
+- Create: vercel.json
+
+**Interfaces:**
+- Consumes: Vercel project configuration schema; banco DNS mapeado a AWS sa-east-1 conforme spec.
+- Produces: regions=['gru1'] aplicada pelo próximo deploy Vercel.
+
+- [ ] **Step 1: Conferir docs oficiais** https://vercel.com/docs/project-configuration/vercel-json#regions e https://vercel.com/docs/regions. Não alterar painel remoto.
+- [ ] **Step 2: Criar configuração mínima.** Não adicionar testes unitários que apenas repetem JSON; verificar com schema oficial.
+
+```json
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["gru1"]
+}
+```
+
+- [ ] **Step 3: Validar JSON parse e schema oficial**, usando Ajv já transitivo se disponível, sem adicionar dependência. Não fazer deploy. Registrar que a configuração fica pronta e o ganho geográfico depende de publicação/medição remota.
+- [ ] **Step 4: Escrever report SDD e informar root para commit/revisão**, sem tocar arquivos de outros agentes.
 
 ## Self-review
 
