@@ -1,7 +1,9 @@
 'use server'
 
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { isAdminEmail } from '@/lib/auth/admin'
+import { ADMIN_BROWSER_COOKIE, ADMIN_BROWSER_MAX_AGE, createAdminBrowserSession } from '@/lib/auth/admin-browser-session'
 import { normalizeEmail } from '@/lib/domain/email'
 import { env } from '@/lib/env'
 import { createClient } from '@/lib/supabase/server'
@@ -28,8 +30,25 @@ export async function verificarCodigo(_prev: AdminLoginState, formData: FormData
 
   try {
     const supabase = await createClient()
-    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
-    if (error) return { step: 'code', email, error: 'Código inválido ou expirado.' }
+    const { data: verified, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+    if (error || !verified.user?.id || !verified.session?.access_token) {
+      return { step: 'code', email, error: 'Código inválido ou expirado.' }
+    }
+    const { data, error: claimsError } = await supabase.auth.getClaims(verified.session.access_token)
+    const userId = data?.claims.sub
+    const sessionId = data?.claims.session_id
+    if (claimsError || userId !== verified.user.id || typeof sessionId !== 'string' || !sessionId) {
+      return { step: 'code', email, error: 'Código inválido ou expirado.' }
+    }
+    const rememberBrowser = formData.get('rememberBrowser') === 'on'
+    const value = createAdminBrowserSession(userId, sessionId, env.loginGuardSecret)
+    ;(await cookies()).set(ADMIN_BROWSER_COOKIE, value, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      ...(rememberBrowser ? { maxAge: ADMIN_BROWSER_MAX_AGE } : {}),
+    })
   } catch {
     return { step: 'code', email, error: 'Código inválido ou expirado.' }
   }

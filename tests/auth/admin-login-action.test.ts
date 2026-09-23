@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 const auth = vi.hoisted(() => ({
   signInWithOtp: vi.fn(),
   verifyOtp: vi.fn(),
+  getClaims: vi.fn(),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -13,7 +14,8 @@ vi.mock('next/navigation', () => ({
     throw new Error('NEXT_REDIRECT')
   }),
 }))
-vi.mock('@/lib/env', () => ({ env: { adminEmails: ['admin@example.com'] } }))
+vi.mock('@/lib/env', () => ({ env: { adminEmails: ['admin@example.com'], loginGuardSecret: 'test-secret' } }))
+vi.mock('next/headers', () => ({ cookies: async () => ({ set: vi.fn() }) }))
 vi.mock('@/lib/supabase/server', () => ({ createClient: vi.fn() }))
 
 const initial: AdminLoginState = { step: 'email', email: '', error: null }
@@ -28,7 +30,8 @@ function form(email: string, token?: string) {
 beforeEach(() => {
   vi.clearAllMocks()
   auth.signInWithOtp.mockResolvedValue({ data: {}, error: null })
-  auth.verifyOtp.mockResolvedValue({ data: {}, error: null })
+  auth.verifyOtp.mockResolvedValue({ data: { user: { id: 'admin-id' }, session: { access_token: 'verified-access-token' } }, error: null })
+  auth.getClaims.mockResolvedValue({ data: { claims: { sub: 'admin-id', session_id: 'session-id' } }, error: null })
   vi.mocked(createClient).mockResolvedValue({ auth } as never)
 })
 
@@ -95,6 +98,7 @@ describe('verificarCodigo — privacidade da allowlist', () => {
 
   it('redireciona o admin verificado para o painel', async () => {
     await expect(verificarCodigo(initial, form('admin@example.com', '123456'))).rejects.toThrow('NEXT_REDIRECT')
+    expect(auth.getClaims).toHaveBeenCalledWith('verified-access-token')
     expect(redirect).toHaveBeenCalledWith('/admin')
   })
 })

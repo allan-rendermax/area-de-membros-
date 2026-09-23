@@ -7,7 +7,13 @@ const actions = vi.hoisted(() => ({
   verificarCodigo: vi.fn(),
 }))
 
-vi.mock('react', () => ({ useActionState: vi.fn() }))
+vi.mock('react', async (importOriginal) => ({
+  ...await importOriginal<typeof import('react')>(),
+  useActionState: vi.fn(),
+  useState: vi.fn(() => [false, vi.fn()]),
+  useRef: vi.fn(() => ({ current: null })),
+  useEffect: vi.fn(),
+}))
 vi.mock('@/app/admin/entrar/actions', () => actions)
 
 type ElementNode = {
@@ -56,5 +62,9 @@ describe('AdminLoginForm — reenvio de código', () => {
     expect(resendButton?.props.formAction).toBe(resend)
     expect(resendButton?.props.formNoValidate).toBe(true)
     expect(email?.props.value).toBe('admin@example.com')
+    const remember = rendered.find((element) => element.type === 'input' && element.props.name === 'rememberBrowser')
+    expect(remember?.props.type).toBe('checkbox')
+    expect(remember?.props.defaultChecked).not.toBe(true)
+    expect(rendered.filter((element) => element.type === 'label').map(text).join(' ')).toContain('7 dias')
   })
 })
