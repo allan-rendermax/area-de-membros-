@@ -57,7 +57,7 @@ Invalidação comprovada pela UI administrativa com o cache real do Next:
 
 Navegação por clique vitrine → produto não gravou acesso a aula; produto → vídeo gravou um acesso. Próxima aula, voltar, abrir arquivo sintético e fechar/reabrir modal funcionaram.
 
-O fixture antigo de autenticação não incluía `session_id` no JWT, campo exigido pelo login administrativo já existente. O suporte sintético foi corrigido para concluir os testes do painel; não houve correção de autenticação no produto. Essa correção ocorreu após as medições comparáveis e não altera sua latência/dataset de aluno.
+O fixture antigo de autenticação não incluía `session_id` no JWT, campo exigido pelo login administrativo já existente. O suporte sintético foi corrigido para concluir os testes do painel; não houve correção de autenticação no produto. Essa correção ocorreu após as medições comparáveis e não altera sua latência/dataset de aluno. Somente após as capturas, as imagens locais do fixture foram desabilitadas nos testes de salvar loja, pois o formulário administrativo aceita imagens por URL HTTPS.
 
 Guardas verificadas em novas requisições: produto/item ocultos e de outra loja exibiram página não encontrada; produto sem compra abriu o modal bloqueado; aluno bloqueado foi levado ao login; reembolso retirou acesso ao produto e ao vídeo. Na abertura de arquivo, outra loja retornou 404, bloqueio redirecionou ao login e reembolso redirecionou ao modal de compra. Nenhuma tentativa negada criou registro de acesso. Os controles sintéticos de bloqueio/pagamento foram restaurados.
 
@@ -68,3 +68,5 @@ Evidências fora do Git: `C:/Users/arqal/.codex/visualizations/2026/09/23/01a0cf
 ## Processo e decisões
 
 Usuário autorizou brainstorming, aprovação autônoma de design/plano, execução sem perguntas, subagentes e paralelismo. Implementações de cache e conteúdo ocorreram em arquivos disjuntos; commits e integração ficaram com o controlador. O cache usa a API documentada para o modelo atual sem `cacheComponents`, evitando uma migração ampla. A região foi incluída somente depois de obter evidência do endpoint do banco. A aprovação de código e o teste local não substituem a medição pós-deploy.
+
+Integração local em `main` por fast-forward concluída, com os 491 testes repetidos e aprovados na pasta principal. Os sete arquivos preexistentes modificados/não rastreados foram preservados por comparação SHA-256. O worktree gerenciado pelo Codex foi mantido; nenhuma alteração preexistente foi incluída nos commits desta rodada.
