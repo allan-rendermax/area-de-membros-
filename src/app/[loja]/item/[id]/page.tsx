@@ -29,9 +29,14 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
   if (ctx.item.kind === 'video' && !embed) notFound()
   if (ctx.item.kind !== 'video' && !isHttpUrl(ctx.item.url)) notFound()
-  if (ctx.item.kind === 'video') await recordItemAccess({ customerId: customer.id, storeId: store.id, productId: ctx.product.id, itemId: ctx.item.id, kind: ctx.item.kind })
+  const [siblingItems] = await Promise.all([
+    listPublishedItemsInModule(ctx.module.id),
+    ctx.item.kind === 'video'
+      ? recordItemAccess({ customerId: customer.id, storeId: store.id, productId: ctx.product.id, itemId: ctx.item.id, kind: ctx.item.kind })
+      : Promise.resolve(),
+  ])
 
-  const siblings = (await listPublishedItemsInModule(ctx.module.id))
+  const siblings = siblingItems
     .filter((item) => item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))
   const index = siblings.findIndex((item) => item.id === ctx.item.id)
   const previous = index > 0 ? siblings[index - 1] : null

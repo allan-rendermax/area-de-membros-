@@ -98,25 +98,24 @@ export async function getProductBySlug(storeId: string, slug: string): Promise<P
 
 export async function listModulesWithItems(productId: string, opts: { publishedOnly: boolean }): Promise<ModuleWithItems[]> {
   const db = createAdminClient()
-  const { data: moduleRows, error } = await db
+  let query = db
     .from('modules')
-    .select(MODULE_COLUMNS)
+    .select(`${MODULE_COLUMNS}, items(${ITEM_COLUMNS})`)
     .eq('product_id', productId)
     .order('sort_order')
     .order('created_at')
+    .order('sort_order', { referencedTable: 'items' })
+    .order('created_at', { referencedTable: 'items' })
+  if (opts.publishedOnly) query = query.eq('is_published', true).eq('items.is_published', true)
+  const { data, error } = await query
   if (error) throw error
-  const modules = (moduleRows as DbModule[]).map(toModule).filter((m) => !opts.publishedOnly || m.isPublished)
-  if (modules.length === 0) return []
-
-  const { data: itemRows, error: itemsError } = await db
-    .from('items')
-    .select(ITEM_COLUMNS)
-    .in('module_id', modules.map((m) => m.id))
-    .order('sort_order')
-    .order('created_at')
-  if (itemsError) throw itemsError
-  const items = (itemRows as DbItem[]).map(toItem).filter((i) => !opts.publishedOnly || i.isPublished)
-  return modules.map((m) => ({ ...m, items: items.filter((i) => i.moduleId === m.id) }))
+  type DbModuleWithItems = DbModule & { items: DbItem[] }
+  return (data as DbModuleWithItems[])
+    .filter((row) => !opts.publishedOnly || row.is_published)
+    .map((row) => ({
+      ...toModule(row),
+      items: row.items.map(toItem).filter((child) => !opts.publishedOnly || child.isPublished),
+    }))
 }
 
 export async function getItemWithContext(itemId: string): Promise<{ item: Item; module: Module; product: Product } | null> {

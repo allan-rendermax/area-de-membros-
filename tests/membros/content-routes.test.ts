@@ -1,3 +1,4 @@
+import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { notFound, redirect } from 'next/navigation'
@@ -92,6 +93,19 @@ function productProps(slug = product.slug) {
 function itemProps(id = item.id) {
   return { params: Promise.resolve({ loja: store.slug, id }), searchParams: Promise.resolve({}) }
 }
+
+describe('carregamento do conteúdo', () => {
+  it('anuncia o carregamento e mantém formas decorativas fora da árvore acessível', async () => {
+    const skeletons = await import('@/components/membros/skeletons')
+    expect(skeletons).toHaveProperty('LessonSkeleton')
+    const html = renderToStaticMarkup(createElement(skeletons.LessonSkeleton))
+
+    expect(html).toContain('role="status"')
+    expect(html).toContain('Carregando material…')
+    expect(html).toContain('aspect-video')
+    expect(html).toContain('aria-hidden="true"')
+  })
+})
 
 describe('vitrine do aluno', () => {
   beforeEach(() => {
@@ -273,6 +287,43 @@ describe('rota de item', () => {
     await expect(ItemPage(itemProps()))
       .rejects.toThrow(`NEXT_REDIRECT:/${store.slug}?comprar=${product.slug}`)
     expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(listPublishedItemsInModule).not.toHaveBeenCalled()
+  })
+
+  it('inicia irmãos enquanto o registro do vídeo está pendente e aguarda ambos antes de renderizar', async () => {
+    const pendingRecord = deferred<void>()
+    const pendingSiblings = deferred<Item[]>()
+    const recordStarted = deferred<void>()
+    vi.mocked(recordItemAccess).mockImplementationOnce(() => {
+      recordStarted.resolve()
+      return pendingRecord.promise
+    })
+    vi.mocked(listPublishedItemsInModule).mockReturnValueOnce(pendingSiblings.promise)
+    let pageResolved = false
+
+    const rendering = ItemPage(itemProps()).then((page) => {
+      pageResolved = true
+      return page
+    })
+    await recordStarted.promise
+    const siblingsStartedWhileRecording = vi.mocked(listPublishedItemsInModule).mock.calls.length
+    const recordCalls = vi.mocked(recordItemAccess).mock.calls.length
+    const resolvedWhilePending = pageResolved
+    pendingRecord.resolve()
+    pendingSiblings.resolve([item])
+    const html = renderToStaticMarkup(await rendering)
+
+    expect(recordCalls).toBe(1)
+    expect(siblingsStartedWhileRecording).toBe(1)
+    expect(resolvedWhilePending).toBe(false)
+    expect(html).toContain(item.title)
+  })
+
+  it('propaga falha do registro do vídeo mesmo com irmãos carregados', async () => {
+    vi.mocked(recordItemAccess).mockRejectedValueOnce(new Error('registro indisponível'))
+
+    await expect(ItemPage(itemProps())).rejects.toThrow('registro indisponível')
+    expect(listPublishedItemsInModule).toHaveBeenCalledWith(courseModule.id)
   })
 
   it('mostra a página interna de arquivo sem abrir ou registrar download antes do clique', async () => {

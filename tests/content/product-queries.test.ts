@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getItemWithContext, listPublishedItemsInModule } from '@/lib/data/products'
+import { getItemWithContext, listModulesWithItems, listPublishedItemsInModule } from '@/lib/data/products'
 
 const admin = vi.hoisted(() => ({ createAdminClient: vi.fn() }))
 
@@ -138,9 +138,89 @@ function useItemsTable(rows: Record<string, unknown>[]) {
   })
 }
 
+function useModulesTable() {
+  const rows = [
+    {
+      ...moduleRow, id: 'module-b', title: 'Módulo B', sort_order: 2,
+      created_at: '2026-09-22T11:00:00Z', items: [],
+    },
+    {
+      ...moduleRow, id: 'module-hidden', title: 'Rascunho', sort_order: 0,
+      is_published: false, created_at: '2026-09-22T08:00:00Z',
+      items: [{ ...firstRow, module_id: 'module-hidden', id: 'item-draft', created_at: '2026-09-22T08:00:00Z' }],
+    },
+    {
+      ...moduleRow, created_at: '2026-09-22T10:00:00Z',
+      items: [
+        { ...secondRow, created_at: '2026-09-22T11:00:00Z' },
+        { ...firstRow, id: 'item-hidden', is_published: false, created_at: '2026-09-22T09:00:00Z' },
+        { ...firstRow, created_at: '2026-09-22T10:00:00Z' },
+      ],
+    },
+  ]
+  const requests = useTransport((request) => {
+    const url = new URL(request.url)
+    const order = (entries: typeof rows) => entries.sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at))
+    const modules = rows
+      .filter((row) => url.searchParams.get('product_id') === `eq.${row.product_id}`)
+      .filter((row) => url.searchParams.get('is_published') !== 'eq.true' || row.is_published)
+      .map((row) => ({
+        ...row,
+        items: row.items
+          .filter((child) => url.searchParams.get('items.is_published') !== 'eq.true' || child.is_published)
+          .sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at)),
+      }))
+    if (url.searchParams.get('order') === 'sort_order.asc,created_at.asc') order(modules)
+    return json(modules)
+  })
+  return requests
+}
+
 describe('consultas de conteúdo', () => {
   beforeEach(() => {
     admin.createAdminClient.mockReset()
+  })
+
+  it('carrega módulos e itens publicados ordenados em uma consulta relacional', async () => {
+    const requests = useModulesTable()
+
+    await expect(listModulesWithItems(productRow.id, { publishedOnly: true })).resolves.toEqual([
+      { ...parent, items: [item, { ...item, id: secondRow.id, title: secondRow.title, url: secondRow.url, sortOrder: 2 }] },
+      { ...parent, id: 'module-b', title: 'Módulo B', sortOrder: 2, items: [] },
+    ])
+
+    expect(requests).toHaveLength(1)
+    const url = new URL(requests[0].url)
+    expect(url.pathname).toBe('/rest/v1/modules')
+    expect(url.searchParams.get('select')).toContain('items(')
+    expect(url.searchParams.get('product_id')).toBe(`eq.${productRow.id}`)
+    expect(url.searchParams.get('is_published')).toBe('eq.true')
+    expect(url.searchParams.get('items.is_published')).toBe('eq.true')
+    expect(url.searchParams.get('order')).toBe('sort_order.asc,created_at.asc')
+    expect(url.searchParams.get('items.order')).toBe('sort_order.asc,created_at.asc')
+  })
+
+  it('inclui rascunhos e módulos vazios no modo admin sem filtros publicados', async () => {
+    const requests = useModulesTable()
+
+    const modules = await listModulesWithItems(productRow.id, { publishedOnly: false })
+    expect(modules.map((module) => [module.id, module.items.map((child) => child.id)])).toEqual([
+      ['module-hidden', ['item-draft']],
+      ['module-a', ['item-hidden', 'item-first', 'item-second']],
+      ['module-b', []],
+    ])
+    expect(requests).toHaveLength(1)
+    const url = new URL(requests[0].url)
+    expect(url.searchParams.has('is_published')).toBe(false)
+    expect(url.searchParams.has('items.is_published')).toBe(false)
+  })
+
+  it('propaga erro da consulta relacional de módulos', async () => {
+    const requests = useResponses(json({ message: 'módulos indisponíveis', code: 'XX002', details: null, hint: null }, 500))
+
+    await expect(listModulesWithItems(productRow.id, { publishedOnly: true }))
+      .rejects.toMatchObject({ message: 'módulos indisponíveis', code: 'XX002' })
+    expect(requests).toHaveLength(1)
   })
 
   it('carrega item, módulo e produto em uma única requisição relacional', async () => {
