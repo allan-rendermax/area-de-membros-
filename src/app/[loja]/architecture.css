@@ -55,6 +55,13 @@
 [data-member-theme="arquitetura"] .arq-auto-cover[data-aspect="episode"] { background: linear-gradient(120deg, #faf9f4 0 70%, #ffd53d 70% 80%, #ff5a16 80%); }
 [data-member-theme="arquitetura"] .arq-auto-cover[data-muted="true"] { filter: saturate(.6); opacity: .7; }
 [data-member-theme="arquitetura"] .member-product-banner h1 { font-family: var(--arq-display); font-weight: 800; text-transform: uppercase; font-size: clamp(30px, 4vw, 64px); }
+[data-member-theme="arquitetura"] .lesson-title { font-family: var(--arq-display); font-size: clamp(34px, 3.5vw, 54px); font-weight: 800; line-height: 1.02; text-transform: uppercase; letter-spacing: -.01em; }
+[data-member-theme="arquitetura"] .lesson-sidebar-heading { font-family: var(--arq-display); font-size: 32px; font-weight: 800; text-transform: uppercase; letter-spacing: .01em; }
+[data-member-theme="arquitetura"] .lesson-section-heading { font-family: var(--arq-display); font-size: 27px; font-weight: 800; text-transform: uppercase; letter-spacing: .005em; }
+[data-member-theme="arquitetura"] .lesson-resource-action { background: var(--arq-action); color: var(--arq-ink); }
+[data-member-theme="arquitetura"] .lesson-back:hover { border-color: var(--member-destaque); color: var(--arq-action); }
+[data-member-theme="arquitetura"] .lesson-sidebar-link[aria-current="page"] { box-shadow: inset 3px 0 var(--member-destaque); }
+[data-member-theme="arquitetura"] .lesson-module summary:hover { color: var(--arq-action); }
 [data-member-theme="arquitetura"] .member-login-copy h2 { font-family: var(--arq-display); text-transform: uppercase; font-size: clamp(48px, 4.5vw, 76px); line-height: 1; }
 [data-member-theme="arquitetura"] .member-login-copy h2 span { color: var(--arq-action); }
 [data-member-theme="arquitetura"] .member-login-panel h1 { font-weight: 800; font-size: 28px; letter-spacing: -.04em; }

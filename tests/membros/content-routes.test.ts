@@ -307,9 +307,9 @@ describe('rota de item', () => {
     const html = renderToStaticMarkup(result)
 
     expect(html).toContain(`href="/${store.slug}/item/${previous.id}"`)
-    expect(html).toContain('← Anterior')
+    expect(html).toContain('Aula anterior')
     expect(html).toContain(`href="/${store.slug}/item/${next.id}"`)
-    expect(html).toContain('Próximo →')
+    expect(html).toContain('Próxima aula')
     expect(listPublishedItemsInModule).toHaveBeenCalledWith(courseModule.id)
     expect(listModulesWithItems).not.toHaveBeenCalled()
   })

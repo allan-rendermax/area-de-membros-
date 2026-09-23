@@ -149,15 +149,15 @@ describe('banners principais de rota', () => {
     expect(html.split('loading="eager"')).toHaveLength(3)
   })
 
-  it('marca o banner do produto como eager/high', async () => {
+  it('abre o produto com título e descrição antes do conteúdo sem banner grande', async () => {
     const element = await ProdutoPage({
       params: Promise.resolve({ loja: store.slug, slug: product.slug }),
       searchParams: Promise.resolve({}),
     })
     const html = renderToStaticMarkup(element)
 
-    expect(html).toContain('sizes="100vw"')
-    expect(html).toContain('loading="eager"')
-    expect(html).toContain('fetchPriority="high"')
+    expect(html).toMatch(/<h1[^>]*>Atlas<\/h1>/)
+    expect(html).toContain(product.description)
+    expect(html).not.toContain(product.bannerUrl)
   })
 })

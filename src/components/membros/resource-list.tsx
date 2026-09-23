@@ -10,30 +10,29 @@ export function ResourceList({ items, storeSlug, currentItemId }: { items: Item[
     : resources
 
   return (
-    <ul className="divide-y divide-borda overflow-hidden rounded-lg border border-borda bg-superficie">
+    <ul className="space-y-3">
       {ordered.map((item) => {
         const isLink = item.kind === 'link'
         const Icon = isLink ? LinkIcon : FileIcon
         const action = isLink ? 'Abrir link' : 'Baixar'
         return (
-          <li key={item.id} className={item.id === currentItemId ? 'bg-superficie-2/70' : ''}>
+          <li key={item.id} className="min-w-0">
             <a
               href={`/${storeSlug}/item/${item.id}/abrir`}
               target={isLink ? '_blank' : undefined}
               rel={isLink ? 'noopener noreferrer' : undefined}
               aria-label={`${action} ${item.title}${isLink ? ' (abre em nova aba)' : ''}`}
-              className="group flex min-h-18 min-w-0 items-center gap-3 px-4 py-4 hover:bg-superficie-2 focus-visible:bg-superficie-2 sm:gap-4 sm:px-5"
+              className={`group flex min-h-20 min-w-0 items-center gap-4 rounded-xl border border-borda px-4 py-4 transition-colors hover:border-destaque/70 hover:bg-superficie-2 focus-visible:border-destaque focus-visible:bg-superficie-2 sm:px-5 ${item.id === currentItemId ? 'bg-superficie-2' : 'bg-superficie'}`}
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-borda bg-fundo text-texto-suave" aria-hidden>
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-borda bg-fundo text-destaque" aria-hidden>
                 <Icon className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block break-words text-sm font-semibold leading-snug text-texto sm:text-base">{item.title}</span>
+                <span className="block break-words [overflow-wrap:anywhere] text-sm font-semibold leading-snug text-texto sm:text-base">{item.title}</span>
                 <span className="mt-1 block text-xs text-texto-suave">{isLink ? 'Link externo · abre em nova aba' : 'Arquivo'}</span>
               </span>
-              <span className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-texto sm:text-sm" aria-hidden>
-                <span>{action}</span>
-                {isLink ? <span className="text-base leading-none text-destaque">↗</span> : <DownloadIcon className="h-4 w-4 text-destaque motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:translate-y-0.5 motion-safe:group-focus-visible:translate-y-0.5" />}
+              <span className="lesson-resource-action grid h-11 w-11 shrink-0 place-items-center rounded-full bg-destaque text-white motion-safe:transition-transform motion-safe:duration-200 motion-safe:group-hover:-translate-y-0.5 motion-safe:group-focus-visible:-translate-y-0.5" aria-hidden>
+                {isLink ? <span className="text-xl leading-none">↗</span> : <DownloadIcon className="h-5 w-5" />}
               </span>
             </a>
           </li>
