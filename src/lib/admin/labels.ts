@@ -4,6 +4,7 @@ const OUTCOME_LABEL: Record<string, string> = {
   sem_mudanca: 'Sem mudança',
   codigo_desconhecido: 'Código desconhecido',
   ignorado: 'Ignorado',
+  teste: 'Teste recebido',
   invalido: 'Inválido',
   chave_invalida: 'Chave inválida',
   erro: 'Erro',

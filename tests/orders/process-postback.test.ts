@@ -27,6 +27,56 @@ beforeEach(() => {
 })
 
 describe('processPostback', () => {
+  it.each([true, 'true', 1, '1'])('confirma teste %s sem criar pedidos, clientes ou emails', async (test) => {
+    const result = await run({
+      ...bumps,
+      test,
+      product: {
+        code: '4O9J39', name: 'Produto Agrupado',
+        items: [{ code: 'R28BKV' }, { code: '45PK73' }],
+      },
+      order_bumps: [{ code: 'R3A674' }, { code: '47ZMAL' }],
+    })
+
+    expect(result).toEqual({ kind: 'ignored', reason: 'teste_conexao' })
+    expect(repo.orders).toHaveLength(0)
+    expect(repo.customers).toHaveLength(0)
+    expect(notifier.sent).toHaveLength(0)
+    expect(repo.events).toHaveLength(1)
+    expect(repo.events[0]).toMatchObject({
+      keyValid: true, outcome: 'teste', paytStatus: 'paid',
+      productCodes: ['4O9J39', 'R28BKV', '45PK73', 'R3A674', '47ZMAL'],
+    })
+    expect(repo.events[0].error).toBeUndefined()
+  })
+
+  it('teste com código conhecido não libera acesso nem reembolsa uma compra existente', async () => {
+    await run(paid)
+    const existingOrders = structuredClone(repo.orders)
+    const existingCustomers = structuredClone(repo.customers)
+
+    expect(await run({ ...bumps, test: true })).toEqual({ kind: 'ignored', reason: 'teste_conexao' })
+    expect(await run(withStatus('refunded', { test: true }))).toEqual({ kind: 'ignored', reason: 'teste_conexao' })
+    expect(repo.orders).toEqual(existingOrders)
+    expect(repo.customers).toEqual(existingCustomers)
+    expect(notifier.sent).toHaveLength(1)
+  })
+
+  it('teste não contorna a chave nem a validação dos dados', async () => {
+    expect(await run({ ...paid, test: true, integration_key: 'errada' })).toEqual({ kind: 'unauthorized' })
+    expect(await run({ ...paid, test: true, customer: {} })).toMatchObject({ kind: 'invalid' })
+    expect(repo.events.map((event) => event.outcome)).toEqual(['chave_invalida', 'invalido'])
+    expect(repo.orders).toHaveLength(0)
+    expect(repo.customers).toHaveLength(0)
+    expect(notifier.sent).toHaveLength(0)
+  })
+
+  it.each([false, 'false', 0, '0', undefined])('processa compra com test=%s normalmente', async (test) => {
+    expect(await run({ ...paid, test })).toMatchObject({ kind: 'processed', outcome: 'liberado', emailsSent: 1 })
+    expect(repo.orders).toHaveLength(1)
+    expect(repo.customers).toHaveLength(1)
+  })
+
   it('recusa chave de integração inválida e registra o evento', async () => {
     expect(await run({ ...paid, integration_key: 'errada' })).toEqual({ kind: 'unauthorized' })
     expect(repo.orders).toHaveLength(0)

@@ -20,6 +20,7 @@ export type EventOutcome =
   | 'chave_invalida'
   | 'invalido'
   | 'ignorado'
+  | 'teste'
   | 'liberado'
   | 'atualizado'
   | 'sem_mudanca'
@@ -124,6 +125,13 @@ export async function processPostback(
   }
   const p = parsed.value
   const summary = { customerEmail: p.customerEmail, productCodes: p.products.map((x) => x.code), paytStatus: p.status }
+
+  // O botão Testar URL envia produtos fictícios. Confirma o recebimento sem
+  // percorrer o fluxo de compra ou alterar acessos, mesmo para códigos conhecidos.
+  if (p.isTest) {
+    await repo.finishEvent(eventId, { keyValid: true, outcome: 'teste', ...summary })
+    return { kind: 'ignored', reason: 'teste_conexao' }
+  }
 
   const status = mapPaytStatus(p.status)
   if (!status) {
