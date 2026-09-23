@@ -44,7 +44,7 @@ const notice: AccessNotice = {
 
 let log: FakeLog
 let transport: FakeTransport
-const deps = () => ({ log, transport, appUrl: 'https://app.test/', emailFrom: 'Área de Membros <acesso@grupoelevamax.com>' })
+const deps = () => ({ log, transport, appUrl: 'https://app.test/', emailFrom: 'Área de Membros <acesso@grupoelevamax.com>', emailReplyTo: 'suporte@example.com' })
 
 beforeEach(() => {
   log = new FakeLog()
@@ -82,6 +82,7 @@ describe('sendAccessNotice', () => {
       from: '"Arquitetura" <acesso@grupoelevamax.com>',
       to: 'joao@gmail.com',
       subject: 'Seu acesso chegou — Arquitetura',
+      replyTo: 'suporte@example.com',
     })
     expect(transport.sent[0].html).toContain('https://app.test/arquitetura/entrar?email=joao%40gmail.com')
   })

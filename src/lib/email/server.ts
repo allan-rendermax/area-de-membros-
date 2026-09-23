@@ -20,6 +20,7 @@ export function notifyAccess(notice: AccessNotice): Promise<NoticeOutcome> {
     transport: createResendTransport(),
     appUrl: env.appUrl,
     emailFrom: env.emailFrom,
+    emailReplyTo: env.emailReplyTo,
   })
 }
 

@@ -14,6 +14,7 @@ export const env = {
   get paytIntegrationKey() { return required('PAYT_INTEGRATION_KEY') },
   get resendApiKey() { return required('RESEND_API_KEY') },
   get emailFrom() { return required('EMAIL_FROM') },
+  get emailReplyTo() { return process.env.EMAIL_REPLY_TO?.trim() || undefined },
   get appUrl() { return required('APP_URL').replace(/\/$/, '') },
   get adminEmails() {
     return required('ADMIN_EMAILS').split(',').map(normalizeEmail).filter(Boolean)

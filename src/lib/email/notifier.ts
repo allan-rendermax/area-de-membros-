@@ -1,7 +1,7 @@
 import type { AccessNotice, EmailKind, NoticeResult } from '@/lib/domain/types'
 import { accessNoticeEmail } from './access-template'
 
-export type OutgoingEmail = { from: string; to: string; subject: string; html: string }
+export type OutgoingEmail = { from: string; to: string; subject: string; html: string; replyTo?: string }
 
 export interface EmailTransport {
   send(email: OutgoingEmail): Promise<{ providerId: string | null }>
@@ -30,7 +30,7 @@ export function loginUrlFor(appUrl: string, storeSlug: string, email: string): s
 
 export async function sendAccessNotice(
   notice: AccessNotice,
-  deps: { log: EmailLogRepo; transport: EmailTransport; appUrl: string; emailFrom: string },
+  deps: { log: EmailLogRepo; transport: EmailTransport; appUrl: string; emailFrom: string; emailReplyTo?: string },
 ): Promise<NoticeOutcome> {
   const logId = await deps.log.start({
     storeId: notice.store.id,
@@ -47,6 +47,7 @@ export async function sendAccessNotice(
       to: notice.to,
       subject,
       html,
+      ...(deps.emailReplyTo ? { replyTo: deps.emailReplyTo } : {}),
     })
     await deps.log.finish(logId, { status: 'enviado', providerId })
     return { ok: true, logId }
