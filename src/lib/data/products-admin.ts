@@ -1,5 +1,7 @@
 import type { ItemInput, ModuleInput, OfferInput, ProductInput } from '@/lib/admin/forms'
+import { itemUploadFilename, validateItemUpload, type ItemUploadTicket } from '@/lib/admin/item-upload'
 import { moveInList } from '@/lib/admin/order'
+import { env } from '@/lib/env'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024
@@ -115,6 +117,22 @@ export async function uploadImage(file: File): Promise<string> {
   const { error } = await db.storage.from('covers').upload(path, file, { contentType: file.type })
   if (error) throw error
   return db.storage.from('covers').getPublicUrl(path).data.publicUrl
+}
+
+export async function createItemUpload(name: string, size: number): Promise<ItemUploadTicket> {
+  const validationError = validateItemUpload(name, size)
+  if (validationError) throw new Error(validationError)
+  const path = `${crypto.randomUUID()}/${itemUploadFilename(name)}`
+  const bucket = createAdminClient().storage.from('arquivos')
+  const { data, error } = await bucket.createSignedUploadUrl(path, { upsert: false })
+  if (error || !data?.token) throw new Error('Não foi possível preparar o envio do arquivo. Tente novamente.')
+  return {
+    path,
+    token: data.token,
+    publicUrl: bucket.getPublicUrl(path).data.publicUrl,
+    supabaseUrl: env.supabaseUrl,
+    publishableKey: env.supabasePublishableKey,
+  }
 }
 
 export type AdminOffer = { id: string; name: string; paytProductCode: string; productIds: string[] }

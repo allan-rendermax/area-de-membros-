@@ -22,17 +22,10 @@ export function ItemAnchor({
   current?: boolean
 }) {
   const href = `/${storeSlug}/item/${item.id}`
-  if (item.kind === 'video') {
-    return (
-      <Link href={href} prefetch={false} className={className} aria-current={current ? 'page' : undefined}>
-        {children}
-      </Link>
-    )
-  }
   return (
-    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+    <Link href={href} prefetch={false} className={className} aria-current={current ? 'page' : undefined}>
       {children}
-    </a>
+    </Link>
   )
 }
 

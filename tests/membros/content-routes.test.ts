@@ -188,6 +188,33 @@ describe('rota de produto', () => {
     expect(html).toContain(item.title)
     expect(listModulesWithItems).toHaveBeenCalledWith(product.id, { publishedOnly: true })
   })
+
+  it('separa aulas e downloads por módulo sem expor URLs externas na capa', async () => {
+    const file = { ...item, id: '22222222-2222-4222-8222-222222222222', kind: 'arquivo' as const, title: 'Apostila da aula', url: 'https://files.example.com/a.pdf' }
+    const link = { ...item, id: '33333333-3333-4333-8333-333333333333', kind: 'link' as const, title: 'Versão editável', url: 'https://drive.example.com/doc' }
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [item, file, link] }])
+    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
+    expect(html).toContain('Aulas em vídeo')
+    expect(html).toContain('Downloads e links')
+    expect(html).toContain(`href="/${store.slug}/item/${file.id}/abrir"`)
+    expect(html).toContain(`href="/${store.slug}/item/${link.id}/abrir"`)
+    expect(html).not.toContain(file.url)
+    expect(html).not.toContain(link.url)
+  })
+
+  it('não cria seção vazia para recursos com destino inválido', async () => {
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [item, { ...item, id: '22222222-2222-4222-8222-222222222222', kind: 'arquivo', url: 'javascript:alert(1)' }] }])
+    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
+    expect(html).toContain('Aulas em vídeo')
+    expect(html).not.toContain('Downloads e links')
+  })
+
+  it('mostra estado vazio quando nenhum item publicado pode ser aberto', async () => {
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [{ ...item, kind: 'arquivo', url: 'javascript:alert(1)' }] }])
+    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
+    expect(html).toContain('Nenhum conteúdo publicado ainda.')
+    expect(html).not.toContain('Downloads e links')
+  })
 })
 
 describe('rota de item', () => {
@@ -248,30 +275,17 @@ describe('rota de item', () => {
     expect(recordItemAccess).not.toHaveBeenCalled()
   })
 
-  it('aguarda o registro autorizado antes de abrir arquivo externo', async () => {
+  it('mostra a página interna de arquivo sem abrir ou registrar download antes do clique', async () => {
     const file = { ...item, kind: 'arquivo' as const, url: 'https://arquivos.example.com/material.pdf' }
-    const pendingRecord = deferred<void>()
-    const recordStarted = deferred<void>()
     vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...context, item: file })
-    vi.mocked(recordItemAccess).mockImplementationOnce(() => {
-      recordStarted.resolve()
-      return pendingRecord.promise
-    })
-
-    const rendering = ItemPage(itemProps())
-    await recordStarted.promise
-
-    expect(recordItemAccess).toHaveBeenCalledWith({
-      customerId: customer.id,
-      storeId: store.id,
-      productId: product.id,
-      itemId: file.id,
-      kind: file.kind,
-    })
+    vi.mocked(listPublishedItemsInModule).mockResolvedValueOnce([file])
+    const html = renderToStaticMarkup(await ItemPage(itemProps()))
+    expect(html).toContain(file.title)
+    expect(html).toContain('Downloads e links')
+    expect(html).toContain(`href="/${store.slug}/item/${file.id}/abrir"`)
+    expect(html).not.toContain(file.url)
     expect(redirect).not.toHaveBeenCalled()
-
-    pendingRecord.resolve()
-    await expect(rendering).rejects.toThrow(`NEXT_REDIRECT:${file.url}`)
+    expect(recordItemAccess).not.toHaveBeenCalled()
   })
 
   it('renderiza vídeo autorizado depois de registrar o acesso', async () => {

@@ -1,6 +1,7 @@
 import { ui } from '@/components/admin/ui'
-import type { Item, ModuleWithItems } from '@/lib/domain/types'
-import { excluirItem, excluirModulo, moverItem, moverModulo, salvarItem, salvarModulo } from './actions'
+import type { ModuleWithItems } from '@/lib/domain/types'
+import { excluirItem, excluirModulo, moverItem, moverModulo, salvarModulo } from './actions'
+import { ItemFields } from './item-fields'
 
 const KIND_LABEL = { arquivo: 'Arquivo', video: 'Vídeo', link: 'Link' } as const
 
@@ -49,35 +50,10 @@ function ConfirmDelete({ action, hidden, question }: { action: (form: FormData) 
   )
 }
 
-function ItemFields({ moduleId, productId, item }: { moduleId: string; productId: string; item?: Item }) {
-  return (
-    <form action={salvarItem} className="grid gap-3 sm:grid-cols-2">
-      <Hidden values={{ id: item?.id ?? '', module_id: moduleId, product_id: productId }} />
-      <label className={ui.label}>Título<input name="title" required defaultValue={item?.title} className={ui.input} /></label>
-      <label className={ui.label}>
-        Tipo
-        <select name="kind" defaultValue={item?.kind ?? 'arquivo'} className={ui.input}>
-          <option value="arquivo">Arquivo (PDF, Drive…)</option>
-          <option value="video">Vídeo (YouTube, Vimeo, Panda)</option>
-          <option value="link">Link externo</option>
-        </select>
-      </label>
-      <label className={`${ui.label} sm:col-span-2`}>Link<input name="url" type="url" required defaultValue={item?.url} className={ui.input} /></label>
-      <label className={`${ui.label} sm:col-span-2`}>
-        Capa (opcional, link de imagem)
-        <input name="cover_url" type="url" defaultValue={item?.coverUrl ?? ''} className={ui.input} />
-      </label>
-      <label className={ui.checkbox}>
-        <input name="is_published" type="checkbox" defaultChecked={item?.isPublished ?? true} /> Publicado
-      </label>
-      <button type="submit" className={`${ui.button} justify-self-start`}>{item ? 'Salvar item' : 'Adicionar item'}</button>
-    </form>
-  )
-}
-
 export function ContentEditor({ productId, modules }: { productId: string; modules: ModuleWithItems[] }) {
   return (
     <div className="flex flex-col gap-4">
+      <p className="text-sm text-texto-suave">Cadastre aulas, arquivos e links como itens. Use itens do mesmo módulo para reunir os recursos de uma aula ou produto.</p>
       {modules.length === 0 && (
         <p className={ui.notice}>Nenhum módulo ainda. Crie o primeiro abaixo — produto com um módulo só não mostra a divisão para o cliente.</p>
       )}

@@ -5,10 +5,11 @@ import { redirect } from 'next/navigation'
 import { errorText, uploadIfPresent, withMessage } from '@/lib/admin/action-helpers'
 import { assertAdminStoreContext, getAdminStore } from '@/lib/admin/current-store'
 import { parseItemForm, parseModuleForm, parseProductForm } from '@/lib/admin/forms'
+import { validateItemUpload, type ItemUploadTicket } from '@/lib/admin/item-upload'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
 import { getProductById } from '@/lib/data/products'
-import { deleteItem, deleteModule, moveItem, moveModule, saveItem, saveModule, saveProduct, uploadImage } from '@/lib/data/products-admin'
+import { createItemUpload, deleteItem, deleteModule, moveItem, moveModule, saveItem, saveModule, saveProduct, uploadImage } from '@/lib/data/products-admin'
 
 function field(form: FormData, name: string): string {
   return String(form.get(name) ?? '')
@@ -24,6 +25,21 @@ async function requireOwnProduct(productId: string) {
   const product = isUuid(productId) ? await getProductById(productId) : null
   if (!product || product.storeId !== store.id) redirect('/admin/produtos')
   return { store, product }
+}
+
+export async function prepararUploadArquivo(
+  productId: string,
+  name: string,
+  size: number,
+): Promise<{ data: ItemUploadTicket; error?: never } | { error: string; data?: never }> {
+  await requireOwnProduct(productId)
+  const validationError = validateItemUpload(name, size)
+  if (validationError) return { error: validationError }
+  try {
+    return { data: await createItemUpload(name, size) }
+  } catch {
+    return { error: 'Não foi possível preparar o envio do arquivo. Tente novamente.' }
+  }
 }
 
 function done(storeSlug: string, productId: string, aba: 'geral' | 'conteudo', message: string): never {
