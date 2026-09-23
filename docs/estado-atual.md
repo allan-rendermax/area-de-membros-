@@ -5,10 +5,10 @@ Atualizado em 23/09/2026. Este é o ponto de entrada para consultar entregas e p
 ## Publicação
 
 - Domínio oficial: https://members.grupoelevamax.com.
-- Última publicação informada no relatório local da tarefa concorrente de e-mail: commit `5473fc1`, deploy `dpl_FMSqkNAzLHKBEAfKUHd9uqz93teH`, Ready / Production, com o domínio oficial. Isso é evidência registrada, não uma nova consulta à Vercel nesta rodada.
-- A publicação anterior `f7ca4b7`, deploy `dpl_6CMYzWBsiEe1sNzv1SvhTUwganJS`, tem execução em São Paulo (`gru1`) confirmada no [relatório de carregamento](status-publicacao-carregamento-2026-09-23.md).
+- **Navegação entre módulos publicada:** commit `e66cd4ffbcdb06dc8e6bbf6c770f8ef8d9026127`, enviado por push normal a `main` após o usuário autorizar “prossiga”.
+- Vercel consultada nesta rodada: deploy `dpl_DvW5HWozTCPE9bw9fNtf3kUHPC9o`, Ready / Production, domínio oficial atribuído e execução em São Paulo (`gru1`). URL: https://area-de-membros-d039y2bps-rendermax.vercel.app. Os logs confirmam o commit `e66cd4f` e build concluído em 18 segundos.
+- Deploy anterior disponível para rollback: https://area-de-membros-6s9v6gdvd-rendermax.vercel.app, `dpl_FMSqkNAzLHKBEAfKUHd9uqz93teH`, commit `5473fc1` (correção de e-mail).
 - O novo relatório `docs/status-entregabilidade-email-2026-09-23.md` foi produzido pela outra tarefa e permanece sob responsabilidade dela no Git. Registra Reply-To configurado, DMARC publicado e reenvio recebido no Gmail. Esse reenvio não comprova uma compra completa com bump nem o login OTP.
-- **A navegação entre módulos descrita abaixo foi implementada e validada localmente, sem novo deploy nesta rodada.**
 
 ## Entregas com registro de publicação
 
@@ -22,7 +22,7 @@ Atualizado em 23/09/2026. Este é o ponto de entrada para consultar entregas e p
 | Desempenho | Consultas relacionais, cache de metadados públicos e funções próximas ao banco | [Carregamento](status-publicacao-carregamento-2026-09-23.md) |
 | Visual | Tema exclusivo da loja Arquitetura, com ações amarelas e texto escuro | [Design system](status-design-system-arquitetura.md) |
 
-## Correções locais desta rodada
+## Navegação publicada e organização desta rodada
 
 - “Conteúdos” lista todos os módulos publicados do produto com itens utilizáveis. O módulo da aula atual abre automaticamente; os demais podem ser expandidos.
 - “Aula anterior” e “Próxima aula” seguem a ordem dos módulos e itens, atravessando módulos. Os extremos da sequência ficam desabilitados.
@@ -41,6 +41,14 @@ Atualizado em 23/09/2026. Este é o ponto de entrada para consultar entregas e p
 - Revisão independente dos arquivos de navegação e testes: nenhum achado.
 - Navegador local: 1440×1000 e 375×812, passagem e retorno entre dois módulos, expansão do painel e títulos longos, sem overflow horizontal. O QA usou HTML gerado pelo componente real da rota, dados fictícios e CSS do build. Não foi uma sessão autenticada do Next.js nem um teste de hidratação, vídeo ou download real; a fonte de exibição usou o fallback do tema.
 
+### Verificação após publicação
+
+- Build remoto concluiu compilação, TypeScript e geração das páginas; deploy Ready e alias confirmados pela CLI Vercel.
+- No domínio oficial, `/arquitetura/entrar` e `/admin/entrar` retornaram HTTP 200. Sem sessão, `/arquitetura`, `/admin`, uma rota de item e sua rota `/abrir` retornaram HTTP 307 para o respectivo login.
+- Login da Arquitetura conferido no navegador em 375×812 e 1440×1000: sem overflow horizontal e sem erros JavaScript capturados. Botão “Entrar” com fundo `rgb(255,213,61)` e texto `rgb(23,23,23)`, confirmando o tema atual em produção.
+- Não houve login real de aluno/admin, envio de código, compra ou download nesta publicação. A navegação autenticada em produção permanece sem validação nesta rodada; os cenários de módulos foram conferidos nos testes e na prévia sintética local.
+- Nenhuma alteração de schema, DNS, credenciais ou configuração de produção nesta publicação. O relatório concorrente de e-mail foi preservado fora do commit.
+
 ## Pendências
 
 | Prioridade | Pendência | Como concluir |
@@ -48,7 +56,7 @@ Atualizado em 23/09/2026. Este é o ponto de entrada para consultar entregas e p
 | Alta | Compra real com order bump e entrega do e-mail | Fazer compra autorizada com valor definido; conferir eventos da Payt, pedidos, acessos e caixa de entrada. Eventos marcados como teste não liberam acesso por decisão atual. |
 | Alta | Reembolso parcial do bump e revogação de acesso | Validar com uma transação apropriada, preservando o produto principal. Chargeback em produção segue sem evidência; usar procedimento legítimo homologado pelo provedor, sem gerar disputa artificial. |
 | Alta | Plano e consumo efetivo do Supabase | Conferir plano e painel de uso da organização, separando tráfego com e sem cache. Não houve leitura desse painel nesta rodada. |
-| Média | Publicar a navegação entre módulos | Publicar o commit desta rodada e validar uma sessão real no domínio oficial. |
+| Média | Validar navegação em sessão real | A correção está publicada; percorrer um produto com mais de um módulo no domínio oficial usando uma conta autorizada. |
 | Média | Progresso sincronizado | Projetar persistência por aluno/loja/item no banco e sua exibição no admin. Hoje “Concluir” permanece local ao navegador. |
 | Média | Login administrativo válido em produção | Validar recebimento do código, entrada e comportamento da opção de sete dias. Os relatórios registram QA completo local, mas não esse fluxo real. |
 | Média | WhatsApp e checkout dentro da área | O relatório de 22/09 registrou campos vazios. Reconsultar a configuração e cadastrar os endereços corretos se ainda faltarem. Não inferir número ou URL de compra. |
