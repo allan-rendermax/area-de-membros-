@@ -9,7 +9,7 @@ import { toVideoEmbed } from '@/lib/content/video'
 import { isHttpUrl, isUuid } from '@/lib/content/url'
 import { loadGrantedProductIds } from '@/lib/data/access'
 import { recordItemAccess } from '@/lib/data/item-access'
-import { getItemWithContext, listPublishedItemsInModule } from '@/lib/data/products'
+import { getItemWithContext, listModulesWithItems } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
 
 export const dynamic = 'force-dynamic'
@@ -29,18 +29,26 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
   if (ctx.item.kind === 'video' && !embed) notFound()
   if (ctx.item.kind !== 'video' && !isHttpUrl(ctx.item.url)) notFound()
-  const [siblingItems] = await Promise.all([
-    listPublishedItemsInModule(ctx.module.id),
+  const [productModules] = await Promise.all([
+    listModulesWithItems(ctx.product.id, { publishedOnly: true }),
     ctx.item.kind === 'video'
       ? recordItemAccess({ customerId: customer.id, storeId: store.id, productId: ctx.product.id, itemId: ctx.item.id, kind: ctx.item.kind })
       : Promise.resolve(),
   ])
 
-  const siblings = siblingItems
-    .filter((item) => item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))
-  const index = siblings.findIndex((item) => item.id === ctx.item.id)
-  const previous = index > 0 ? siblings[index - 1] : null
-  const next = index >= 0 && index < siblings.length - 1 ? siblings[index + 1] : null
+  const modules = productModules
+    .filter((module) => module.isPublished)
+    .map((module) => ({
+      ...module,
+      items: module.items.filter((item) => item.isPublished &&
+        (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))),
+    }))
+    .filter((module) => module.items.length > 0)
+  const sequence = modules.flatMap((module) => module.items)
+  const siblings = modules.find((module) => module.id === ctx.module.id)?.items ?? []
+  const index = sequence.findIndex((item) => item.id === ctx.item.id)
+  const previous = index > 0 ? sequence[index - 1] : null
+  const next = index >= 0 && index < sequence.length - 1 ? sequence[index + 1] : null
   const productHref = `/${store.slug}/produto/${ctx.product.slug}`
 
   return (
@@ -86,7 +94,7 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
               next={next ? { href: `/${store.slug}/item/${next.id}`, title: next.title } : null}
             />
           </div>
-          <LessonSidebar modules={[{ ...ctx.module, items: siblings }]} storeSlug={store.slug} currentItemId={ctx.item.id} />
+          <LessonSidebar modules={modules} storeSlug={store.slug} currentItemId={ctx.item.id} />
         </div>
       </main>
     </>

@@ -1,3 +1,11 @@
+# Área de membros
+
+**Comece por [Estado atual](docs/estado-atual.md)** para consultar entregas, evidências de publicação e pendências. Os relatórios datados em `docs/` preservam o histórico de cada rodada.
+
+Referências visuais: [docs/design/referencias](docs/design/referencias/).
+
+Verificação local: `npm test`, `npm run lint` e `npm run build`. Antes de alterar código Next.js, leia `AGENTS.md` e a documentação instalada em `node_modules/next/dist/docs/`.
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

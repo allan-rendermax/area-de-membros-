@@ -22,4 +22,10 @@ Os formatos `true`, `"true"`, `1` e `"1"` seguem a normalização já existente.
 
 ## Publicação
 
-Validação operacional em produção será registrada após o deploy e o teste no painel Payt.
+- Commit `e74ee4d7d335a6b42d360ee7d6a065fd22ab6c68` enviado por push normal a `main`.
+- Vercel confirmou Ready / Production: https://vercel.com/rendermax/area-de-membros-/Cs2jgjgbAr7epKdwoeBj3y71PqKM.
+- Às 14:40:51 BRT, acionado Testar URL na tela de cadastro já preenchida pelo usuário, mantendo URL, tipo, produtos e eventos selecionados.
+- A Payt substituiu Testar URL pelos botões Salvar e Salvar e Voltar, confirmando aceitação do teste. O cadastro ficou aberto para o usuário concluir; não foi acionado Salvar.
+- Evento recebido às `17:40:51.699347Z`, finalizado às `17:40:51.793Z`: aproximadamente 94 ms entre registro e conclusão, `key_valid=true`, `outcome=teste`, sem erro. Esse intervalo não inclui todo o trajeto de rede entre Payt e Vercel.
+- Comparação antes/depois de contagens e hashes dos registros vinculados ao destinatário fictício confirmou pedidos e cliente anteriores inalterados, e nenhum registro de e-mail novo.
+- Compra real e confirmação de entrega na caixa do comprador não foram executadas nesta correção. Os fluxos reais foram cobertos pela suíte local.

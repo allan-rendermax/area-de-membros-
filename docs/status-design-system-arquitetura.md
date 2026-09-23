@@ -34,3 +34,16 @@ Prévia local: http://127.0.0.1:3105/arquitetura. Dados e sessão fictícios; n�
 - A rota /arquitetura sem sessão segue redirecionando ao login (307).
 - /admin/entrar retornou HTTP 200 sem o atributo de tema nem o novo título. O tema permanece restrito ao slug exato arquitetura; os testes anteriores verificaram outra loja sem alterações visuais.
 - Não houve novo login de aluno nem navegação autenticada em produção nesta etapa; catálogo, produto e modal haviam sido validados com fixture local. Não foram modificados clientes, compras ou permissões.
+
+## Domínio oficial — 22/09/2026
+
+- Endereço autorizado: https://members.grupoelevamax.com/arquitetura.
+- Domínio conectado ao ambiente Production do projeto Vercel existente `area-de-membros-`.
+- Cloudflare: criado somente CNAME `members` → `514df50633f09a6b.vercel-dns-016.com`, TTL Auto, Somente DNS, conforme recomendação exibida pela Vercel. Os seis registros anteriores, incluindo raiz, www e e-mail, foram preservados.
+- `APP_URL` atualizado para `https://members.grupoelevamax.com` nos ambientes já associados à variável (Production e Preview). O `.env.local` continua apontando para localhost.
+- Redeploy do mesmo commit `a456e18`: `dpl_DgK9NDnuKysPavigL6L2dmxPqM3T`, estado Ready, domínio atribuído. Painel: https://vercel.com/rendermax/area-de-membros-/DgK9NDnuKysPavigL6L2dmxPqM3T.
+- DNS confirmado em 1.1.1.1 e 8.8.8.8. Durante a verificação, o resolvedor padrão local ainda mantinha resposta negativa; a checagem HTTPS utilizou resolução pública em 1.1.1.1 com validação TLS normal, sem ignorar certificados.
+- Certificado TLS autorizado, SAN `members.grupoelevamax.com`, validade até 21/12/2026, emitido e gerenciado pela Vercel.
+- Novo domínio: `/arquitetura` sem sessão retorna 307 para `/arquitetura/entrar`; login retorna 200 com o tema arquitetura; `/admin/entrar` retorna 200 sem esse tema.
+- As três artes do tema retornaram 200 no novo domínio, com SHA-256 igual aos arquivos locais aprovados.
+- Nenhum e-mail de teste enviado e nenhuma compra, permissão ou cliente alterado. Propagação do DNS pode variar entre redes.

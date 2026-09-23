@@ -1,14 +1,15 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { Window } from 'happy-dom'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { notFound, redirect } from 'next/navigation'
 import ItemPage from '@/app/[loja]/item/[id]/page'
 import ProdutoPage from '@/app/[loja]/produto/[slug]/page'
 import VitrinePage from '@/app/[loja]/page'
 import { loadGrantedProductIds, loadStoreAccess } from '@/lib/data/access'
 import { listRecentProductIds, recordItemAccess } from '@/lib/data/item-access'
-import { getItemWithContext, getProductBySlug, listModulesWithItems, listPublishedItemsInModule } from '@/lib/data/products'
-import type { CustomerRow, Item, Module, Product, Store } from '@/lib/domain/types'
+import { getItemWithContext, getProductBySlug, listModulesWithItems } from '@/lib/data/products'
+import type { CustomerRow, Item, Module, ModuleWithItems, Product, Store } from '@/lib/domain/types'
 import { requireStoreSession } from '@/lib/membros/session'
 
 vi.mock('next/navigation', () => ({ notFound: vi.fn(), redirect: vi.fn() }))
@@ -18,7 +19,6 @@ vi.mock('@/lib/data/products', () => ({
   getItemWithContext: vi.fn(),
   getProductBySlug: vi.fn(),
   listModulesWithItems: vi.fn(),
-  listPublishedItemsInModule: vi.fn(),
 }))
 vi.mock('@/lib/membros/session', () => ({ requireStoreSession: vi.fn() }))
 
@@ -242,7 +242,75 @@ describe('rota de item', () => {
     vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product], granted: new Set([product.id]) })
     vi.mocked(recordItemAccess).mockResolvedValue()
     vi.mocked(listModulesWithItems).mockResolvedValue([{ ...courseModule, items: [item] }])
-    vi.mocked(listPublishedItemsInModule).mockResolvedValue([item])
+  })
+
+  const nextModule = { ...courseModule, id: 'module-b', title: 'Módulo B', sortOrder: 2 }
+  const nextLesson = { ...item, id: '33333333-3333-4333-8333-333333333333', moduleId: nextModule.id, title: 'Primeira aula B' }
+  const windows: Window[] = []
+  afterEach(async () => { await Promise.all(windows.splice(0).map((window) => window.happyDOM.close())) })
+
+  async function renderedItem(id = item.id) {
+    const window = new Window()
+    windows.push(window)
+    window.document.body.innerHTML = renderToStaticMarkup(await ItemPage(itemProps(id)))
+    return window.document
+  }
+
+  it('avança para o módulo seguinte e exibe todos os módulos, abrindo apenas o atual', async () => {
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([
+      { ...courseModule, items: [item] }, { ...nextModule, items: [nextLesson] },
+    ])
+    const doc = await renderedItem()
+    expect(doc.querySelector('a[title="Primeira aula B"]')?.getAttribute('href')).toBe(`/loja-a/item/${nextLesson.id}`)
+    const sidebar = doc.querySelector('aside')!
+    expect([...sidebar.querySelectorAll('summary')].map((node) => node.textContent)).toEqual(['Módulo A1⌄', 'Módulo B1⌄'])
+    expect([...sidebar.querySelectorAll('details')].map((node) => node.hasAttribute('open'))).toEqual([true, false])
+    expect(sidebar.querySelector('[aria-current="page"]')?.getAttribute('href')).toBe(`/loja-a/item/${item.id}`)
+  })
+
+  it('volta ao módulo anterior e desabilita próxima somente no fim do produto', async () => {
+    vi.mocked(getItemWithContext).mockResolvedValueOnce({ item: nextLesson, module: nextModule, product })
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([
+      { ...courseModule, items: [item] }, { ...nextModule, items: [nextLesson] },
+    ])
+    const doc = await renderedItem(nextLesson.id)
+    expect(doc.querySelector('a[title="Aula principal"]')?.getAttribute('href')).toBe(`/loja-a/item/${item.id}`)
+    expect([...doc.querySelectorAll('button[disabled]')].map((node) => node.textContent)).toContain('Próxima aula')
+    expect([...doc.querySelectorAll('aside details')].map((node) => node.hasAttribute('open'))).toEqual([false, true])
+  })
+
+  it('pula módulos vazios, rascunhos e destinos inválidos na navegação e no painel', async () => {
+    const hidden = { ...item, id: 'hidden', title: 'Conteúdo oculto', isPublished: false }
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([
+      { ...courseModule, items: [item, hidden] },
+      { ...nextModule, id: 'empty', title: 'Vazio', items: [] },
+      { ...nextModule, id: 'draft', title: 'Rascunho', isPublished: false, items: [{ ...nextLesson, id: 'draft-item' }] },
+      { ...nextModule, id: 'invalid', title: 'Inválido', items: [
+        { ...item, id: 'bad-video', url: 'https://example.com/video' },
+        { ...item, id: 'bad-file', kind: 'arquivo', url: 'javascript:alert(1)' },
+      ] },
+      { ...nextModule, items: [nextLesson] },
+    ])
+    const doc = await renderedItem()
+    expect(doc.querySelector('a[title="Primeira aula B"]')?.getAttribute('href')).toBe(`/loja-a/item/${nextLesson.id}`)
+    expect([...doc.querySelectorAll('aside a')].map((node) => node.getAttribute('href'))).toEqual([
+      `/loja-a/item/${item.id}`, `/loja-a/item/${nextLesson.id}`,
+    ])
+    expect(doc.querySelectorAll('aside details')).toHaveLength(2)
+  })
+
+  it('mantém downloads do módulo atual mesmo quando o painel inclui materiais de outro módulo', async () => {
+    const localFile = { ...item, id: 'local-file', kind: 'arquivo' as const, title: 'PDF do módulo A', url: 'https://example.com/a.pdf' }
+    const otherFile = { ...nextLesson, id: 'other-file', kind: 'arquivo' as const, title: 'PDF do módulo B', url: 'https://example.com/b.pdf' }
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([
+      { ...courseModule, items: [item, localFile] }, { ...nextModule, items: [otherFile] },
+    ])
+    const doc = await renderedItem()
+    const downloads = doc.querySelector('section[aria-label="Downloads e links"]')!
+    expect(downloads.querySelector('a')?.getAttribute('href')).toBe('/loja-a/item/local-file/abrir')
+    expect(downloads.textContent).not.toContain('PDF do módulo B')
+    expect(doc.querySelector('aside a[href="/loja-a/item/other-file"]')).not.toBeNull()
+    expect([...doc.querySelectorAll('button[disabled]')].map((node) => node.textContent)).toContain('Aula anterior')
   })
 
   it('inicia contexto e permissão antes de qualquer um terminar', async () => {
@@ -279,6 +347,7 @@ describe('rota de item', () => {
 
     expect(redirect).not.toHaveBeenCalled()
     expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(listModulesWithItems).not.toHaveBeenCalled()
   })
 
   it('redireciona item não comprado sem registrar acesso', async () => {
@@ -287,18 +356,18 @@ describe('rota de item', () => {
     await expect(ItemPage(itemProps()))
       .rejects.toThrow(`NEXT_REDIRECT:/${store.slug}?comprar=${product.slug}`)
     expect(recordItemAccess).not.toHaveBeenCalled()
-    expect(listPublishedItemsInModule).not.toHaveBeenCalled()
+    expect(listModulesWithItems).not.toHaveBeenCalled()
   })
 
-  it('inicia irmãos enquanto o registro do vídeo está pendente e aguarda ambos antes de renderizar', async () => {
+  it('inicia módulos enquanto o registro do vídeo está pendente e aguarda ambos antes de renderizar', async () => {
     const pendingRecord = deferred<void>()
-    const pendingSiblings = deferred<Item[]>()
+    const pendingModules = deferred<ModuleWithItems[]>()
     const recordStarted = deferred<void>()
     vi.mocked(recordItemAccess).mockImplementationOnce(() => {
       recordStarted.resolve()
       return pendingRecord.promise
     })
-    vi.mocked(listPublishedItemsInModule).mockReturnValueOnce(pendingSiblings.promise)
+    vi.mocked(listModulesWithItems).mockReturnValueOnce(pendingModules.promise)
     let pageResolved = false
 
     const rendering = ItemPage(itemProps()).then((page) => {
@@ -306,30 +375,30 @@ describe('rota de item', () => {
       return page
     })
     await recordStarted.promise
-    const siblingsStartedWhileRecording = vi.mocked(listPublishedItemsInModule).mock.calls.length
+    const modulesStartedWhileRecording = vi.mocked(listModulesWithItems).mock.calls.length
     const recordCalls = vi.mocked(recordItemAccess).mock.calls.length
     const resolvedWhilePending = pageResolved
     pendingRecord.resolve()
-    pendingSiblings.resolve([item])
+    pendingModules.resolve([{ ...courseModule, items: [item] }])
     const html = renderToStaticMarkup(await rendering)
 
     expect(recordCalls).toBe(1)
-    expect(siblingsStartedWhileRecording).toBe(1)
+    expect(modulesStartedWhileRecording).toBe(1)
     expect(resolvedWhilePending).toBe(false)
     expect(html).toContain(item.title)
   })
 
-  it('propaga falha do registro do vídeo mesmo com irmãos carregados', async () => {
+  it('propaga falha do registro do vídeo mesmo com módulos carregados', async () => {
     vi.mocked(recordItemAccess).mockRejectedValueOnce(new Error('registro indisponível'))
 
     await expect(ItemPage(itemProps())).rejects.toThrow('registro indisponível')
-    expect(listPublishedItemsInModule).toHaveBeenCalledWith(courseModule.id)
+    expect(listModulesWithItems).toHaveBeenCalledWith(product.id, { publishedOnly: true })
   })
 
   it('mostra a página interna de arquivo sem abrir ou registrar download antes do clique', async () => {
     const file = { ...item, kind: 'arquivo' as const, url: 'https://arquivos.example.com/material.pdf' }
     vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...context, item: file })
-    vi.mocked(listPublishedItemsInModule).mockResolvedValueOnce([file])
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [file] }])
     const html = renderToStaticMarkup(await ItemPage(itemProps()))
     expect(html).toContain(file.title)
     expect(html).toContain('Downloads e links')
@@ -349,10 +418,10 @@ describe('rota de item', () => {
     expect(html).toContain('youtube-nocookie.com/embed/dQw4w9WgXcQ')
   })
 
-  it('renderiza anterior e próximo usando somente irmãos publicados do módulo atual', async () => {
+  it('preserva a ordem de anterior e próximo dentro do mesmo módulo', async () => {
     const previous = { ...item, id: '22222222-2222-4222-8222-222222222222', title: 'Aula anterior', sortOrder: 0 }
     const next = { ...item, id: '33333333-3333-4333-8333-333333333333', title: 'Próxima aula', sortOrder: 2 }
-    vi.mocked(listPublishedItemsInModule).mockResolvedValueOnce([previous, item, next])
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [previous, item, next] }])
 
     const result = await ItemPage(itemProps())
     const html = renderToStaticMarkup(result)
@@ -361,7 +430,6 @@ describe('rota de item', () => {
     expect(html).toContain('Aula anterior')
     expect(html).toContain(`href="/${store.slug}/item/${next.id}"`)
     expect(html).toContain('Próxima aula')
-    expect(listPublishedItemsInModule).toHaveBeenCalledWith(courseModule.id)
-    expect(listModulesWithItems).not.toHaveBeenCalled()
+    expect(listModulesWithItems).toHaveBeenCalledWith(product.id, { publishedOnly: true })
   })
 })
