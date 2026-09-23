@@ -19,7 +19,10 @@ vi.mock('@/lib/data/products', () => ({ getProductById: vi.fn(), listProducts: i
 vi.mock('@/lib/data/customers', () => ({ changeCustomerEmail: vi.fn(), setCustomerBlocked: vi.fn() }))
 vi.mock('@/lib/data/orders', () => ({ createManualOrder: io.createManualOrder, revokeManualOrder: io.revokeManualOrder }))
 vi.mock('@/lib/email/server', () => ({ resendAccessForCustomer: io.resendAccessForCustomer }))
-vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+  unstable_cache: <T extends (...args: never[]) => unknown>(load: T) => load,
+}))
 vi.mock('next/navigation', () => ({ redirect: (url: string) => { throw new Error(`NEXT_REDIRECT:${decodeURIComponent(url)}`) } }))
 vi.mock('@/components/membros/auto-cover', () => ({ AutoCover: () => null }))
 

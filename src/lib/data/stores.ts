@@ -1,7 +1,9 @@
+import { unstable_cache } from 'next/cache'
 import type { StoreInput } from '@/lib/admin/forms'
 import type { Store } from '@/lib/domain/types'
 import { env } from '@/lib/env'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { PUBLIC_STORES_REVALIDATE, PUBLIC_STORES_TAG } from './store-cache'
 
 export const STORE_COLUMNS = 'id, slug, name, logo_url, support_url, support_whatsapp, login_image_url'
 
@@ -27,11 +29,11 @@ export function toStore(row: DbStore): Store {
   }
 }
 
-export async function getStoreBySlug(slug: string): Promise<Store | null> {
+export const getStoreBySlug = unstable_cache(async (slug: string): Promise<Store | null> => {
   const { data, error } = await createAdminClient().from('stores').select(STORE_COLUMNS).eq('slug', slug).maybeSingle()
   if (error) throw error
   return data ? toStore(data as DbStore) : null
-}
+}, ['public-store-by-slug-v1'], { tags: [PUBLIC_STORES_TAG], revalidate: PUBLIC_STORES_REVALIDATE })
 
 export async function getStoreById(id: string): Promise<Store | null> {
   const { data, error } = await createAdminClient().from('stores').select(STORE_COLUMNS).eq('id', id).maybeSingle()
