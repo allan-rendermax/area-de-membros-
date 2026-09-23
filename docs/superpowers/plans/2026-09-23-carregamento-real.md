@@ -1,6 +1,6 @@
 # Carregamento real — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Reduzir espera na entrada e navegação preservando visual e segurança da área de membros.
 
@@ -46,7 +46,7 @@ Plano revisado e aprovado autonomamente conforme autorização do usuário. Tare
 - Consumes: createAdminClient(), Store, StoreInput, saveStore(input): Promise<string>.
 - Produces: getStoreBySlug(slug: string): Promise<Store|null> com mesma interface; PUBLIC_STORES_TAG='public-stores', PUBLIC_STORES_REVALIDATE=300.
 
-- [ ] **Step 1: Escrever regressões antes do código.** Usar cliente Supabase real com fetch sintético como tests/content/product-queries.test.ts, e double de next/cache com Map + invalidação para testar política, não alegar integração real. Testar dois slugs, repetição, null, erro e atualização. Server Action stub requireAdmin/saveStore/redirect: evento save:resolved vem antes de invalidate, save rejeitado nunca invalida.
+- [x] **Step 1: Escrever regressões antes do código.** Usar cliente Supabase real com fetch sintético como tests/content/product-queries.test.ts, e double de next/cache com Map + invalidação para testar política, não alegar integração real. Testar dois slugs, repetição, null, erro e atualização. Server Action stub requireAdmin/saveStore/redirect: evento save:resolved vem antes de invalidate, save rejeitado nunca invalida.
 
 ```ts
 expect(cacheOptions).toEqual({ tags: ['public-stores'], revalidate: 300 })
@@ -56,8 +56,8 @@ expect(storeRequests).toHaveLength(1)
 expect(events).toEqual(['save:resolved', 'invalidate:public-stores', 'revalidate:/admin'])
 ```
 
-- [ ] **Step 2: Rodar** `npx vitest run tests/content/store-cache.test.ts tests/admin/store-cache-action.test.ts` e registrar falhas esperadas por cache/invalidação ausentes.
-- [ ] **Step 3: Implementar a política usando guia local caching-without-cache-components e updateTag.** Extrair o corpo atual da consulta para a função envolvida, sem mudar o mapper ou getStoreById/listStores.
+- [x] **Step 2: Rodar** `npx vitest run tests/content/store-cache.test.ts tests/admin/store-cache-action.test.ts` e registrar falhas esperadas por cache/invalidação ausentes.
+- [x] **Step 3: Implementar a política usando guia local caching-without-cache-components e updateTag.** Extrair o corpo atual da consulta para a função envolvida, sem mudar o mapper ou getStoreById/listStores.
 
 ```ts
 export const PUBLIC_STORES_TAG = 'public-stores'
@@ -73,8 +73,8 @@ updateTag(PUBLIC_STORES_TAG)
 revalidatePath('/admin', 'layout')
 ```
 
-- [ ] **Step 4: Rodar testes focados e suíte completa uma vez**, ajustar mocks existentes somente quando necessário. Não esconder avisos preexistentes. Relatar RED/GREEN e limitações do double (QA testará cache real).
-- [ ] **Step 5: Auto-revisar diff, escrever report no workspace SDD e informar arquivos prontos ao controlador.** Controlador fará commit isolado e revisão para evitar concorrência no índice.
+- [x] **Step 4: Rodar testes focados e suíte completa uma vez**, ajustar mocks existentes somente quando necessário. Não esconder avisos preexistentes. Relatar RED/GREEN e limitações do double (QA testará cache real).
+- [x] **Step 5: Auto-revisar diff, escrever report no workspace SDD e informar arquivos prontos ao controlador.** Controlador fará commit isolado e revisão para evitar concorrência no índice.
 
 ### Task 2: Menos viagens de conteúdo e resposta de navegação
 
@@ -91,7 +91,7 @@ revalidatePath('/admin', 'layout')
 - Consumes: createAdminClient(), toModule(), toItem(), ModuleWithItems; recordItemAccess(entry): Promise<void>; listPublishedItemsInModule(id): Promise<Item[]>.
 - Produces: listModulesWithItems(productId: string, opts: {publishedOnly: boolean}): Promise<ModuleWithItems[]> inalterada; LessonSkeleton(): JSX.Element.
 
-- [ ] **Step 1: Adicionar regressões de consulta e concorrência.** Transporte real Supabase responde relação modules.items. Assert URL de ordem pai e items.order, filtros is_published e items.is_published só no modo publicado, uma requisição, admin com rascunhos, módulo vazio e erro. Promessas controladas demonstram que irmãos iniciam enquanto registro está pendente e a página não resolve; resolver ambos e conferir render. Falha de gravação rejeita; autorização negada nunca inicia essas operações.
+- [x] **Step 1: Adicionar regressões de consulta e concorrência.** Transporte real Supabase responde relação modules.items. Assert URL de ordem pai e items.order, filtros is_published e items.is_published só no modo publicado, uma requisição, admin com rascunhos, módulo vazio e erro. Promessas controladas demonstram que irmãos iniciam enquanto registro está pendente e a página não resolve; resolver ambos e conferir render. Falha de gravação rejeita; autorização negada nunca inicia essas operações.
 
 ```ts
 const pendingRecord = deferred<void>()
@@ -105,8 +105,8 @@ pendingRecord.resolve()
 await pagePromise
 ```
 
-- [ ] **Step 2: Rodar** `npx vitest run tests/content/product-queries.test.ts tests/membros/content-routes.test.ts` e registrar RED esperado.
-- [ ] **Step 3: Implementar junção e concorrência.** Confirmar API referencedTable nos tipos locais Supabase/PostgREST e guia de dados Next.
+- [x] **Step 2: Rodar** `npx vitest run tests/content/product-queries.test.ts tests/membros/content-routes.test.ts` e registrar RED esperado.
+- [x] **Step 3: Implementar junção e concorrência.** Confirmar API referencedTable nos tipos locais Supabase/PostgREST e guia de dados Next.
 
 ```ts
 let query = db.from('modules')
@@ -129,14 +129,14 @@ const [siblingItems] = await Promise.all([
 const siblings = siblingItems.filter((item) => item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))
 ```
 
-- [ ] **Step 4: Adicionar LessonSkeleton conforme padrão de skeletons existente.** Cabeçalho, retângulo aspect-video e lateral; role=status com texto `Carregando material…`, formas decorativas aria-hidden. Loading de produto/item retorna o mesmo componente. Ler docs de loading e linking-and-navigating; manter prefetch=false em links de itens.
+- [x] **Step 4: Adicionar LessonSkeleton conforme padrão de skeletons existente.** Cabeçalho, retângulo aspect-video e lateral; role=status com texto `Carregando material…`, formas decorativas aria-hidden. Loading de produto/item retorna o mesmo componente. Ler docs de loading e linking-and-navigating; manter prefetch=false em links de itens.
 
 ```tsx
 import { LessonSkeleton } from '@/components/membros/skeletons'
 export default function Loading() { return <LessonSkeleton /> }
 ```
 
-- [ ] **Step 5: Rodar testes focados e suíte completa uma vez**, auto-revisar e escrever report SDD com RED/GREEN e lista de arquivos. Controlador faz commit e revisão isolados.
+- [x] **Step 5: Rodar testes focados e suíte completa uma vez**, auto-revisar e escrever report SDD com RED/GREEN e lista de arquivos. Controlador faz commit e revisão isolados.
 
 ### Task 3: Baseline, QA no navegador e entrega
 
@@ -148,7 +148,7 @@ export default function Loading() { return <LessonSkeleton /> }
 - Consumes: build baseline 2f89ff1 e build final, fixture HTTP sintético baseado no browser-fixture.mjs da rodada anterior.
 - Produces: relatório com tempos, contagens, capturas, limitações e revisão de segurança funcional.
 
-- [ ] **Step 1: Antes de alterar código, iniciar fixture local e build baseline.** Fixture usa exclusivamente chaves/contas fictícias; latência 100 ms por Auth/REST. Suportar relação modules.items e filtros/ordem embed no mesmo fixture para ambos os builds; habilitar edição de stores para QA admin, com audit do contador.
+- [x] **Step 1: Antes de alterar código, iniciar fixture local e build baseline.** Fixture usa exclusivamente chaves/contas fictícias; latência 100 ms por Auth/REST. Suportar relação modules.items e filtros/ordem embed no mesmo fixture para ambos os builds; habilitar edição de stores para QA admin, com audit do contador.
 
 ```powershell
 npm test
@@ -157,10 +157,10 @@ node '<visualizations>/browser-fixture.mjs' --production
 & '<agent-browser.cmd>' --session perf-members-2 open http://127.0.0.1:3100/arquitetura/entrar
 ```
 
-- [ ] **Step 2: Capturar baseline** login/home/produto/item em 375x812 e 1440x1000. Uma amostra inicial separada e mediana de três aquecidas. Registrar tempo até corpo completo, requisições Auth/REST, vitals e navegação por clique, sem chamar fetch de medição de clique.
-- [ ] **Step 3: Após tarefas 1 e 2 revisadas, executar** `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`; repetir o mesmo protocolo no build final. Verificar backend sem novas leituras de stores após aquecimento, e novas leituras depois de salvar/renomear/criar via admin.
-- [ ] **Step 4: QA funcional agent-browser:** login; vitrine->produto->vídeo->próximo/voltar; abrir recursos; modal fechar/reabrir; capturas responsivas; erro JS/overflow; aluno bloqueado, pedido reembolsado, conteúdo oculto/outra loja; cold/warm de cache; store edit/create/rename. Não executar login nem alteração em dados reais.
-- [ ] **Step 5: Relatório e revisão final.** Documentar números e método, limites da medição sintética, estado de produção/região e avisos preexistentes. Revisão ampla por subagente distinto, corrigir achados e repetir apenas checks afetados. Integrar localmente com fast-forward somente se seguro e preservar todos os arquivos preexistentes. Não declarar publicado sem deploy confirmado.
+- [x] **Step 2: Capturar baseline** login/home/produto/item em 375x812 e 1440x1000. Uma amostra inicial separada e mediana de três aquecidas. Registrar tempo até corpo completo, requisições Auth/REST, vitals e navegação por clique, sem chamar fetch de medição de clique.
+- [x] **Step 3: Após tarefas 1 e 2 revisadas, executar** `npm test`, `npx tsc --noEmit`, `npm run lint`, `npm run build`; repetir o mesmo protocolo no build final. Verificar backend sem novas leituras de stores após aquecimento, e novas leituras depois de salvar/renomear/criar via admin.
+- [x] **Step 4: QA funcional agent-browser:** login; vitrine->produto->vídeo->próximo/voltar; abrir recursos; modal fechar/reabrir; capturas responsivas; erro JS/overflow; aluno bloqueado, pedido reembolsado, conteúdo oculto/outra loja; cold/warm de cache; store edit/create/rename. Não executar login nem alteração em dados reais.
+- [x] **Step 5: Relatório e revisão final.** Documentar números e método, limites da medição sintética, estado de produção/região e avisos preexistentes. Revisão ampla por subagente distinto, corrigir achados e repetir apenas checks afetados. Integrar localmente com fast-forward somente se seguro e preservar todos os arquivos preexistentes. Não declarar publicado sem deploy confirmado.
 
 ### Task 4: Colocalização para o próximo deploy
 
@@ -171,8 +171,8 @@ node '<visualizations>/browser-fixture.mjs' --production
 - Consumes: Vercel project configuration schema; banco DNS mapeado a AWS sa-east-1 conforme spec.
 - Produces: regions=['gru1'] aplicada pelo próximo deploy Vercel.
 
-- [ ] **Step 1: Conferir docs oficiais** https://vercel.com/docs/project-configuration/vercel-json#regions e https://vercel.com/docs/regions. Não alterar painel remoto.
-- [ ] **Step 2: Criar configuração mínima.** Não adicionar testes unitários que apenas repetem JSON; verificar com schema oficial.
+- [x] **Step 1: Conferir docs oficiais** https://vercel.com/docs/project-configuration/vercel-json#regions e https://vercel.com/docs/regions. Não alterar painel remoto.
+- [x] **Step 2: Criar configuração mínima.** Não adicionar testes unitários que apenas repetem JSON; verificar com schema oficial.
 
 ```json
 {
@@ -181,8 +181,8 @@ node '<visualizations>/browser-fixture.mjs' --production
 }
 ```
 
-- [ ] **Step 3: Validar JSON parse e schema oficial**, usando Ajv já transitivo se disponível, sem adicionar dependência. Não fazer deploy. Registrar que a configuração fica pronta e o ganho geográfico depende de publicação/medição remota.
-- [ ] **Step 4: Escrever report SDD e informar root para commit/revisão**, sem tocar arquivos de outros agentes.
+- [x] **Step 3: Validar JSON parse e schema oficial**, usando Ajv já transitivo se disponível, sem adicionar dependência. Não fazer deploy. Registrar que a configuração fica pronta e o ganho geográfico depende de publicação/medição remota.
+- [x] **Step 4: Escrever report SDD e informar root para commit/revisão**, sem tocar arquivos de outros agentes.
 
 ## Self-review
 
