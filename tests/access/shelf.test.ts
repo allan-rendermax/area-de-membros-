@@ -77,6 +77,13 @@ describe('buildShelf', () => {
     expect(buildShelf([], new Set()).featured).toBeNull()
   })
 
+  it('mantém o primeiro bloqueado por ordem como destaque automático após priorizar ofertas', () => {
+    const products = [product('front', 0), product('bump', 2, { role: 'orderbump' })]
+    const shelf = buildShelf(products, new Set())
+    expect(shelf.locked.map((p) => p.id)).toEqual(['bump', 'front'])
+    expect(shelf.featured?.id).toBe('front')
+  })
+
   it('só expõe checkout de produto bloqueado', () => {
     const shelf = buildShelf(products, new Set(['atlas']))
     expect(shelf.unlocked[0].checkoutUrl).toBeNull()

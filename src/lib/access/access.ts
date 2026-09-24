@@ -53,7 +53,7 @@ export function buildShelf(products: Product[], granted: Set<string>): Shelf {
   const locked = all.filter((p) => !p.unlocked)
     .sort((a, b) => lockedPriority(a.role) - lockedPriority(b.role) || a.sortOrder - b.sortOrder)
   const featuredId = visible.find((p) => p.isFeatured)?.id
-  const featured = all.find((p) => p.id === featuredId) ?? unlocked[0] ?? locked[0] ?? null
+  const featured = all.find((p) => p.id === featuredId) ?? unlocked[0] ?? all.find((p) => !p.unlocked) ?? null
   return { featured, unlocked, locked }
 }
 
