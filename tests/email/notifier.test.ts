@@ -81,7 +81,7 @@ describe('sendAccessNotice', () => {
     expect(transport.sent[0]).toMatchObject({
       from: '"Arquitetura" <acesso@grupoelevamax.com>',
       to: 'joao@gmail.com',
-      subject: 'Seu acesso chegou — Arquitetura',
+      subject: 'Seu acesso: Atlas Visual — liberado',
       replyTo: 'suporte@example.com',
     })
     expect(transport.sent[0].html).toContain('https://app.test/arquitetura/entrar?email=joao%40gmail.com')
