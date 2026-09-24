@@ -1,6 +1,6 @@
 # Task 2 — Administração, ofertas e uploads privados
 
-Implementado no branch `codex/niveis-produtos`.
+Implementado no branch `codex/niveis-produtos`, commit de implementação `07d6ffc`.
 
 ## Entrega
 
