@@ -14,12 +14,11 @@ export const getStore = cache(async (slug: string): Promise<Store> => {
 })
 
 export async function requireStoreSession(slug: string): Promise<{ store: Store; customer: CustomerRow }> {
-  const [store, { supabase, data }] = await Promise.all([
+  const [store, { data }] = await Promise.all([
     getStore(slug),
     (async () => {
       const supabase = await createClient()
-      const { data } = await supabase.auth.getUser()
-      return { supabase, data }
+      return supabase.auth.getUser()
     })(),
   ])
   const email = data.user?.email
@@ -27,7 +26,8 @@ export async function requireStoreSession(slug: string): Promise<{ store: Store;
 
   const customer = await findCustomerByEmail(email)
   if (!customer || customer.blockedAt) {
-    await supabase.auth.signOut()
+    // Deny this page without revoking other sessions (including legacy admin
+    // cookies). Rendering or prefetching a store page must never log users out.
     redirect(`/${store.slug}/entrar`)
   }
   return { store, customer }

@@ -2,9 +2,10 @@ import type { Item } from '@/lib/domain/types'
 import { isHttpUrl } from '@/lib/content/url'
 import { resourceLabel } from '@/lib/content/resource-label'
 import { DownloadIcon, FileIcon, LinkIcon } from './icons'
+import { withPreview } from '@/lib/membros/paths'
 
-export function ResourceList({ items, storeSlug, currentItemId, legacyPresentation = false }: { items: Item[]; storeSlug: string; currentItemId?: string; legacyPresentation?: boolean }) {
-  const resources = items.filter((item) => item.isPublished && item.kind !== 'video' && isHttpUrl(item.url))
+export function ResourceList({ items, storeSlug, currentItemId, legacyPresentation = false, preview = false }: { items: Item[]; storeSlug: string; currentItemId?: string; legacyPresentation?: boolean; preview?: boolean }) {
+  const resources = items.filter((item) => (preview || item.isPublished) && item.kind !== 'video' && isHttpUrl(item.url))
   if (resources.length === 0) return null
   const ordered = currentItemId
     ? [...resources.filter((item) => item.id === currentItemId), ...resources.filter((item) => item.id !== currentItemId)]
@@ -20,7 +21,7 @@ export function ResourceList({ items, storeSlug, currentItemId, legacyPresentati
         return (
           <li key={item.id} className="min-w-0">
             <a
-              href={`/${storeSlug}/item/${item.id}/abrir`}
+              href={withPreview(`/${storeSlug}/item/${item.id}/abrir`, preview)}
               target={isLink ? '_blank' : undefined}
               rel={isLink ? 'noopener noreferrer' : undefined}
               aria-label={`${action}${legacyPresentation ? ' ' : ': '}${item.title}${isLink ? ' (abre em nova aba)' : ''}`}

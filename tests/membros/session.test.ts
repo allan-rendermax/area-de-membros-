@@ -83,14 +83,14 @@ describe('requireStoreSession', () => {
     expect(supabase.auth.signOut).not.toHaveBeenCalled()
   })
 
-  it('encerra a sessão de cliente ausente ou bloqueado antes de redirecionar', async () => {
+  it('nega acesso a cliente ausente ou bloqueado sem revogar sessões durante a leitura', async () => {
     for (const found of [null, { ...customer, blockedAt: '2026-09-22' }]) {
       const supabase = authClient()
       vi.mocked(createClient).mockResolvedValueOnce(supabase as never)
       vi.mocked(findCustomerByEmail).mockResolvedValueOnce(found)
 
       await expect(requireStoreSession(store.slug)).rejects.toThrow(`NEXT_REDIRECT:/${store.slug}/entrar`)
-      expect(supabase.auth.signOut).toHaveBeenCalledOnce()
+      expect(supabase.auth.signOut).not.toHaveBeenCalled()
     }
   })
 

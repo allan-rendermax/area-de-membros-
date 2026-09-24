@@ -29,8 +29,8 @@ export default async function ProdutoAdminPage({ params, searchParams }: PagePro
         <nav className="flex flex-wrap items-center gap-2">
           <Link href={`/admin/produtos/${product.id}?aba=geral`} className={ui.chip(!showContent)}>Geral</Link>
           <Link href={`/admin/produtos/${product.id}?aba=conteudo`} className={ui.chip(showContent)}>Conteúdo</Link>
-          <a href={`/${store.slug}/produto/${product.slug}`} target="_blank" rel="noopener noreferrer" className="ml-auto text-sm text-texto-suave hover:text-texto">
-            Ver na loja ↗
+          <a href={`/${store.slug}/produto/${product.slug}?previa=1`} target="_blank" rel="noopener noreferrer" className="ml-auto text-sm text-texto-suave hover:text-texto">
+            Visualizar como aluno ↗
           </a>
         </nav>
       )}

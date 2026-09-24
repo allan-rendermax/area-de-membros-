@@ -15,41 +15,44 @@ import { loadGrantedProductLevels } from '@/lib/data/access'
 import { recordItemAccess } from '@/lib/data/item-access'
 import { getItemWithContext, listModulesWithItems } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
+import { requireStorePreview } from '@/lib/membros/preview'
+import { withPreview } from '@/lib/membros/paths'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'>) {
+export default async function ItemPage({ params, searchParams }: PageProps<'/[loja]/item/[id]'>) {
   const { loja, id } = await params
   if (!isUuid(id)) notFound()
-  const { store, customer } = await requireStoreSession(loja)
+  const preview = (await searchParams).previa === '1'
+  const { store, customer } = await (preview ? requireStorePreview(loja) : requireStoreSession(loja))
 
   const [ctx, levels] = await Promise.all([
     getItemWithContext(id),
-    loadGrantedProductLevels(store.id, customer),
+    customer ? loadGrantedProductLevels(store.id, customer) : Promise.resolve(null),
   ])
-  if (!ctx || ctx.product.storeId !== store.id || !ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished) notFound()
-  const level = levels.get(ctx.product.id)
+  if (!ctx || ctx.product.storeId !== store.id || (!preview && (!ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished))) notFound()
+  const level = preview ? 'complete' : levels?.get(ctx.product.id)
   if (!level) redirect(`/${store.slug}?comprar=${ctx.product.slug}`)
   if (!canAccessLevel(level, ctx.module.requiredLevel ?? 'basic')) redirect(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`)
 
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
   if (ctx.item.kind === 'video' && !embed) notFound()
   if (ctx.item.kind !== 'video' && !isHttpUrl(ctx.item.url)) notFound()
-  const completionResult = await Promise.allSettled([listCompletedItemIds(customer.id, store.id, ctx.product.id)])
+  const completionResult = await Promise.allSettled([customer ? listCompletedItemIds(customer.id, store.id, ctx.product.id) : Promise.resolve([])])
   const completedIds = completionResult[0].status === 'fulfilled' ? completionResult[0].value : []
   const progressAvailable = completionResult[0].status === 'fulfilled'
   const [productModules] = await Promise.all([
-    listModulesWithItems(ctx.product.id, { publishedOnly: true }),
-    ctx.item.kind === 'video'
+    listModulesWithItems(ctx.product.id, { publishedOnly: !preview }),
+    customer && ctx.item.kind === 'video'
       ? recordItemAccess({ customerId: customer.id, storeId: store.id, productId: ctx.product.id, itemId: ctx.item.id, kind: ctx.item.kind })
       : Promise.resolve(),
   ])
 
   const modules = productModules
-    .filter((module) => module.isPublished && canAccessLevel(level, module.requiredLevel ?? 'basic'))
+    .filter((module) => (preview || module.isPublished) && canAccessLevel(level, module.requiredLevel ?? 'basic'))
     .map((module) => ({
       ...module,
-      items: module.items.filter((item) => item.isPublished &&
+      items: module.items.filter((item) => (preview || item.isPublished) &&
         (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))),
     }))
     .filter((module) => module.items.length > 0)
@@ -60,11 +63,11 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
   const index = sequence.findIndex((item) => item.id === ctx.item.id)
   const previous = index > 0 ? sequence[index - 1] : null
   const next = index >= 0 && index < sequence.length - 1 ? sequence[index + 1] : null
-  const productHref = `/${store.slug}/produto/${ctx.product.slug}`
+  const productHref = withPreview(`/${store.slug}/produto/${ctx.product.slug}`, preview)
 
   return (
     <>
-      <StoreHeader store={store} email={customer.email} active="materials" actions={<InstallAppButton />} />
+      <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} active="materials" actions={<InstallAppButton />} />
       <main className="lesson-workspace member-item-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
         <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0 order-2 lg:order-1">
@@ -90,13 +93,14 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
 
             {siblings.some((item) => item.kind !== 'video') && <section className="mt-9" aria-label="Downloads e links">
               <h2 className="lesson-section-heading mb-5 text-2xl font-bold">Downloads e links</h2>
-              <ResourceList items={siblings} storeSlug={store.slug} currentItemId={ctx.item.id} />
+              <ResourceList items={siblings} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} />
             </section>}
 
             {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
-            <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer.email)} /></div>
+            <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
             <LessonToolbar
-              key={`${customer.id}:${ctx.item.id}`}
+              key={`${customer?.id ?? 'preview'}:${ctx.item.id}`}
+              preview={preview}
               storeSlug={store.slug}
               initialCompleted={visibleCompletedIds.includes(ctx.item.id)}
               progressAvailable={progressAvailable}
@@ -105,11 +109,11 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
               itemId={ctx.item.id}
               itemTitle={ctx.item.title}
               description={ctx.product.description}
-              previous={previous ? { href: `/${store.slug}/item/${previous.id}`, title: previous.title } : null}
-              next={next ? { href: `/${store.slug}/item/${next.id}`, title: next.title } : null}
+              previous={previous ? { href: withPreview(`/${store.slug}/item/${previous.id}`, preview), title: previous.title } : null}
+              next={next ? { href: withPreview(`/${store.slug}/item/${next.id}`, preview), title: next.title } : null}
             />
           </div>
-          <LessonSidebar modules={modules} storeSlug={store.slug} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
+          <LessonSidebar modules={modules} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
         </div>
       </main>
     </>

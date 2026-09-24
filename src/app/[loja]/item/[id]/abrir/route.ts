@@ -7,24 +7,26 @@ import { recordItemAccess } from '@/lib/data/item-access'
 import { getItemWithContext } from '@/lib/data/products'
 import { env } from '@/lib/env'
 import { requireStoreSession } from '@/lib/membros/session'
+import { requireStorePreview } from '@/lib/membros/preview'
 
-export async function GET(_request: Request, { params }: { params: Promise<{ loja: string; id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ loja: string; id: string }> }) {
   const { loja, id } = await params
   if (!isUuid(id)) notFound()
-  const { store, customer } = await requireStoreSession(loja)
+  const preview = new URL(request.url).searchParams.get('previa') === '1'
+  const { store, customer } = await (preview ? requireStorePreview(loja) : requireStoreSession(loja))
   const [ctx, levels] = await Promise.all([
     getItemWithContext(id),
-    loadGrantedProductLevels(store.id, customer),
+    customer ? loadGrantedProductLevels(store.id, customer) : Promise.resolve(null),
   ])
 
-  if (!ctx || ctx.product.storeId !== store.id || !ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished) notFound()
-  const level = levels.get(ctx.product.id)
+  if (!ctx || ctx.product.storeId !== store.id || (!preview && (!ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished))) notFound()
+  const level = preview ? 'complete' : levels?.get(ctx.product.id)
   if (!level) redirect(`/${store.slug}?comprar=${ctx.product.slug}`)
   if (!canAccessLevel(level, ctx.module.requiredLevel ?? 'basic')) redirect(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`)
 
   const destination = await resolveResourceDestination(ctx.item, env.supabaseUrl)
   if (!destination) notFound()
 
-  await recordItemAccess({ customerId: customer.id, storeId: store.id, productId: ctx.product.id, itemId: ctx.item.id, kind: ctx.item.kind })
+  if (customer) await recordItemAccess({ customerId: customer.id, storeId: store.id, productId: ctx.product.id, itemId: ctx.item.id, kind: ctx.item.kind })
   redirect(destination)
 }

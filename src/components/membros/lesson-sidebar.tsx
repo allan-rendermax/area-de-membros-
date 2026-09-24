@@ -7,8 +7,8 @@ import { toVideoEmbed } from '@/lib/content/video'
 import { ItemAnchor } from './episode-card'
 import { FileIcon, LinkIcon, PlayIcon } from './icons'
 
-function usable(item: ModuleWithItems['items'][number]) {
-  return item.isPublished && (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))
+function usable(item: ModuleWithItems['items'][number], preview: boolean) {
+  return (preview || item.isPublished) && (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))
 }
 
 const desktopQuery = '(min-width: 1024px)'
@@ -20,15 +20,16 @@ function subscribeToViewport(onChange: () => void) {
 function isDesktop() { return window.matchMedia(desktopQuery).matches }
 function serverViewport() { return false }
 
-export function LessonSidebar({ modules, storeSlug, currentItemId, completedItemIds = [], legacyPresentation = false }: {
+export function LessonSidebar({ modules, storeSlug, currentItemId, completedItemIds = [], legacyPresentation = false, preview = false }: {
   modules: ModuleWithItems[]
   storeSlug: string
   currentItemId?: string
   completedItemIds?: string[]
   legacyPresentation?: boolean
+  preview?: boolean
 }) {
   const desktop = useSyncExternalStore(subscribeToViewport, isDesktop, serverViewport)
-  const visible = modules.filter((module) => module.isPublished).map((module) => ({ ...module, items: module.items.filter(usable) })).filter((module) => module.items.length > 0)
+  const visible = modules.filter((module) => preview || module.isPublished).map((module) => ({ ...module, items: module.items.filter((item) => usable(item, preview)) })).filter((module) => module.items.length > 0)
   if (visible.length === 0) return null
 
   const content = (
@@ -44,7 +45,7 @@ export function LessonSidebar({ modules, storeSlug, currentItemId, completedItem
             {module.items.map((item) => {
               const Icon = item.kind === 'video' ? PlayIcon : item.kind === 'link' ? LinkIcon : FileIcon
               return <li key={item.id} className="min-w-0">
-                <ItemAnchor item={item} storeSlug={storeSlug} current={item.id === currentItemId} className={`lesson-sidebar-link flex min-w-0 items-start gap-3 rounded-lg px-3 py-3 text-sm leading-snug ${item.id === currentItemId ? 'bg-superficie-2 text-texto' : 'text-texto-suave hover:bg-superficie-2 hover:text-texto'}`}>
+                <ItemAnchor item={item} storeSlug={storeSlug} preview={preview} current={item.id === currentItemId} className={`lesson-sidebar-link flex min-w-0 items-start gap-3 rounded-lg px-3 py-3 text-sm leading-snug ${item.id === currentItemId ? 'bg-superficie-2 text-texto' : 'text-texto-suave hover:bg-superficie-2 hover:text-texto'}`}>
                   <Icon className="mt-0.5 h-4 w-4 shrink-0 text-destaque" />
                   <span className="min-w-0 break-words [overflow-wrap:anywhere]">{item.title}{!legacyPresentation && item.id === currentItemId && <span className="mt-1 block text-xs text-destaque">Conteúdo atual</span>}{!legacyPresentation && completedItemIds.includes(item.id) && <span className="mt-1 block text-xs text-texto">Concluído</span>}</span>
                 </ItemAnchor>

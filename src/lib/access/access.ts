@@ -41,8 +41,8 @@ export type ShelfProduct = {
 
 export type Shelf = { featured: ShelfProduct | null; unlocked: ShelfProduct[]; locked: ShelfProduct[] }
 
-export function buildShelf(products: Product[], granted: Set<string>): Shelf {
-  const visible = products.filter((p) => p.isPublished).sort((a, b) => a.sortOrder - b.sortOrder)
+export function buildShelf(products: Product[], granted: Set<string>, { includeDrafts = false } = {}): Shelf {
+  const visible = products.filter((p) => includeDrafts || p.isPublished).sort((a, b) => a.sortOrder - b.sortOrder)
   const all: ShelfProduct[] = visible.map((p) => {
     const unlocked = granted.has(p.id)
     return {

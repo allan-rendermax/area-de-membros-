@@ -15,7 +15,7 @@ export async function enviarCodigo(_prev: AdminLoginState, formData: FormData): 
   if (!isAdminEmail(email, env.adminEmails)) return { step: 'code', email, error: null }
 
   try {
-    const supabase = await createClient()
+    const supabase = await createClient('admin')
     await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })
   } catch {
     return { step: 'code', email, error: null }
@@ -29,7 +29,7 @@ export async function verificarCodigo(_prev: AdminLoginState, formData: FormData
   if (!isAdminEmail(email, env.adminEmails)) return { step: 'code', email, error: 'Código inválido ou expirado.' }
 
   try {
-    const supabase = await createClient()
+    const supabase = await createClient('admin')
     const { data: verified, error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
     if (error || !verified.user?.id || !verified.session?.access_token) {
       return { step: 'code', email, error: 'Código inválido ou expirado.' }

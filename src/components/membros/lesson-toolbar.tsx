@@ -11,6 +11,7 @@ export type LessonToolbarProps = {
   storeSlug: string
   initialCompleted: boolean
   progressAvailable?: boolean
+  preview?: boolean
   productTitle: string
   moduleTitle: string
   itemId: string
@@ -31,7 +32,7 @@ function ToolbarIcon({ kind }: { kind: 'info' | 'previous' | 'next' | 'check' })
   </svg>
 }
 
-export function LessonToolbar({ storeSlug, initialCompleted, progressAvailable = true, productTitle, moduleTitle, itemId, itemTitle, description, previous, next }: LessonToolbarProps) {
+export function LessonToolbar({ storeSlug, initialCompleted, progressAvailable = true, preview = false, productTitle, moduleTitle, itemId, itemTitle, description, previous, next }: LessonToolbarProps) {
   const router = useRouter()
   const [saved, setSaved] = useState<{ itemId: string; completed: boolean } | null>(null)
   const complete = saved?.itemId === itemId ? saved.completed : initialCompleted
@@ -68,7 +69,7 @@ export function LessonToolbar({ storeSlug, initialCompleted, progressAvailable =
   }
 
   function toggleCompletion() {
-    if (saving.current || !progressAvailable) return
+    if (preview || saving.current || !progressAvailable) return
     saving.current = true
     setError('')
     startTransition(async () => {
@@ -105,7 +106,8 @@ export function LessonToolbar({ storeSlug, initialCompleted, progressAvailable =
         {previous ? <Link href={previous.href} title={previous.title} className={`${navigationClass} order-2`}><ToolbarIcon kind="previous" />Conteúdo anterior</Link> : <button type="button" disabled className={`${navigationClass} order-2`}><ToolbarIcon kind="previous" />Conteúdo anterior</button>}
         {next ? <Link href={next.href} title={next.title} className={`${navigationClass} order-3`}>Próximo conteúdo<ToolbarIcon kind="next" /></Link> : <button type="button" disabled className={`${navigationClass} order-3`}>Próximo conteúdo<ToolbarIcon kind="next" /></button>}
         <div className="order-4 flex min-w-0 w-full flex-col items-stretch sm:ml-auto sm:w-auto sm:items-end">
-          <button type="button" disabled={pending || !progressAvailable} aria-pressed={Boolean(complete)} onClick={toggleCompletion} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-semibold focus-visible:outline-2 ${complete ? 'border border-destaque bg-destaque/15 text-texto hover:bg-destaque/25' : 'bg-destaque text-white hover:bg-destaque/80'}`}><ToolbarIcon kind="check" />{pending ? 'Salvando…' : complete ? 'Concluído' : 'Concluir'}</button>
+          <button type="button" disabled={preview || pending || !progressAvailable} aria-pressed={Boolean(complete)} onClick={toggleCompletion} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2 text-sm font-semibold focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50 ${complete ? 'border border-destaque bg-destaque/15 text-texto hover:bg-destaque/25' : 'bg-destaque text-white hover:bg-destaque/80'}`}><ToolbarIcon kind="check" />{pending ? 'Salvando…' : complete ? 'Concluído' : 'Concluir'}</button>
+          {preview && <span className="mt-1 text-center text-[11px] leading-tight text-texto-suave">Progresso desativado na prévia</span>}
           {!error && saved?.itemId === itemId && <span className="mt-1 text-center text-[11px] leading-tight text-texto-suave">Progresso salvo na sua conta</span>}
         </div>
       </div>

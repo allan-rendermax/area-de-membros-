@@ -8,7 +8,7 @@ import { createClient } from '@/lib/supabase/server'
 export async function getAdminSession(): Promise<{ email: string } | null> {
   const browserSession = (await cookies()).get(ADMIN_BROWSER_COOKIE)?.value
   if (!browserSession) return null
-  const supabase = await createClient()
+  const supabase = await createClient('admin')
   const { data, error } = await supabase.auth.getUser()
   const email = data.user?.email
   if (error || !email || !isAdminEmail(email, env.adminEmails)) return null

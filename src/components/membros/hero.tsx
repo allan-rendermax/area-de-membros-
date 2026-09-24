@@ -2,9 +2,10 @@ import Link from 'next/link'
 import type { ShelfProduct } from '@/lib/access/access'
 import { AutoCover } from './auto-cover'
 import { LockIcon, PlayIcon } from './icons'
+import { withPreview } from '@/lib/membros/paths'
 
-export function Hero({ product, storeSlug }: { product: ShelfProduct; storeSlug: string }) {
-  const href = product.unlocked ? `/${storeSlug}/produto/${product.slug}` : `/${storeSlug}?comprar=${product.slug}`
+export function Hero({ product, storeSlug, preview = false }: { product: ShelfProduct; storeSlug: string; preview?: boolean }) {
+  const href = withPreview(product.unlocked ? `/${storeSlug}/produto/${product.slug}` : `/${storeSlug}?comprar=${product.slug}`, preview)
   return (
     <section className="relative">
       <AutoCover seed={product.id} title="" imageUrl={product.bannerUrl ?? product.coverUrl} aspect="banner" className="max-h-[72vh] w-full rounded-none sm:aspect-[21/9]" eager />

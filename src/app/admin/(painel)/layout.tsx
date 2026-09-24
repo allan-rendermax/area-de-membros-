@@ -41,6 +41,7 @@ export default async function PainelLayout({ children }: { children: React.React
               <Link key={l.href} href={l.href} className="text-texto-suave hover:text-texto">{l.label}</Link>
             ))}
           </nav>
+          <a href={`/${store.slug}?previa=1`} target="_blank" rel="noopener noreferrer" className={ui.buttonGhost}>Visualizar como aluno ↗</a>
           <form action="/sair?para=admin" method="post" className="ml-auto flex items-center gap-3 text-sm text-texto-suave">
             <span className="hidden sm:inline">{email}</span>
             <button type="submit" className="hover:text-texto">Sair</button>

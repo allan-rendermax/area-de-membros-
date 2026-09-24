@@ -12,28 +12,32 @@ import { requireStoreSession } from '@/lib/membros/session'
 import { supportHref } from '@/lib/support/whatsapp'
 import { getMemberTheme, withMemberArtwork } from '@/lib/membros/theme'
 import { ArchitectureHero } from '@/components/membros/architecture-hero'
+import { requireStorePreview } from '@/lib/membros/preview'
+import { withPreview } from '@/lib/membros/paths'
+import { listProducts } from '@/lib/data/products'
 
 export const dynamic = 'force-dynamic'
 
 export default async function VitrinePage({ params, searchParams }: PageProps<'/[loja]'>) {
-  const [{ loja }, { comprar }] = await Promise.all([params, searchParams])
-  const { store, customer } = await requireStoreSession(loja)
+  const [{ loja }, { comprar, previa }] = await Promise.all([params, searchParams])
+  const preview = previa === '1'
+  const { store, customer } = await (preview ? requireStorePreview(loja) : requireStoreSession(loja))
   const [{ products, granted }, recentIds] = await Promise.all([
-    loadStoreAccess(store.id, customer),
-    listRecentProductIds(customer.id, store.id),
+    customer ? loadStoreAccess(store.id, customer) : listProducts(store.id).then((products) => ({ products, granted: new Set(products.map((p) => p.id)) })),
+    customer ? listRecentProductIds(customer.id, store.id) : Promise.resolve([]),
   ])
   const architecture = getMemberTheme(store.slug) === 'arquitetura'
-  const shelf = buildShelf(products.map((product) => withMemberArtwork(product, store.slug)), granted)
+  const shelf = buildShelf(products.map((product) => withMemberArtwork(product, store.slug)), granted, { includeDrafts: preview })
   const tracks = buildTracks(shelf)
   const continuing = recentIds.flatMap((id) => shelf.unlocked.filter((p) => p.id === id))
   const openSlug = typeof comprar === 'string' ? comprar : null
-  const support = supportHref(store, 'geral', customer.email)
+  const support = supportHref(store, 'geral', customer?.email ?? null)
 
   return (
     <>
-      <StoreHeader store={store} email={customer.email} actions={<InstallAppButton />} legacyHome />
+      <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} actions={<InstallAppButton />} legacyHome />
       <main className="pb-24">
-        {architecture ? <ArchitectureHero /> : shelf.featured && <Hero product={shelf.featured} storeSlug={store.slug} />}
+        {architecture ? <ArchitectureHero /> : shelf.featured && <Hero product={shelf.featured} storeSlug={store.slug} preview={preview} />}
         {architecture && (
           <div id="materiais" className="arq-library-heading">
             <h2>Tudo pronto para você criar</h2>
@@ -44,7 +48,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
           {continuing.length > 0 && (
             <Carousel title="Continuar">
               {continuing.map((p) => (
-                <PosterLink key={p.id} product={p} href={`/${store.slug}/produto/${p.slug}`} />
+                <PosterLink key={p.id} product={p} href={withPreview(`/${store.slug}/produto/${p.slug}`, preview)} />
               ))}
             </Carousel>
           )}
@@ -67,7 +71,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
             <Carousel key={track.name} title={track.name}>
               {track.products.map((p) => (
                 p.unlocked
-                  ? <PosterLink key={p.id} product={p} href={`/${store.slug}/produto/${p.slug}`} />
+                  ? <PosterLink key={p.id} product={p} href={withPreview(`/${store.slug}/produto/${p.slug}`, preview)} />
                   : <LockedPoster key={`${p.id}-${openSlug === p.slug}`} product={p} initiallyOpen={openSlug === p.slug} />
               ))}
             </Carousel>

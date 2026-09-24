@@ -31,6 +31,14 @@ function button(label: string) {
 async function click(element: HTMLElement) { await act(async () => element.click()) }
 
 describe('LessonToolbar', () => {
+  it('does not save progress in admin preview even with a student session in the browser', async () => {
+    await render({ ...base, preview: true })
+    expect(button('Concluir').disabled).toBe(true)
+    await click(button('Concluir'))
+    expect(saveCompletion).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Progresso desativado na prévia')
+  })
+
   beforeEach(async () => {
     vi.mocked(saveCompletion).mockReset()
     container = document.createElement('div')
