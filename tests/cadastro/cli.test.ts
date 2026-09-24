@@ -1,0 +1,52 @@
+import { afterEach, describe, expect, it } from 'vitest'
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { spawnSync } from 'node:child_process'
+
+const script = resolve('scripts/cadastrar-produto.mjs')
+const dirs: string[] = []
+afterEach(async () => { await Promise.all(dirs.splice(0).map(dir => rm(dir, { recursive: true, force: true }))) })
+async function root() { const dir = await mkdtemp(join(tmpdir(), 'cadastro-cli-')); dirs.push(dir); return dir }
+async function product(dir: string, name: string, body = 'nome: Kit\nid: P1\ntag: front\nloja: loja\n') {
+  const folder = join(dir, name)
+  await mkdir(folder)
+  await writeFile(join(folder, 'produto.txt'), body)
+  await mkdir(join(folder, 'entregaveis'))
+  await writeFile(join(folder, 'entregaveis', 'Guia.txt'), 'abc')
+  return folder
+}
+function run(...args: string[]) {
+  return spawnSync(process.execPath, [script, ...args], { cwd: resolve('.'), encoding: 'utf8', env: { ...process.env, SUPABASE_URL: '', SUPABASE_SECRET_KEY: '', NEXT_PUBLIC_SUPABASE_URL: '' } })
+}
+describe('CLI de cadastro', () => {
+  it('simula sem credenciais e mostra resumo, tamanho, Payt e link', async () => {
+    const dir = await root()
+    const folder = await product(dir, 'kit')
+    const result = run(folder, '--simular')
+    expect(result.status).toBe(0)
+    expect(result.stdout).toMatch(/Kit|Material|Guia|3 B|P1|\/loja\/kit/)
+  })
+  it('lote com segunda pasta inválida falha sem pedir credenciais', async () => {
+    const dir = await root()
+    await product(dir, 'primeiro')
+    await product(dir, 'segundo', 'nome: Inválido\nid: P2\ntag: desconhecida\nloja: loja\n')
+    const result = run(dir, '--todos', '--simular')
+    expect(result.status).not.toBe(0)
+    expect(result.stderr).toMatch(/tag|inválid/i)
+  })
+  it('simulação rejeita código Payt repetido no lote', async () => {
+    const dir = await root()
+    await product(dir, 'primeiro')
+    await product(dir, 'segundo', 'nome: Outro Kit\nid: P1\ntag: front\nloja: loja\n')
+    const result = run(dir, '--todos', '--simular')
+    expect(result.status).not.toBe(0)
+    expect(result.stderr).toMatch(/Payt.*repetido|repetido.*Payt/i)
+  })
+  it('rejeita flag desconhecida e pasta ausente', async () => {
+    const dir = await root()
+    const folder = await product(dir, 'kit')
+    expect(run(folder, '--inexistente').status).not.toBe(0)
+    expect(run(join(dir, 'ausente'), '--simular').status).not.toBe(0)
+  })
+})

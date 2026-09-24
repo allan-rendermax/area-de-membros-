@@ -1,0 +1,3 @@
+# Os links abaixo são seguros e ilustrativos.
+Vídeo introdutório | https://www.youtube.com/watch?v=example
+Página de apoio | https://example.com/apoio

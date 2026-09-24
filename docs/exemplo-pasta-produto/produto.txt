@@ -1,0 +1,9 @@
+# Exemplo seguro para simulação. Troque loja e id por valores reais antes de cadastrar.
+nome: Kit de Inspeção Exemplo
+id: EXEMPLO-PAYT-001
+tag: front
+loja: loja-exemplo
+trilha: Inspeção
+destaque: não
+ordem: 10
+descricao: Material fictício para experimentar o cadastrador. Não representa um produto à venda.
