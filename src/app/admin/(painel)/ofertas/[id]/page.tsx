@@ -7,6 +7,7 @@ import { isUuid } from '@/lib/content/url'
 import { listProducts } from '@/lib/data/products'
 import { getOffer } from '@/lib/data/products-admin'
 import { OfferForm } from '../offer-form'
+import { DeleteOfferSection } from '../delete-offer-form'
 
 export default async function OfertaPage({ params, searchParams }: PageProps<'/admin/ofertas/[id]'>) {
   await requireAdmin()
@@ -24,6 +25,7 @@ export default async function OfertaPage({ params, searchParams }: PageProps<'/a
       <h1 className={ui.h1}>{offer ? 'Editar oferta' : `Nova oferta — ${store.name}`}</h1>
       {typeof msg === 'string' && <p role="status" className={ui.notice}>{msg}</p>}
       <OfferForm offer={offer} products={products} initialCode={typeof codigo === 'string' ? codigo : ''} storeId={store.id} />
+      {offer && <DeleteOfferSection key={offer.id} offer={{ id: offer.id, name: offer.name }} storeId={store.id} />}
     </div>
   )
 }
