@@ -6,7 +6,7 @@ import ProdutoPage from '@/app/[loja]/produto/[slug]/page'
 import { AutoCover } from '@/components/membros/auto-cover'
 import { ContentImage } from '@/components/membros/content-image'
 import { Hero } from '@/components/membros/hero'
-import { loadGrantedProductIds } from '@/lib/data/access'
+import { loadGrantedProductLevels } from '@/lib/data/access'
 import { getProductBySlug, listModulesWithItems } from '@/lib/data/products'
 import type { CustomerRow, Product, Store } from '@/lib/domain/types'
 import { getStore, requireStoreSession } from '@/lib/membros/session'
@@ -19,7 +19,7 @@ vi.mock('@/app/[loja]/entrar/actions', () => ({ entrar: vi.fn() }))
 vi.mock('@/lib/auth/login-guard', () => ({ freshFormStamp: () => 'stamp' }))
 vi.mock('@/lib/env', () => ({ env: { loginGuardSecret: 'test', turnstileSiteKey: '', turnstileSecretKey: '' } }))
 vi.mock('@/lib/support/whatsapp', () => ({ supportHref: () => null }))
-vi.mock('@/lib/data/access', () => ({ loadGrantedProductIds: vi.fn() }))
+vi.mock('@/lib/data/access', () => ({ loadGrantedProductLevels: vi.fn() }))
 vi.mock('@/lib/data/products', () => ({ getProductBySlug: vi.fn(), listModulesWithItems: vi.fn() }))
 vi.mock('@/lib/membros/session', () => ({ getStore: vi.fn(), requireStoreSession: vi.fn() }))
 
@@ -134,7 +134,7 @@ describe('banners principais de rota', () => {
     vi.mocked(getStore).mockResolvedValue(store)
     vi.mocked(requireStoreSession).mockResolvedValue({ store, customer })
     vi.mocked(getProductBySlug).mockResolvedValue(product)
-    vi.mocked(loadGrantedProductIds).mockResolvedValue(new Set([product.id]))
+    vi.mocked(loadGrantedProductLevels).mockResolvedValue(new Map([[product.id, 'complete']]))
     vi.mocked(listModulesWithItems).mockResolvedValue([])
   })
 

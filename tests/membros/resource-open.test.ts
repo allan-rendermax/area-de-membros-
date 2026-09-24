@@ -1,17 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { notFound, redirect } from 'next/navigation'
 import { GET } from '@/app/[loja]/item/[id]/abrir/route'
-import { loadGrantedProductIds } from '@/lib/data/access'
+import { loadGrantedProductLevels } from '@/lib/data/access'
 import { recordItemAccess } from '@/lib/data/item-access'
 import { getItemWithContext } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 vi.mock('next/navigation', () => ({ notFound: vi.fn(), redirect: vi.fn() }))
-vi.mock('@/lib/data/access', () => ({ loadGrantedProductIds: vi.fn() }))
+vi.mock('@/lib/data/access', () => ({ loadGrantedProductLevels: vi.fn() }))
 vi.mock('@/lib/data/item-access', () => ({ recordItemAccess: vi.fn() }))
 vi.mock('@/lib/data/products', () => ({ getItemWithContext: vi.fn() }))
 vi.mock('@/lib/membros/session', () => ({ requireStoreSession: vi.fn() }))
 vi.mock('@/lib/env', () => ({ env: { supabaseUrl: 'https://project.supabase.co' } }))
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: vi.fn() }))
 
 const id = '11111111-1111-4111-8111-111111111111'
 const store = { id: 'store-a', slug: 'loja-a', name: 'Loja A', logoUrl: null, supportUrl: null, supportWhatsapp: null, loginImageUrl: null }
@@ -30,7 +32,7 @@ describe('rota protegida para abrir recurso', () => {
     vi.mocked(redirect).mockImplementation((url) => { throw new Error(`NEXT_REDIRECT:${url}`) })
     vi.mocked(requireStoreSession).mockResolvedValue({ store, customer })
     vi.mocked(getItemWithContext).mockResolvedValue(ctx)
-    vi.mocked(loadGrantedProductIds).mockResolvedValue(new Set([product.id]))
+    vi.mocked(loadGrantedProductLevels).mockResolvedValue(new Map([[product.id, 'complete']]))
     vi.mocked(recordItemAccess).mockResolvedValue()
   })
 
@@ -62,9 +64,36 @@ describe('rota protegida para abrir recurso', () => {
   })
 
   it('redireciona para compra antes de registrar quando produto não foi comprado', async () => {
-    vi.mocked(loadGrantedProductIds).mockResolvedValueOnce(new Set())
+    vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map())
     await expect(GET(request, params())).rejects.toThrow('NEXT_REDIRECT:/loja-a?comprar=produto-a')
     expect(recordItemAccess).not.toHaveBeenCalled()
+  })
+
+  it('bloqueia download extra antes de registrar ou assinar', async () => {
+    vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map([[product.id, 'basic']]))
+    vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...ctx, module: { ...courseModule, requiredLevel: 'complete' }, item: { ...item, url: 'https://project.supabase.co/storage/v1/object/authenticated/arquivos-restritos/modelo.pdf' } })
+    await expect(GET(request, params())).rejects.toThrow('NEXT_REDIRECT:/loja-a/produto/produto-a?bloqueado=1')
+    expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(createAdminClient).not.toHaveBeenCalled()
+  })
+
+  it('assina arquivo privado apenas para nível autorizado e redireciona para URL assinada', async () => {
+    const signedUrl = 'https://project.supabase.co/storage/v1/object/sign/arquivos-restritos/modelo.pdf?token=short'
+    const createSignedUrl = vi.fn().mockResolvedValue({ data: { signedUrl }, error: null })
+    vi.mocked(createAdminClient).mockReturnValue({ storage: { from: vi.fn(() => ({ createSignedUrl })) } } as unknown as ReturnType<typeof createAdminClient>)
+    vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...ctx, module: { ...courseModule, requiredLevel: 'complete' }, item: { ...item, url: 'https://project.supabase.co/storage/v1/object/authenticated/arquivos-restritos/modelo.pdf' } })
+    await expect(GET(request, params())).rejects.toThrow(`NEXT_REDIRECT:${signedUrl}`)
+    expect(createSignedUrl).toHaveBeenCalledWith('modelo.pdf', 60, { download: true })
+    expect(recordItemAccess).toHaveBeenCalledOnce()
+  })
+
+  it('não registra nem redireciona se assinatura falha', async () => {
+    const createSignedUrl = vi.fn().mockResolvedValue({ data: null, error: new Error('storage unavailable') })
+    vi.mocked(createAdminClient).mockReturnValue({ storage: { from: vi.fn(() => ({ createSignedUrl })) } } as unknown as ReturnType<typeof createAdminClient>)
+    vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...ctx, item: { ...item, url: 'https://project.supabase.co/storage/v1/object/authenticated/arquivos-restritos/modelo.pdf' } })
+    await expect(GET(request, params())).rejects.toThrow('NEXT_NOT_FOUND')
+    expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(redirect).not.toHaveBeenCalled()
   })
 
   it('aguarda o registro do clique autorizado antes de redirecionar, sem buscar bytes', async () => {

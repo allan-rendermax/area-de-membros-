@@ -6,14 +6,14 @@ import { notFound, redirect } from 'next/navigation'
 import ItemPage from '@/app/[loja]/item/[id]/page'
 import ProdutoPage from '@/app/[loja]/produto/[slug]/page'
 import VitrinePage from '@/app/[loja]/page'
-import { loadGrantedProductIds, loadStoreAccess } from '@/lib/data/access'
+import { loadGrantedProductLevels, loadStoreAccess } from '@/lib/data/access'
 import { listRecentProductIds, recordItemAccess } from '@/lib/data/item-access'
 import { getItemWithContext, getProductBySlug, listModulesWithItems } from '@/lib/data/products'
 import type { CustomerRow, Item, Module, ModuleWithItems, Product, Store } from '@/lib/domain/types'
 import { requireStoreSession } from '@/lib/membros/session'
 
 vi.mock('next/navigation', () => ({ notFound: vi.fn(), redirect: vi.fn() }))
-vi.mock('@/lib/data/access', () => ({ loadGrantedProductIds: vi.fn(), loadStoreAccess: vi.fn() }))
+vi.mock('@/lib/data/access', () => ({ loadGrantedProductLevels: vi.fn(), loadStoreAccess: vi.fn() }))
 vi.mock('@/lib/data/item-access', () => ({ listRecentProductIds: vi.fn(), recordItemAccess: vi.fn() }))
 vi.mock('@/lib/data/products', () => ({
   getItemWithContext: vi.fn(),
@@ -111,7 +111,7 @@ describe('vitrine do aluno', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(requireStoreSession).mockResolvedValue({ store, customer })
-    vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product], granted: new Set([product.id]) })
+    vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product], granted: new Set([product.id]), levels: new Map([[product.id, 'complete']]) })
     vi.mocked(listRecentProductIds).mockResolvedValue([])
   })
 
@@ -126,7 +126,7 @@ describe('vitrine do aluno', () => {
     const arq = { ...store, slug: 'arquitetura' }
     vi.mocked(requireStoreSession).mockResolvedValue({ store: arq, customer })
     vi.mocked(loadStoreAccess).mockResolvedValue({
-      customer, products: [{ ...product, slug: 'atlas-visual-das-patologias' }], granted: new Set([product.id]),
+      customer, products: [{ ...product, slug: 'atlas-visual-das-patologias' }], granted: new Set([product.id]), levels: new Map([[product.id, 'complete']]),
     })
     const html = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: arq.slug }), searchParams: Promise.resolve({}) }))
     expect(html).toContain('Menos tempo no zero.')
@@ -149,30 +149,30 @@ describe('rota de produto', () => {
     vi.mocked(redirect).mockImplementation((path) => { throw new Error(`NEXT_REDIRECT:${path}`) })
     vi.mocked(requireStoreSession).mockResolvedValue({ store, customer })
     vi.mocked(getProductBySlug).mockResolvedValue(product)
-    vi.mocked(loadGrantedProductIds).mockResolvedValue(new Set([product.id]))
-    vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product], granted: new Set([product.id]) })
+    vi.mocked(loadGrantedProductLevels).mockResolvedValue(new Map([[product.id, 'complete']]))
+    vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product], granted: new Set([product.id]), levels: new Map([[product.id, 'complete']]) })
     vi.mocked(listModulesWithItems).mockResolvedValue([{ ...courseModule, items: [item] }])
   })
 
   it('inicia produto e permissão antes de qualquer um terminar', async () => {
     const pendingProduct = deferred<Product | null>()
-    const pendingGranted = deferred<Set<string>>()
+    const pendingGranted = deferred<Map<string, 'basic' | 'complete'>>()
     vi.mocked(getProductBySlug).mockReturnValueOnce(pendingProduct.promise)
-    vi.mocked(loadGrantedProductIds).mockReturnValueOnce(pendingGranted.promise)
+    vi.mocked(loadGrantedProductLevels).mockReturnValueOnce(pendingGranted.promise)
 
     const rendering = ProdutoPage(productProps())
     await settle()
-    const callsBeforeResolution = [getProductBySlug, loadGrantedProductIds].map((mock) => vi.mocked(mock).mock.calls.length)
+    const callsBeforeResolution = [getProductBySlug, loadGrantedProductLevels].map((mock) => vi.mocked(mock).mock.calls.length)
 
     pendingProduct.resolve(product)
-    pendingGranted.resolve(new Set([product.id]))
+    pendingGranted.resolve(new Map([[product.id, 'complete']]))
     await rendering
 
     expect(callsBeforeResolution).toEqual([1, 1])
   })
 
   it('prioriza 404 de produto ausente ou oculto sobre compra', async () => {
-    vi.mocked(loadGrantedProductIds).mockResolvedValue(new Set())
+    vi.mocked(loadGrantedProductLevels).mockResolvedValue(new Map())
 
     vi.mocked(getProductBySlug).mockResolvedValueOnce(null)
     await expect(ProdutoPage(productProps('ausente'))).rejects.toThrow('NEXT_NOT_FOUND')
@@ -180,13 +180,13 @@ describe('rota de produto', () => {
     vi.mocked(getProductBySlug).mockResolvedValueOnce({ ...product, isPublished: false })
     await expect(ProdutoPage(productProps())).rejects.toThrow('NEXT_NOT_FOUND')
 
-    expect(loadGrantedProductIds).toHaveBeenCalledTimes(2)
+    expect(loadGrantedProductLevels).toHaveBeenCalledTimes(2)
     expect(redirect).not.toHaveBeenCalled()
     expect(listModulesWithItems).not.toHaveBeenCalled()
   })
 
   it('redireciona produto não comprado sem carregar módulos', async () => {
-    vi.mocked(loadGrantedProductIds).mockResolvedValue(new Set())
+    vi.mocked(loadGrantedProductLevels).mockResolvedValue(new Map())
 
     await expect(ProdutoPage(productProps()))
       .rejects.toThrow(`NEXT_REDIRECT:/${store.slug}?comprar=${product.slug}`)
@@ -229,6 +229,46 @@ describe('rota de produto', () => {
     expect(html).toContain('Nenhum conteúdo publicado ainda.')
     expect(html).not.toContain('Downloads e links')
   })
+
+  it('mostra extras bloqueados sem itens ou destinos e oferece upgrade ao Básico', async () => {
+    const extra = { ...courseModule, id: 'extra', title: 'Modelos exclusivos', requiredLevel: 'complete' as const }
+    const privateItem = { ...item, id: '44444444-4444-4444-8444-444444444444', moduleId: extra.id, kind: 'arquivo' as const, title: 'Modelo secreto', url: 'https://project.supabase.co/storage/v1/object/authenticated/arquivos-restritos/modelo.pdf' }
+    vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map([[product.id, 'basic']]))
+    vi.mocked(getProductBySlug).mockResolvedValueOnce({ ...product, upgradeCheckoutUrl: 'https://checkout.example.com/upgrade' })
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [item] }, { ...extra, items: [privateItem] }])
+
+    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
+    expect(html).toContain('Seu acesso: Básico')
+    expect(html).toContain('Modelos exclusivos')
+    expect(html).toContain('Desbloquear versão completa')
+    expect(html).toContain('href="https://checkout.example.com/upgrade"')
+    expect(html).toContain('Já paguei, atualizar acesso')
+    expect(html).not.toContain(privateItem.title)
+    expect(html).not.toContain(privateItem.id)
+    expect(html).not.toContain(privateItem.url)
+  })
+
+  it('exibe extras e evita CTA quando acesso é Completo', async () => {
+    const extra = { ...courseModule, id: 'extra', title: 'Modelos exclusivos', requiredLevel: 'complete' as const }
+    const privateItem = { ...item, id: '44444444-4444-4444-8444-444444444444', moduleId: extra.id, kind: 'arquivo' as const, title: 'Modelo secreto', url: 'https://project.supabase.co/storage/v1/object/authenticated/arquivos-restritos/modelo.pdf' }
+    vi.mocked(getProductBySlug).mockResolvedValueOnce({ ...product, upgradeCheckoutUrl: 'https://checkout.example.com/upgrade' })
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [item] }, { ...extra, items: [privateItem] }])
+
+    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
+    expect(html).toContain('Seu acesso: Completo')
+    expect(html).toContain(privateItem.title)
+    expect(html).not.toContain('Desbloquear versão completa')
+  })
+
+  it('orienta suporte quando existe extra sem checkout válido', async () => {
+    const extra = { ...courseModule, id: 'extra', requiredLevel: 'complete' as const }
+    vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map([[product.id, 'basic']]))
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...extra, items: [item] }])
+    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
+    expect(html).toContain('entre em contato com o suporte')
+    expect(html).not.toContain('Desbloquear versão completa')
+    expect(html).not.toContain(item.id)
+  })
 })
 
 describe('rota de item', () => {
@@ -238,8 +278,8 @@ describe('rota de item', () => {
     vi.mocked(redirect).mockImplementation((path) => { throw new Error(`NEXT_REDIRECT:${path}`) })
     vi.mocked(requireStoreSession).mockResolvedValue({ store, customer })
     vi.mocked(getItemWithContext).mockResolvedValue(context)
-    vi.mocked(loadGrantedProductIds).mockResolvedValue(new Set([product.id]))
-    vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product], granted: new Set([product.id]) })
+    vi.mocked(loadGrantedProductLevels).mockResolvedValue(new Map([[product.id, 'complete']]))
+    vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product], granted: new Set([product.id]), levels: new Map([[product.id, 'complete']]) })
     vi.mocked(recordItemAccess).mockResolvedValue()
     vi.mocked(listModulesWithItems).mockResolvedValue([{ ...courseModule, items: [item] }])
   })
@@ -315,23 +355,23 @@ describe('rota de item', () => {
 
   it('inicia contexto e permissão antes de qualquer um terminar', async () => {
     const pendingContext = deferred<typeof context | null>()
-    const pendingGranted = deferred<Set<string>>()
+    const pendingGranted = deferred<Map<string, 'basic' | 'complete'>>()
     vi.mocked(getItemWithContext).mockReturnValueOnce(pendingContext.promise)
-    vi.mocked(loadGrantedProductIds).mockReturnValueOnce(pendingGranted.promise)
+    vi.mocked(loadGrantedProductLevels).mockReturnValueOnce(pendingGranted.promise)
 
     const rendering = ItemPage(itemProps())
     await settle()
-    const callsBeforeResolution = [getItemWithContext, loadGrantedProductIds].map((mock) => vi.mocked(mock).mock.calls.length)
+    const callsBeforeResolution = [getItemWithContext, loadGrantedProductLevels].map((mock) => vi.mocked(mock).mock.calls.length)
 
     pendingContext.resolve(context)
-    pendingGranted.resolve(new Set([product.id]))
+    pendingGranted.resolve(new Map([[product.id, 'complete']]))
     await rendering
 
     expect(callsBeforeResolution).toEqual([1, 1])
   })
 
   it('prioriza 404 para conteúdo ausente, de outra loja ou oculto e nunca registra acesso', async () => {
-    vi.mocked(loadGrantedProductIds).mockResolvedValue(new Set())
+    vi.mocked(loadGrantedProductLevels).mockResolvedValue(new Map())
     const invalidContexts = [
       null,
       { ...context, product: { ...product, storeId: 'store-b' } },
@@ -351,7 +391,7 @@ describe('rota de item', () => {
   })
 
   it('redireciona item não comprado sem registrar acesso', async () => {
-    vi.mocked(loadGrantedProductIds).mockResolvedValue(new Set())
+    vi.mocked(loadGrantedProductLevels).mockResolvedValue(new Map())
 
     await expect(ItemPage(itemProps()))
       .rejects.toThrow(`NEXT_REDIRECT:/${store.slug}?comprar=${product.slug}`)
@@ -416,6 +456,27 @@ describe('rota de item', () => {
     expect(recordItemAccess).toHaveBeenCalledOnce()
     expect(html).toContain(item.title)
     expect(html).toContain('youtube-nocookie.com/embed/dQw4w9WgXcQ')
+  })
+
+  it('impede item extra direto antes de registro e não revela embed', async () => {
+    const extra = { ...courseModule, requiredLevel: 'complete' as const }
+    vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map([[product.id, 'basic']]))
+    vi.mocked(getItemWithContext).mockResolvedValueOnce({ item, module: extra, product })
+    await expect(ItemPage(itemProps())).rejects.toThrow('NEXT_REDIRECT:/loja-a/produto/produto-a?bloqueado=1')
+    expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(listModulesWithItems).not.toHaveBeenCalled()
+  })
+
+  it('omite extras da barra lateral e da próxima aula para Básico', async () => {
+    const extra = { ...courseModule, id: 'extra', title: 'Modelos exclusivos', requiredLevel: 'complete' as const }
+    const extraItem = { ...item, id: '44444444-4444-4444-8444-444444444444', moduleId: extra.id, title: 'Aula secreta', url: 'https://www.youtube.com/watch?v=secret' }
+    vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map([[product.id, 'basic']]))
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [item] }, { ...extra, items: [extraItem] }])
+    const html = renderToStaticMarkup(await ItemPage(itemProps()))
+    expect(html).not.toContain(extraItem.id)
+    expect(html).not.toContain(extraItem.title)
+    expect(html).not.toContain(extraItem.url)
+    expect(html).not.toContain('Modelos exclusivos')
   })
 
   it('preserva a ordem de anterior e próximo dentro do mesmo módulo', async () => {

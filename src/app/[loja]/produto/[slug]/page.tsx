@@ -3,10 +3,12 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { EpisodeCard, ItemAnchor } from '@/components/membros/episode-card'
 import { LessonSidebar } from '@/components/membros/lesson-sidebar'
+import { ProductUpgrade } from '@/components/membros/product-upgrade'
 import { ResourceList } from '@/components/membros/resource-list'
 import { StoreHeader } from '@/components/membros/store-header'
 import { WhatsAppFloating } from '@/components/membros/whatsapp-button'
-import { loadGrantedProductIds } from '@/lib/data/access'
+import { canAccessLevel } from '@/lib/access/access'
+import { loadGrantedProductLevels } from '@/lib/data/access'
 import { getProductBySlug, listModulesWithItems } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
 import { supportHref } from '@/lib/support/whatsapp'
@@ -15,20 +17,25 @@ import { toVideoEmbed } from '@/lib/content/video'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ProdutoPage({ params }: PageProps<'/[loja]/produto/[slug]'>) {
+export default async function ProdutoPage({ params, searchParams }: PageProps<'/[loja]/produto/[slug]'>) {
   const { loja, slug } = await params
   const { store, customer } = await requireStoreSession(loja)
-  const [product, granted] = await Promise.all([
+  const [product, levels] = await Promise.all([
     getProductBySlug(store.id, slug),
-    loadGrantedProductIds(store.id, customer),
+    loadGrantedProductLevels(store.id, customer),
   ])
   if (!product || !product.isPublished) notFound()
-  if (!granted.has(product.id)) redirect(`/${store.slug}?comprar=${product.slug}`)
+  const level = levels.get(product.id)
+  if (!level) redirect(`/${store.slug}?comprar=${product.slug}`)
 
-  const modules = (await listModulesWithItems(product.id, { publishedOnly: true }))
+  const publishedModules = (await listModulesWithItems(product.id, { publishedOnly: true }))
     .filter((module) => module.isPublished)
     .map((module) => ({ ...module, items: module.items.filter((item) => item.isPublished && (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))) }))
     .filter((module) => module.items.length > 0)
+  const modules = publishedModules.filter((module) => canAccessLevel(level, module.requiredLevel ?? 'basic'))
+  const lockedModules = publishedModules.filter((module) => !canAccessLevel(level, module.requiredLevel ?? 'basic'))
+  const productHref = `/${store.slug}/produto/${product.slug}`
+  const blocked = (await searchParams).bloqueado === '1'
   const support = supportHref(store, 'geral', customer.email)
 
   return (
@@ -42,6 +49,8 @@ export default async function ProdutoPage({ params }: PageProps<'/[loja]/produto
               <div className="min-w-0 flex-1">
                 <p className="lesson-eyebrow text-xs font-bold uppercase tracking-[.16em] text-texto-suave">Seu material</p>
                 <h1 className="lesson-title mt-1 break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{product.title}</h1>
+                <p className="mt-2 text-sm font-semibold text-destaque">Seu acesso: {level === 'complete' ? 'Completo' : 'Básico'}</p>
+                {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo faz parte da versão completa.</p>}
                 {product.description && <p className="mt-3 max-w-2xl break-words text-sm leading-relaxed text-texto-suave sm:text-base">{product.description}</p>}
                 {modules[0]?.items[0] && <ItemAnchor item={modules[0].items[0]} storeSlug={store.slug} className="mt-5 inline-flex min-h-11 items-center gap-3 rounded-full bg-destaque px-5 py-2.5 text-sm font-bold text-white hover:bg-destaque/80">
                   Abrir primeiro conteúdo <span aria-hidden>→</span>
@@ -73,6 +82,14 @@ export default async function ProdutoPage({ params }: PageProps<'/[loja]/produto
                 })}
               </div>
             )}
+            {lockedModules.length > 0 && <section className="mt-9" aria-label="Módulos bloqueados">
+              <h2 className="mb-4 text-xl font-bold">Módulos da versão completa</h2>
+              <ul className="space-y-3">{lockedModules.map((module) => <li key={module.id} className="rounded-xl border border-borda bg-superficie p-4">
+                <span className="font-semibold">{module.title}</span>
+                <span className="ml-3 text-sm text-texto-suave">{module.items.length} {module.items.length === 1 ? 'conteúdo' : 'conteúdos'} bloqueados</span>
+              </li>)}</ul>
+            </section>}
+            <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={productHref} />
           </div>
           <LessonSidebar modules={modules} storeSlug={store.slug} />
         </div>

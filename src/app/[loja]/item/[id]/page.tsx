@@ -7,7 +7,8 @@ import { ResourceList } from '@/components/membros/resource-list'
 import { StoreHeader } from '@/components/membros/store-header'
 import { toVideoEmbed } from '@/lib/content/video'
 import { isHttpUrl, isUuid } from '@/lib/content/url'
-import { loadGrantedProductIds } from '@/lib/data/access'
+import { canAccessLevel } from '@/lib/access/access'
+import { loadGrantedProductLevels } from '@/lib/data/access'
 import { recordItemAccess } from '@/lib/data/item-access'
 import { getItemWithContext, listModulesWithItems } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
@@ -19,12 +20,14 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
   if (!isUuid(id)) notFound()
   const { store, customer } = await requireStoreSession(loja)
 
-  const [ctx, granted] = await Promise.all([
+  const [ctx, levels] = await Promise.all([
     getItemWithContext(id),
-    loadGrantedProductIds(store.id, customer),
+    loadGrantedProductLevels(store.id, customer),
   ])
   if (!ctx || ctx.product.storeId !== store.id || !ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished) notFound()
-  if (!granted.has(ctx.product.id)) redirect(`/${store.slug}?comprar=${ctx.product.slug}`)
+  const level = levels.get(ctx.product.id)
+  if (!level) redirect(`/${store.slug}?comprar=${ctx.product.slug}`)
+  if (!canAccessLevel(level, ctx.module.requiredLevel ?? 'basic')) redirect(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`)
 
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
   if (ctx.item.kind === 'video' && !embed) notFound()
@@ -37,7 +40,7 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
   ])
 
   const modules = productModules
-    .filter((module) => module.isPublished)
+    .filter((module) => module.isPublished && canAccessLevel(level, module.requiredLevel ?? 'basic'))
     .map((module) => ({
       ...module,
       items: module.items.filter((item) => item.isPublished &&
