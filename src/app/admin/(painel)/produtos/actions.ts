@@ -9,6 +9,7 @@ import { validateItemUpload, type ItemUploadTicket } from '@/lib/admin/item-uplo
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
 import { getProductById } from '@/lib/data/products'
+import { deleteProduct } from '@/lib/data/product-deletion'
 import { createItemUpload, deleteItem, deleteModule, moveItem, moveModule, saveItem, saveModule, saveProduct, uploadImage } from '@/lib/data/products-admin'
 
 function field(form: FormData, name: string): string {
@@ -17,6 +18,26 @@ function field(form: FormData, name: string): string {
 
 function direction(form: FormData): 'up' | 'down' {
   return field(form, 'direcao') === 'up' ? 'up' : 'down'
+}
+
+export type DeleteProductState = { error: string | null }
+
+export async function excluirProduto(_previous: DeleteProductState, formData: FormData): Promise<DeleteProductState> {
+  await requireAdmin()
+  const store = await getAdminStore()
+  try {
+    assertAdminStoreContext(formData, store.id)
+    const id = formData.get('id')
+    const confirmation = formData.get('confirmation')
+    if (typeof id !== 'string' || !isUuid(id)) return { error: 'Produto inválido. Recarregue a página.' }
+    if (typeof confirmation !== 'string' || !confirmation.trim()) return { error: 'Digite o nome do produto para confirmar a exclusão.' }
+    await deleteProduct({ id, storeId: store.id, confirmation: confirmation.trim() })
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Não foi possível excluir o produto. Tente novamente.' }
+  }
+  revalidatePath('/admin', 'layout')
+  revalidatePath(`/${store.slug}`, 'layout')
+  redirect(withMessage('/admin/produtos', 'Produto excluído.'))
 }
 
 async function requireOwnProduct(productId: string) {

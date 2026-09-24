@@ -8,6 +8,7 @@ import { getProductById, listModulesWithItems } from '@/lib/data/products'
 import { listTracks } from '@/lib/data/products-admin'
 import { ContentEditor } from '../content-editor'
 import { ProductForm } from '../product-form'
+import { DeleteProductSection } from '../delete-product-form'
 
 export default async function ProdutoAdminPage({ params, searchParams }: PageProps<'/admin/produtos/[id]'>) {
   await requireAdmin()
@@ -34,7 +35,10 @@ export default async function ProdutoAdminPage({ params, searchParams }: PagePro
         </nav>
       )}
       {typeof msg === 'string' && <p role="status" className={ui.notice}>{msg}</p>}
-      {product && showContent ? <ContentEditor productId={product.id} modules={modules} /> : <ProductForm product={product} tracks={tracks} storeId={store.id} />}
+      {product && showContent ? <ContentEditor productId={product.id} modules={modules} /> : <>
+        <ProductForm product={product} tracks={tracks} storeId={store.id} />
+        {product && <DeleteProductSection key={product.id} product={{ id: product.id, title: product.title }} storeId={store.id} />}
+      </>}
     </div>
   )
 }
