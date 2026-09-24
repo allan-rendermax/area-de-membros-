@@ -11,6 +11,14 @@ const MIME = {
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const STORE_RESERVED = new Set(['admin', 'api', 'entrar', 'sair', '_next', 'favicon.ico', 'manifest.webmanifest', 'sw.js', 'icons'])
 const collator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: false })
+const MAX_ORDER = 2147483647
+
+function validOrder(value, name) {
+  if (!Number.isInteger(value) || value < 0 || value > MAX_ORDER) {
+    throw new Error(`${name}: ordem fora do limite inteiro PostgreSQL.`)
+  }
+  return value
+}
 
 export function gerarSlug(text) {
   return String(text ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -68,7 +76,7 @@ function titled(name) {
   const match = /^(\d+)\s+(.+)$/.exec(name)
   const title = (match ? match[2] : name).trim()
   if (!title) throw new Error(`Título vazio em ${name}.`)
-  return { title, number: match ? Number(match[1]) : null, original: name }
+  return { title, number: match ? validOrder(Number(match[1]), `Prefixo de ${name}`) : null, original: name }
 }
 
 function compareNames(a, b) {
@@ -79,8 +87,8 @@ function compareNames(a, b) {
 }
 
 function assignOrders(entries) {
-  let next = Math.max(0, ...entries.map((entry) => entry.number ?? 0)) + 1
-  return entries.map((entry) => entry.number ?? next++)
+  let next = entries.reduce((highest, entry) => Math.max(highest, entry.number ?? 0), 0)
+  return entries.map((entry) => entry.number ?? validOrder(++next, 'Ordem derivada'))
 }
 
 function storageComponent(name) {
@@ -174,8 +182,8 @@ export function montarPlano({ ficha, arquivos, linksTexto = '' }) {
     online.push({ title, kind: video ? 'video' : 'link', sortOrder: online.length + 1, url, arquivo: null })
   }
   if (online.length) {
-    if (titles.has('conteúdo online')) throw new Error('Colisão de título de módulo: Conteúdo online.')
-    result.push({ title: 'Conteúdo online', sortOrder: Math.max(0, ...moduleOrders) + 1, itens: online })
+    if (titles.has(titleKey('Conteúdo online'))) throw new Error('Colisão de título de módulo: Conteúdo online.')
+    result.push({ title: 'Conteúdo online', sortOrder: validOrder(Math.max(0, ...moduleOrders) + 1, 'Conteúdo online'), itens: online })
   }
   return { ficha, imagens: images, modulos: result, arquivos: uploads }
 }

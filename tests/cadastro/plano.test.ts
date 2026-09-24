@@ -84,4 +84,23 @@ describe('plano do produto', () => {
     expect(() => montarPlano({ ficha, arquivos: [], linksTexto: 'Título | file:///segredo' })).toThrow(/url|link/i)
     expect(() => montarPlano({ ficha, arquivos: [], linksTexto: 'Título sem separador' })).toThrow(/link/i)
   })
+
+  it('rejeita módulo Conteúdo online existente ao adicionar links', () => {
+    expect(() => montarPlano({ ficha, arquivos: [arquivo('entregaveis/Conteúdo online/Guia.pdf')], linksTexto: 'Aula | https://example.com/aula' })).toThrow(/colisão.*módulo/i)
+  })
+
+  it('aceita o maior prefixo inteiro PostgreSQL quando não precisa derivar ordem', () => {
+    const plano = montarPlano({ ficha, arquivos: [arquivo('entregaveis/2147483647 Último/Guia.pdf')] })
+    expect(plano.modulos[0].sortOrder).toBe(2147483647)
+  })
+
+  it.each([
+    ['prefixo acima do limite', [arquivo('entregaveis/2147483648 Extra/Guia.pdf')], ''],
+    ['prefixo gigantesco', [arquivo(`entregaveis/${'9'.repeat(400)} Extra/Guia.pdf`)], ''],
+    ['ordem derivada para módulo sem prefixo', [arquivo('entregaveis/2147483647 Último/Guia.pdf'), arquivo('entregaveis/Outro/Guia.pdf')], ''],
+    ['ordem derivada para item sem prefixo', [arquivo('entregaveis/Material/2147483647 Último.pdf'), arquivo('entregaveis/Material/Outro.pdf')], ''],
+    ['ordem derivada para conteúdo online', [arquivo('entregaveis/2147483647 Último/Guia.pdf')], 'Aula | https://example.com/aula'],
+  ])('rejeita %s fora do inteiro PostgreSQL', (_name, arquivos, linksTexto) => {
+    expect(() => montarPlano({ ficha, arquivos, linksTexto })).toThrow(/ordem|prefixo|inteiro/i)
+  })
 })

@@ -13,19 +13,25 @@ async function regularFile(path, label) {
 }
 
 async function list(directory, prefix, depth, files) {
-  const entries = await readdir(directory, { withFileTypes: true })
+  let entries
+  try { entries = await readdir(directory, { withFileTypes: true }) }
+  catch (cause) { throw new Error(`Não foi possível listar a pasta ${prefix.join('/')}.`, { cause }) }
   if (depth > 0 && entries.length === 0) throw new Error(`Módulo vazio: ${prefix.join('/')}.`)
   for (const entry of entries) {
     const absolutePath = join(directory, entry.name)
     const relativePath = [...prefix, entry.name].join('/')
-    const stat = await lstat(absolutePath)
+    let stat
+    try { stat = await lstat(absolutePath) }
+    catch (cause) { throw new Error(`Não foi possível verificar ${relativePath}.`, { cause }) }
     if (stat.isSymbolicLink()) throw new Error(`Link simbólico não permitido: ${relativePath}.`)
     if (stat.isDirectory()) {
       if (depth >= 1) throw new Error(`Subpasta profunda não permitida: ${relativePath}.`)
       await list(absolutePath, [...prefix, entry.name], depth + 1, files)
     } else if (stat.isFile()) {
-      await access(absolutePath, constants.R_OK)
-      await readFile(absolutePath)
+      try {
+        await access(absolutePath, constants.R_OK)
+        await readFile(absolutePath)
+      } catch (cause) { throw new Error(`Não foi possível ler ${relativePath}.`, { cause }) }
       files.push({ relativePath, absolutePath, size: stat.size })
     } else {
       throw new Error(`Entrada não regular em entregaveis: ${relativePath}.`)

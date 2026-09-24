@@ -52,4 +52,20 @@ describe('leitura local da pasta', () => {
     await mkdir(join(directory, 'entregaveis', 'Módulo'), { recursive: true })
     await expect(lerPastaProduto(directory, { defaultStoreSlug: 'arquitetura' })).rejects.toThrow(/vazi/i)
   })
+
+  it('rejeita colisão entre pasta Conteúdo online e links.txt', async () => {
+    const directory = await pasta()
+    await mkdir(join(directory, 'entregaveis', 'Conteúdo online'), { recursive: true })
+    await writeFile(join(directory, 'entregaveis', 'Conteúdo online', 'Guia.pdf'), 'a')
+    await writeFile(join(directory, 'links.txt'), 'Aula | https://example.com/aula')
+    await expect(lerPastaProduto(directory, { defaultStoreSlug: 'arquitetura' })).rejects.toThrow(/colisão.*módulo/i)
+  })
+
+  it('rejeita ordem derivada acima do inteiro PostgreSQL ao ler a pasta', async () => {
+    const directory = await pasta()
+    await mkdir(join(directory, 'entregaveis', '2147483647 Último'), { recursive: true })
+    await writeFile(join(directory, 'entregaveis', '2147483647 Último', 'Guia.pdf'), 'a')
+    await writeFile(join(directory, 'links.txt'), 'Aula | https://example.com/aula')
+    await expect(lerPastaProduto(directory, { defaultStoreSlug: 'arquitetura' })).rejects.toThrow(/ordem|inteiro/i)
+  })
 })
