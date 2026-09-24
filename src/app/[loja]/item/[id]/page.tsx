@@ -1,3 +1,6 @@
+import { MaterialHelp } from '@/components/membros/material-help'
+import { supportHref } from '@/lib/support/whatsapp'
+import { listCompletedItemIds } from '@/lib/data/member-progress'
 import { InstallAppButton } from '@/components/membros/install-app-button'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
@@ -29,6 +32,9 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
   if (ctx.item.kind === 'video' && !embed) notFound()
   if (ctx.item.kind !== 'video' && !isHttpUrl(ctx.item.url)) notFound()
+  const completionResult = await Promise.allSettled([listCompletedItemIds(customer.id, store.id, ctx.product.id)])
+  const completedIds = completionResult[0].status === 'fulfilled' ? completionResult[0].value : []
+  const progressAvailable = completionResult[0].status === 'fulfilled'
   const [productModules] = await Promise.all([
     listModulesWithItems(ctx.product.id, { publishedOnly: true }),
     ctx.item.kind === 'video'
@@ -53,10 +59,10 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
 
   return (
     <>
-      <StoreHeader store={store} email={customer.email} actions={<InstallAppButton />} />
-      <main className="lesson-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
+      <StoreHeader store={store} email={customer.email} active="materials" actions={<InstallAppButton />} />
+      <main className="lesson-workspace member-item-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
         <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
-          <div className="min-w-0">
+          <div className="min-w-0 order-2 lg:order-1">
             <header className="lesson-heading flex min-w-0 items-start gap-4">
               <Link href={productHref} aria-label="Voltar ao produto" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
@@ -82,9 +88,13 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
               <ResourceList items={siblings} storeSlug={store.slug} currentItemId={ctx.item.id} />
             </section>}
 
+            {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
+            <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer.email)} /></div>
             <LessonToolbar
-              storeId={store.id}
-              customerId={customer.id}
+              key={`${customer.id}:${ctx.item.id}`}
+              storeSlug={store.slug}
+              initialCompleted={completedIds.includes(ctx.item.id)}
+              progressAvailable={progressAvailable}
               productTitle={ctx.product.title}
               moduleTitle={ctx.module.title}
               itemId={ctx.item.id}
@@ -94,7 +104,7 @@ export default async function ItemPage({ params }: PageProps<'/[loja]/item/[id]'
               next={next ? { href: `/${store.slug}/item/${next.id}`, title: next.title } : null}
             />
           </div>
-          <LessonSidebar modules={modules} storeSlug={store.slug} currentItemId={ctx.item.id} />
+          <LessonSidebar modules={modules} storeSlug={store.slug} currentItemId={ctx.item.id} completedItemIds={completedIds} />
         </div>
       </main>
     </>

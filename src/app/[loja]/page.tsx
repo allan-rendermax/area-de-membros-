@@ -31,7 +31,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
 
   return (
     <>
-      <StoreHeader store={store} email={customer.email} actions={<InstallAppButton />} />
+      <StoreHeader store={store} email={customer.email} actions={<InstallAppButton />} legacyHome />
       <main className="pb-24">
         {architecture ? <ArchitectureHero /> : shelf.featured && <Hero product={shelf.featured} storeSlug={store.slug} />}
         {architecture && (

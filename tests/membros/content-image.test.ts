@@ -149,6 +149,16 @@ describe('banners principais de rota', () => {
     expect(html.split('loading="eager"')).toHaveLength(3)
   })
 
+  it('oferece ajuda contextual no acesso mesmo sem suporte configurado', async () => {
+    const element = await EntrarPage({
+      params: Promise.resolve({ loja: store.slug }),
+      searchParams: Promise.resolve({}),
+    })
+    const html = renderToStaticMarkup(element)
+    expect(html).toContain('Precisa de ajuda?')
+    expect(html).toContain('e-mail da compra')
+  })
+
   it('abre o produto com título e descrição antes do conteúdo sem banner grande', async () => {
     const element = await ProdutoPage({
       params: Promise.resolve({ loja: store.slug, slug: product.slug }),
