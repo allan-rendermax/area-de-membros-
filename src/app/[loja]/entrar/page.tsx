@@ -50,7 +50,7 @@ export default async function EntrarPage({ params, searchParams }: PageProps<'/[
         </div>
       </aside>
 
-      <div className="member-login-panel relative flex w-full flex-col justify-center px-4 py-10 sm:px-6 lg:w-[30rem] lg:shrink-0 lg:border-l lg:border-borda lg:bg-superficie lg:px-10 xl:w-[34rem]">
+      <main className="member-login-panel relative flex w-full flex-col justify-center px-4 py-10 sm:px-6 lg:w-[30rem] lg:shrink-0 lg:border-l lg:border-borda lg:bg-superficie lg:px-10 xl:w-[34rem]">
         <div className="mx-auto w-full max-w-sm">
           <div className="mb-6 flex items-center justify-center gap-3 lg:justify-start">
             {store.logoUrl ? (
@@ -79,7 +79,7 @@ export default async function EntrarPage({ params, searchParams }: PageProps<'/[
             <InstallAppButton />
           </div>
         </div>
-      </div>
+      </main>
 
       <WhatsAppFloating href={support} />
     </div>

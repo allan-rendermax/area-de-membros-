@@ -14,8 +14,9 @@ export function StoreForm({ store }: { store: Store | null }) {
         <input name="slug" defaultValue={store?.slug} pattern="[a-z0-9]+(-[a-z0-9]+)*" className={ui.input} />
       </label>
       <label className={ui.label}>
-        WhatsApp de suporte (DDI + DDD + número)
+        WhatsApp de suporte (opcional)
         <input name="support_whatsapp" inputMode="tel" defaultValue={store?.supportWhatsapp ?? ''} placeholder="5511999998888" className={ui.input} />
+        <span className="text-sm text-texto-suave">Informe DDI + DDD + número. Se deixar vazio, apenas os outros canais de suporte serão exibidos.</span>
       </label>
       <label className={ui.label}>Link de suporte (opcional)<input name="support_url" type="url" defaultValue={store?.supportUrl ?? ''} className={ui.input} /></label>
       <div className="grid gap-4 sm:grid-cols-2">
