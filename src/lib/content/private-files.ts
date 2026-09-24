@@ -11,11 +11,11 @@ function segments(path: string): string[] {
   return parts
 }
 
-function ownUrl(url: string, supabaseUrl: string): URL | null {
+function ownUrl(url: string, supabaseUrl: string, allowDecorations = false): URL | null {
   try {
     const parsed = new URL(url)
     const own = new URL(supabaseUrl)
-    if (parsed.origin !== own.origin || parsed.username || parsed.password || parsed.search || parsed.hash) return null
+    if (parsed.origin !== own.origin || parsed.username || parsed.password || (!allowDecorations && (parsed.search || parsed.hash))) return null
     return parsed
   } catch {
     return null
@@ -43,7 +43,7 @@ export function privateFilePath(url: string, supabaseUrl: string): string | null
 }
 
 export function isLegacyPublicFileUrl(url: string, supabaseUrl: string): boolean {
-  const parsed = ownUrl(url, supabaseUrl)
+  const parsed = ownUrl(url, supabaseUrl, true)
   if (!parsed || !parsed.pathname.startsWith(publicPrefix)) return false
   try {
     segments(parsed.pathname.slice(publicPrefix.length).split('/').map(decodeURIComponent).join('/'))

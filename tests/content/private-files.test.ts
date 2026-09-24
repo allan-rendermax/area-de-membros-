@@ -24,6 +24,8 @@ describe('private file references', () => {
 
   it('recognizes only own legacy public files', () => {
     expect(isLegacyPublicFileUrl(`${origin}/storage/v1/object/public/arquivos/a.pdf`, origin)).toBe(true)
+    expect(isLegacyPublicFileUrl(`${origin}/storage/v1/object/public/arquivos/a.pdf?download=Guia.pdf`, origin)).toBe(true)
+    expect(isLegacyPublicFileUrl(`${origin}/storage/v1/object/public/arquivos/a.pdf#page=1`, origin)).toBe(true)
     expect(isLegacyPublicFileUrl('https://evil.example/storage/v1/object/public/arquivos/a.pdf', origin)).toBe(false)
     expect(isLegacyPublicFileUrl(`${origin}/storage/v1/object/public/other/a.pdf`, origin)).toBe(false)
   })
