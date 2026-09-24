@@ -11,6 +11,7 @@ import { listOrdersByEmail } from '@/lib/data/orders'
 import { listOffers } from '@/lib/data/products-admin'
 import { listEmailsForCustomer, listItemOpensForCustomer } from '@/lib/data/success'
 import { buildTimeline } from '@/lib/success/timeline'
+import { DeleteCustomerSection } from '../delete-customer-form'
 import { alternarBloqueio, corrigirEmail, liberarAcessoManual, reenviarAcesso, removerAcessoManual } from '../actions'
 
 const KIND_STYLE: Record<string, string> = {
@@ -148,6 +149,7 @@ export default async function ClientePage({ params, searchParams }: PageProps<'/
           {devices.length === 0 && <li className="px-4 py-2 text-texto-suave">Nenhum acesso registrado.</li>}
         </ul>
       </section>
+      <DeleteCustomerSection customer={customer} />
     </div>
   )
 }

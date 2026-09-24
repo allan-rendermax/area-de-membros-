@@ -5,13 +5,14 @@ import { SHARING_DEVICE_THRESHOLD, searchCustomers } from '@/lib/data/customers'
 
 export default async function ClientesPage({ searchParams }: PageProps<'/admin/clientes'>) {
   await requireAdmin()
-  const { q } = await searchParams
+  const { q, msg } = await searchParams
   const query = typeof q === 'string' ? q.trim().toLowerCase() : ''
   const customers = await searchCustomers(query)
 
   return (
     <div className="flex flex-col gap-4">
       <h1 className={ui.h1}>Clientes</h1>
+      {typeof msg === 'string' && <p role="status" className={ui.notice}>{msg}</p>}
       <form className="flex gap-2">
         <input name="q" defaultValue={query} placeholder="Buscar por e-mail" className={`${ui.input} w-full max-w-sm`} />
         <button type="submit" className={ui.button}>Buscar</button>

@@ -6,9 +6,29 @@ import { assertAdminStoreContext, getAdminStore } from '@/lib/admin/current-stor
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
 import { changeCustomerEmail, setCustomerBlocked } from '@/lib/data/customers'
+import { deleteCustomer } from '@/lib/data/customer-deletion'
 import { createManualOrder, revokeManualOrder } from '@/lib/data/orders'
 import { isValidEmail, normalizeEmail } from '@/lib/domain/email'
 import { resendAccessForCustomer } from '@/lib/email/server'
+
+export type DeleteCustomerState = { error: string | null }
+
+export async function excluirCliente(_state: DeleteCustomerState, formData: FormData): Promise<DeleteCustomerState> {
+  const admin = await requireAdmin()
+  const id = String(formData.get('id') ?? '')
+  const confirmation = normalizeEmail(String(formData.get('confirmation') ?? ''))
+  if (!isUuid(id) || !isValidEmail(confirmation)) {
+    return { error: 'Cliente inválido ou confirmação ausente. Digite o e-mail do cliente.' }
+  }
+  try {
+    await deleteCustomer({ id, confirmation, adminEmail: admin.email })
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Não foi possível confirmar a exclusão. Recarregue a lista de clientes.' }
+  }
+  // Customers and their orders span all stores.
+  revalidatePath('/', 'layout')
+  redirect(`/admin/clientes?msg=${encodeURIComponent('Cliente, pedidos e registros vinculados excluídos definitivamente.')}`)
+}
 
 function back(id: string, message: string): never {
   revalidatePath(`/admin/clientes/${id}`)
