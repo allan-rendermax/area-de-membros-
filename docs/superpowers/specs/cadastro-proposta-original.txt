@@ -1,0 +1,87 @@
+Here's the prompt, ready to paste into GPT/Codex. Run it from the project folder ("Area de membros").
+
+Written for: GPT/Codex, working as the programmer inside this project.
+
+```
+Você está no repositório "Area de membros" (Next.js 16 + Supabase + Vitest). Leia AGENTS.md antes de tudo:
+esta versão do Next tem mudanças — consulte node_modules/next/dist/docs/ antes de mexer em código do app.
+
+## Objetivo
+Criar um CADASTRADOR GENÉRICO de produtos: o dono monta uma pasta por produto (ficha + capa + entregáveis),
+roda UM comando e o produto aparece publicado na área de membros, liberado automaticamente para quem
+comprar pelo código da Payt. Hoje isso só existe fixo para um produto em scripts/cadastro-atlas-patologias.mjs —
+use-o como referência (leitura do .env.local, cliente Supabase com SUPABASE_SECRET_KEY, bucket "arquivos",
+funções garantirProduto/garantirModulo/garantirItem/garantirOferta idempotentes). NÃO apague nem altere esse script.
+
+## 1. Banco: papel do produto (tag)
+- Nova migration em supabase/migrations/ (siga o padrão de nome com timestamp):
+  products.role text not null default 'front' check (role in ('front','orderbump','upsell')).
+- NÃO aplique a migration em produção sozinho. Deixe o arquivo pronto e me avise o comando/passo para aplicar.
+- Propague o campo: tipos/queries em src/lib/data/products.ts e products-admin.ts, e um select "Papel"
+  (Front / Orderbump / Upsell) em src/app/admin/(painel)/produtos/product-form.tsx + actions.ts.
+
+## 2. Vitrine
+Hoje src/lib/access/access.ts já mostra todo produto publicado não comprado como bloqueado, com checkout_url.
+Mantenha esse comportamento. Única mudança: na lista de bloqueados, ordenar orderbump e upsell ANTES dos fronts
+(depois por sort_order). Não esconda nada. Cubra com teste em tests/.
+
+## 3. Formato da pasta de produto
+Minha Pasta de Produto/
+  produto.txt          (obrigatório)
+  capa.jpg|png|webp    (opcional; vira cover_url)
+  banner.jpg|png|webp  (opcional; vira banner_url)
+  links.txt            (opcional; uma linha por item: "Título | URL")
+  entregaveis/
+    01 Material principal/   -> módulo "Material principal", ordem 1 (prefixo numérico = ordem, removido do título)
+      Guia Visual.pdf        -> item kind 'arquivo', título = nome do arquivo sem extensão
+    02 Kits editáveis/
+      Kit Checklist.zip
+  Se entregaveis/ tiver arquivos soltos (sem subpasta), vão para um módulo "Material".
+  Itens de links.txt vão para um módulo "Conteúdo online" (kind 'video' se URL do YouTube/Vimeo, senão 'link').
+  Ordem dos itens: prefixo numérico do arquivo, senão ordem alfabética.
+
+produto.txt (chave: valor, uma por linha; "descricao" pode ocupar várias linhas até o fim do arquivo):
+  nome: Atlas Visual das Patologias        (obrigatório)
+  id: 45WX6J                               (obrigatório; código do produto na Payt — 1 código por produto)
+  tag: front | orderbump | upsell          (obrigatório)
+  loja: arquitetura                        (opcional; padrão DEFAULT_STORE_SLUG do .env.local)
+  slug: atlas-visual-das-patologias        (opcional; padrão = nome sem acento, minúsculo, com hífens)
+  trilha: Patologias                       (opcional; coluna track)
+  checkout: https://...                    (opcional para front; obrigatório para orderbump/upsell — erro se faltar)
+  destaque: sim | nao                      (opcional; is_featured, padrão nao)
+  ordem: 3                                 (opcional; sort_order)
+  descricao: texto...
+
+## 4. Script
+scripts/cadastrar-produto.mjs  —  uso:
+  node scripts/cadastrar-produto.mjs "<pasta do produto>" [--simular]
+  node scripts/cadastrar-produto.mjs "<pasta com várias pastas de produto>" --todos [--simular]
+Fluxo: validar ficha e pasta (erros claros em português, nada é enviado se houver erro) → subir arquivos para
+o bucket "arquivos" em "<slug>/..." com upsert e contentType correto (pdf, zip, jpg, png, webp, mp4, docx, xlsx…;
+padrão application/octet-stream) → URL pública com ?download=<título>.<ext> (como em ajustar-nomes-download.mjs)
+→ upsert do produto (store_id+slug), módulos (por título), itens (por título dentro do módulo),
+is_published = true → upsert da oferta pelo payt_product_code = id, nome = nome do produto, ligada a este produto
+em offer_products.
+Idempotente: rodar de novo atualiza, nunca duplica. Não apague itens/módulos que existam no banco e não estejam
+na pasta — apenas liste-os no final como "no banco mas não na pasta".
+--simular: só valida e imprime o que faria (produto, módulos, itens, tamanhos, oferta), sem enviar nada.
+Ao final imprima um resumo: produto criado/atualizado, nº de módulos/itens, código Payt, link /<loja>/produto/<slug>.
+
+## 5. Qualidade
+- Separe a lógica pura (ler ficha, gerar slug, montar plano de módulos/itens a partir da árvore de arquivos,
+  validar) em um módulo testável, ex. scripts/lib/cadastro-plano.mjs, e escreva testes Vitest em tests/ (TDD:
+  teste primeiro). Casos: ficha válida, campo obrigatório faltando, tag inválida, upsell sem checkout,
+  descricao multilinha, arquivos soltos, ordenação por prefixo, links.txt com YouTube vs link comum, slug com acentos.
+- Rode npm test, npm run lint e npm run build; tudo deve passar.
+- Crie um exemplo em docs/exemplo-pasta-produto/ (produto.txt modelo comentado + estrutura) e um guia curto em
+  português simples em docs/como-cadastrar-produto.md (público: dono não-programador).
+- Nunca imprima nem commite segredos do .env.local.
+- Commits pequenos e descritivos. Não faça push nem deploy.
+
+Ao terminar, me entregue: lista de arquivos criados/alterados, saída dos testes/lint/build, o passo exato para
+aplicar a migration, e o comando de exemplo para cadastrar um produto em modo --simular.
+```
+
+**About the tag:** today, **every** product a customer didn't buy already shows up locked with a buy button, including other fronts. In practice, the prompt only makes orderbumps and upsells appear **first** in the locked section, and it adds the tag to the admin panel. If you'd rather hide fronts from people who didn't buy them, tell me and I'll adjust the prompt.
+
+**Before running it for real:** the database change needs to be applied in Supabase. When GPT finishes, send me what it reports and I'll check the work and apply the change.
