@@ -13,3 +13,5 @@ Aplicação Next local em `127.0.0.1:3187`, provedor Supabase sintético em `127
 Limite visual observado no formulário desktop: o texto nativo “Escolher arquivo / Nenhum arquivo escolhido” ultrapassa a coluna de capa e fica sob a coluna de campos. Esse comportamento já existia no layout do formulário e não foi alterado neste trabalho.
 
 Esta verificação cobre a aplicação real com um provedor HTTP local. Ela não testa Supabase, Payt, e-mail ou dados de produção.
+
+Para reproduzir a partir da raiz do projeto, inicie `node docs/qa/cadastrador-produtos/browser-fixture.mjs` e abra `http://127.0.0.1:3187/admin/entrar` com `npx --yes agent-browser@0.38.1 --session cadastrador-produtos-qa --allowed-domains 127.0.0.1,localhost open http://127.0.0.1:3187/admin/entrar`. Admin: `admin@example.test`, código `12345678`; membro: `aluno@example.test` em `/arquitetura/entrar`. O fixture usa apenas credenciais e URLs locais fictícias, e reiniciá-lo restaura os dados iniciais.
