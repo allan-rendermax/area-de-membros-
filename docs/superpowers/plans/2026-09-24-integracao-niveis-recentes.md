@@ -31,13 +31,13 @@
 **Files:** arquivos conflitantes identificados pelo merge, `src/app/[loja]/progresso/actions.ts`, `tests/membros/member-progress-action.test.ts`, migrations de role e suas referências em testes/docs, `tests/content/product-queries.test.ts`, testes de formulários/rotas.
 **Interfaces:** `loadGrantedProductLevels():Promise<Map<string,AccessLevel>>`, `canAccessLevel(granted,required)`, campos opcionais Product `studentCheckoutUrl`, `upgradeCheckoutUrl`, `role` coexistentes.
 
-- [ ] Integrar main no worktree com `git merge --no-commit main`; resolver cada conflito com união dos comportamentos, sem escolher um lado inteiro.
-- [ ] Manter campos de produto nas três camadas: seleção SQL, mapper e persistência/formulário.
+- [x] Integrar main no worktree com `git merge --no-commit main`; resolver cada conflito com união dos comportamentos, sem escolher um lado inteiro.
+- [x] Manter campos de produto nas três camadas: seleção SQL, mapper e persistência/formulário.
 ```ts
 studentCheckoutUrl: row.student_checkout_url ?? null,
 upgradeCheckoutUrl: row.upgrade_checkout_url ?? null,
 ```
-- [ ] Adicionar regressão de progresso: Básico não conclui nem desfaz conclusão de extra; Completo continua autorizado. Rodar teste e confirmar RED antes de corrigir a action.
+- [x] Adicionar regressão de progresso: Básico não conclui nem desfaz conclusão de extra; Completo continua autorizado. Rodar teste e confirmar RED antes de corrigir a action.
 ```ts
 const levels = await loadGrantedProductLevels(store.id, customer)
 if (!canAccessLevel(levels.get(ctx.product.id), ctx.module.requiredLevel ?? 'basic')) {
@@ -45,21 +45,21 @@ if (!canAccessLevel(levels.get(ctx.product.id), ctx.module.requiredLevel ?? 'bas
 }
 ```
 Adaptar o texto ao erro existente para não expor conteúdo. Testar ausência de `setItemCompletion` e `revalidatePath` ao negar.
-- [ ] Renomear `20260924000001_product_role.sql` para `20260924000003_product_role.sql`, atualizar suas referências e adicionar verificação de unicidade das versões de todas as migrations. Manter `20260924000001_member_progress.sql` e `20260924000002_student_checkout.sql` intactas.
-- [ ] Rodar testes relevantes, TypeScript e depois a suíte completa. Conferir interface aprovada preservada nas rotas. Commit de integração e correções, reportar contagens e arquivos.
+- [x] Renomear `20260924000001_product_role.sql` para `20260924000003_product_role.sql`, atualizar suas referências e adicionar verificação de unicidade das versões de todas as migrations. Manter `20260924000001_member_progress.sql` e `20260924000002_student_checkout.sql` intactas.
+- [x] Rodar testes relevantes, TypeScript e depois a suíte completa. Conferir interface aprovada preservada nas rotas. Commit de integração e correções, reportar contagens e arquivos.
 
 ### Task 2 — Revisão da integração
 
 **Files:** somente relatório ignorado de revisão; checkout em modo leitura.
-- [ ] Comparar a integração contra `main` e contra a branch antiga: conferir fields, action, migrations e apresentação aprovada.
-- [ ] Revisar permissões antes de progresso, conteúdo e assinatura. Conferir que o conflito de versões foi eliminado sem tocar migrations publicadas.
-- [ ] Encaminhar achados concretos para correção e revisar somente os ajustes.
+- [x] Comparar a integração contra `main` e contra a branch antiga: conferir fields, action, migrations e apresentação aprovada.
+- [x] Revisar permissões antes de progresso, conteúdo e assinatura. Conferir que o conflito de versões foi eliminado sem tocar migrations publicadas.
+- [x] Encaminhar achados concretos para correção e revisar somente os ajustes.
 
 ### Task 3 — QA e entrega
 
 **Files:** fixture de `docs/qa/niveis-produtos/`, novo relatório `docs/qa/integracao-niveis/relatorio.md` e capturas; `docs/status-integracao-niveis-2026-09-24.md`.
-- [ ] Adaptar a fixture às tabelas de progresso e campos recentes sem usar credenciais reais; bloquear fetch externo.
-- [ ] Rodar `npm run build`, `npm test`, `npm run lint`; simular cadastro legado e com níveis.
-- [ ] Usar `agent-browser@0.38.1` no build local: Basic/Complete, item com toolbar de progresso, navegação filtrada, cupom na vitrine de produto não comprado, ajuda e campos de admin. Desktop1440 e mobile390; capturas e ausência de overflow/erros.
-- [ ] Registrar validação e ordem exata das migrations. Encerrar serviços locais.
-- [ ] Entregar branch integrada localmente. Integração na pasta principal somente se não sobrescrever alterações locais; não fazer push/deploy.
+- [x] Adaptar a fixture às tabelas de progresso e campos recentes sem usar credenciais reais; bloquear fetch externo.
+- [x] Rodar `npm run build`, `npm test`, `npm run lint`; simular cadastro legado e com níveis.
+- [x] Usar `agent-browser@0.38.1` no build local: Basic/Complete, item com toolbar de progresso, navegação filtrada, cupom na vitrine de produto não comprado, ajuda e campos de admin. Desktop1440 e mobile390; capturas e ausência de overflow/erros.
+- [x] Registrar validação e ordem exata das migrations. Encerrar serviços locais.
+- [x] Entregar branch integrada localmente. Integração na pasta principal somente se não sobrescrever alterações locais; não fazer push/deploy.
