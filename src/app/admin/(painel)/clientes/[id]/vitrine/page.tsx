@@ -53,7 +53,7 @@ export default async function ClienteVitrinePage({ params }: { params: Promise<{
             {track.products.map((p) => (
               p.unlocked
                 ? <PosterLink key={p.id} product={p} href={previewHref} />
-                : <LockedPoster key={p.id} product={{ ...p, checkoutUrl: null }} />
+                : <LockedPoster key={p.id} product={{ ...p, checkoutUrl: null, studentCheckoutUrl: null }} />
             ))}
           </Carousel>
         ))}

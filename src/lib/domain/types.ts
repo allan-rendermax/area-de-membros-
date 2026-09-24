@@ -41,6 +41,7 @@ export type Product = {
   coverUrl: string | null
   bannerUrl: string | null
   checkoutUrl: string | null
+  studentCheckoutUrl?: string | null
   isFeatured: boolean
   sortOrder: number
   isPublished: boolean

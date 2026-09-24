@@ -75,6 +75,7 @@ export type ProductInput = {
   coverUrl: string | null
   bannerUrl: string | null
   checkoutUrl: string | null
+  studentCheckoutUrl: string | null
   isFeatured: boolean
   sortOrder: number
   isPublished: boolean
@@ -96,6 +97,7 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
     coverUrl: optionalUrl(form, 'cover_url', 'Capa'),
     bannerUrl: optionalUrl(form, 'banner_url', 'Banner'),
     checkoutUrl: optionalUrl(form, 'checkout_url', 'Checkout'),
+    studentCheckoutUrl: optionalUrl(form, 'student_checkout_url', 'Checkout de aluno'),
     isFeatured: checked(form, 'is_featured'),
     sortOrder: Number.isFinite(sortOrder) ? Math.trunc(sortOrder) : 0,
     isPublished: checked(form, 'is_published'),

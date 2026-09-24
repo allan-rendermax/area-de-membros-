@@ -34,6 +34,7 @@ export async function saveProduct(input: ProductInput): Promise<string> {
     cover_url: input.coverUrl,
     banner_url: input.bannerUrl,
     checkout_url: input.checkoutUrl,
+    student_checkout_url: input.studentCheckoutUrl ?? null,
     is_featured: input.isFeatured,
     sort_order: input.sortOrder,
     is_published: input.isPublished,

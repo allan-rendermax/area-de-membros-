@@ -36,7 +36,7 @@ describe('parseProductForm', () => {
       ),
     ).toEqual({
       id: null, storeId: 's1', slug: 'atlas-visual', title: 'Atlas Visual', track: 'Patologias', description: 'texto',
-      coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', isFeatured: true, sortOrder: 3, isPublished: true,
+      coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', studentCheckoutUrl: null, isFeatured: true, sortOrder: 3, isPublished: true,
     })
     expect(parseProductForm(fd({ title: 'Atlas Visual' }), 's1').track).toBe('')
     expect(parseProductForm(fd({ title: 'Atlas Visual', track: '   ' }), 's1').track).toBe('')
@@ -45,6 +45,13 @@ describe('parseProductForm', () => {
   it('recusa título vazio e endereço inválido', () => {
     expect(() => parseProductForm(fd({ title: '' }), 's1')).toThrow('Informe o título')
     expect(() => parseProductForm(fd({ title: 'A', slug: 'Com Espaço' }), 's1')).toThrow('Endereço do produto inválido')
+  })
+
+  it('preserva checkout de aluno completo, trata vazio como null e recusa protocolo inseguro', () => {
+    const promotional = 'https://checkout.example.test/item?coupon=ALUNO10&utm_source=members#payment'
+    expect(parseProductForm(fd({ title: 'Atlas', student_checkout_url: promotional }), 's1').studentCheckoutUrl).toBe(promotional)
+    expect(parseProductForm(fd({ title: 'Atlas', student_checkout_url: '   ' }), 's1').studentCheckoutUrl).toBeNull()
+    expect(() => parseProductForm(fd({ title: 'Atlas', student_checkout_url: 'javascript:alert(1)' }), 's1')).toThrow('Link inválido')
   })
 })
 
