@@ -36,11 +36,22 @@ describe('lista e navegação de recursos', () => {
     expect(html).not.toContain(file.url)
     expect(html).not.toContain(link.url)
     expect(html).not.toContain('href="/loja-a/item/bad/abrir"')
+    expect(html).toContain('Baixar PDF')
+    expect(html).toContain('PDF')
+    expect(html).not.toContain('hidden shrink-0 text-sm font-semibold text-destaque')
   })
 
   it('abre a página interna de arquivo na mesma aba', () => {
     const html = renderToStaticMarkup(ItemAnchor({ item: file, storeSlug: 'loja-a', className: 'x', children: 'Abrir material' }))
     expect(html).toContain(`href="/loja-a/item/${file.id}"`)
     expect(html).not.toContain('target="_blank"')
+  })
+
+  it('preserva os rótulos originais na lista do produto', () => {
+    const html = renderToStaticMarkup(createElement(ResourceList, { items: [file, link], storeSlug: 'loja-a', legacyPresentation: true }))
+    expect(html).toContain('Arquivo')
+    expect(html).toContain(`aria-label="Baixar ${file.title}"`)
+    expect(html).not.toContain('Baixar PDF')
+    expect(html).not.toContain('>PDF</span>')
   })
 })

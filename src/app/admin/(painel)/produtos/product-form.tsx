@@ -55,6 +55,11 @@ export function ProductForm({ product, tracks, storeId }: { product: Product | n
           Link do checkout para upgrade ao Completo
           <input name="upgrade_checkout_url" type="url" defaultValue={product?.upgradeCheckoutUrl ?? ''} className={ui.input} />
         </label>
+        <label className={ui.label}>
+          Checkout de aluno com 10% de desconto
+          <input name="student_checkout_url" type="url" defaultValue={product?.studentCheckoutUrl ?? ''} className={ui.input} />
+          <span className="text-sm text-texto-suave">Cole o link completo do checkout com o cupom de aluno de 10% já aplicado. Deixe vazio para não oferecer o desconto.</span>
+        </label>
         <label className={ui.label}>Ordem<input name="sort_order" type="number" defaultValue={product?.sortOrder ?? 0} className={ui.input} /></label>
         <label className={ui.checkbox}>
           <input name="is_featured" type="checkbox" defaultChecked={product?.isFeatured ?? false} /> Destaque no topo da vitrine

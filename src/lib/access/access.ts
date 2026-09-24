@@ -36,6 +36,7 @@ export type ShelfProduct = {
   unlocked: boolean
   checkoutUrl: string | null
   role?: ProductRole
+  studentCheckoutUrl?: string | null
 }
 
 export type Shelf = { featured: ShelfProduct | null; unlocked: ShelfProduct[]; locked: ShelfProduct[] }
@@ -56,6 +57,7 @@ export function buildShelf(products: Product[], granted: Set<string>): Shelf {
       unlocked,
       checkoutUrl: unlocked ? null : p.checkoutUrl,
       role: p.role,
+      studentCheckoutUrl: unlocked ? null : (p.studentCheckoutUrl ?? null),
     }
   })
   const unlocked = all.filter((p) => p.unlocked)

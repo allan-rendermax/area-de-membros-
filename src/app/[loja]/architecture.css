@@ -90,3 +90,11 @@
   [data-member-theme="arquitetura"] *, [data-member-theme="arquitetura"] *::before, [data-member-theme="arquitetura"] *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
   [data-member-theme="arquitetura"] .member-poster:hover { transform: none; }
 }
+
+/* The same native disclosure opens on desktop and remains collapsible on mobile. */
+@media (min-width: 1024px) {
+  .lesson-contents > summary { pointer-events: none; list-style: none; }
+  .lesson-contents > summary::-webkit-details-marker { display: none; }
+}
+[data-member-theme="arquitetura"] .member-item-workspace .text-destaque { color: var(--arq-action); }
+[data-member-theme="arquitetura"] [aria-current="location"] { box-shadow: inset 3px 0 var(--member-destaque); }

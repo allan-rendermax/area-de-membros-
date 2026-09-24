@@ -34,6 +34,7 @@ export function EntrarForm({
       <label className="flex flex-col gap-2 text-sm font-medium text-texto-suave">
         E-mail
         <input
+          id="login-email"
           name="email"
           type="email"
           inputMode="email"
@@ -42,13 +43,15 @@ export function EntrarForm({
           spellCheck={false}
           required
           defaultValue={state.email}
+          aria-invalid={state.error ? true : undefined}
+          aria-describedby={state.error ? 'email-error' : undefined}
           disabled={pending}
           className="rounded-md border border-borda bg-fundo px-4 py-3 text-base text-texto outline-none focus:border-destaque"
         />
       </label>
 
       {state.error && (
-        <div role="alert" className="rounded-md border border-destaque/40 bg-destaque/10 px-3 py-2 text-sm text-texto">
+        <div id="email-error" role="alert" className="rounded-md border border-destaque/40 bg-destaque/10 px-3 py-2 text-sm text-texto">
           <p>{state.error}</p>
           {state.supportHref && (
             <a href={state.supportHref} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex font-semibold underline underline-offset-4">

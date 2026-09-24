@@ -26,7 +26,7 @@
 5. Consulta com erro não pode virar insert; reexecução preserva extras: fake estado na tarefa 3.
 
 ### Task 1: Papel do produto de ponta a ponta
-**Files:** migration supabase/migrations/20260924000001_product_role.sql; src/lib/domain/types.ts; src/lib/data/products.ts; src/lib/data/products-admin.ts; src/lib/admin/forms.ts; src/app/admin/(painel)/produtos/product-form.tsx; src/app/admin/(painel)/produtos/actions.ts somente se necessário; src/lib/access/access.ts; fixtures afetadas e tests/admin, tests/access, tests/content.
+**Files:** migration supabase/migrations/20260924000003_product_role.sql; src/lib/domain/types.ts; src/lib/data/products.ts; src/lib/data/products-admin.ts; src/lib/admin/forms.ts; src/app/admin/(painel)/produtos/product-form.tsx; src/app/admin/(painel)/produtos/actions.ts somente se necessário; src/lib/access/access.ts; fixtures afetadas e tests/admin, tests/access, tests/content.
 **Interfaces:** Produz ProductRole e Product.role obrigatórios; ShelfProduct.role opcional se necessário para compatibilidade dos consumidores antigos, default front. Não altera interface do cadastrador.
 - [x] Escrever testes de role default front, rejeição inválida, persistência/admin action, SQL default/check/not-null, ordenação locked e tracks.
 ```ts

@@ -1,4 +1,4 @@
--- Apply after 20260924000001_product_role.sql. Legacy purchases retain complete access.
+-- Apply after 20260924000003_product_role.sql. Legacy purchases retain complete access.
 alter table public.products add column upgrade_checkout_url text;
 alter table public.modules add column required_level text not null default 'basic'
   constraint modules_required_level_check check (required_level in ('basic', 'complete'));

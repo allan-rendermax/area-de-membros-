@@ -38,6 +38,7 @@ export async function saveProduct(input: ProductInput): Promise<string> {
     checkout_url: input.checkoutUrl,
     upgrade_checkout_url: input.upgradeCheckoutUrl ?? null,
     role: input.role,
+    student_checkout_url: input.studentCheckoutUrl ?? null,
     is_featured: input.isFeatured,
     sort_order: input.sortOrder,
     is_published: input.isPublished,

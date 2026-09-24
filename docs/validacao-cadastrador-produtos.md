@@ -20,7 +20,7 @@ Testes de unidade e integração local verificam leitura de ficha, descrição m
 Supabase e Payt de produção não foram usados para cadastrar dados ou testar compras. Nenhuma migration foi aplicada. Não houve push nem deploy. O funcionamento externo definitivo depende da migration e da configuração real; o executor já verifica o esquema antes de enviar.
 
 ## Aplicar a migration
-No painel Supabase, selecione o projeto correto, abra **SQL Editor → New query**, copie o conteúdo de **supabase/migrations/20260924000001_product_role.sql** e clique **Run**, uma única vez:
+No painel Supabase, selecione o projeto correto, abra **SQL Editor → New query**, copie o conteúdo de **supabase/migrations/20260924000003_product_role.sql** e clique **Run**, uma única vez:
 
 ```sql
 alter table public.products add column role text not null default 'front'
@@ -72,7 +72,7 @@ M	src/lib/admin/forms.ts
 M	src/lib/data/products-admin.ts
 M	src/lib/data/products.ts
 M	src/lib/domain/types.ts
-A	supabase/migrations/20260924000001_product_role.sql
+A	supabase/migrations/20260924000003_product_role.sql
 M	tests/access/shelf.test.ts
 M	tests/access/tracks.test.ts
 M	tests/admin/forms.test.ts

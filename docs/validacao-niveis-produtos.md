@@ -27,7 +27,7 @@ Os testes HTTP de webhook e download complementam a navegação com agent-browse
 
 Nenhuma migration, alteração de catálogo real, publicação, push ou merge foi executada. Antes de publicar esta versão, aplicar as migrations pendentes na ordem do repositório, incluindo:
 
-1. `supabase/migrations/20260924000001_product_role.sql` (do cadastrador anterior).
+1. `supabase/migrations/20260924000003_product_role.sql` (do cadastrador anterior).
 2. `supabase/migrations/20260924010000_product_access_levels.sql` (campos de nível, RPC e bucket privado `arquivos-restritos`).
 
 As migrations anteriores também precisam estar aplicadas. Não há uma segunda migration exclusiva do bucket: ele é provisionado na migration de níveis. Validar em homologação os perfis Básico, Completo, upgrade e reembolso antes de ativar as ofertas reais. O teste sintético de Storage não substitui a conferência do bucket e das permissões reais.

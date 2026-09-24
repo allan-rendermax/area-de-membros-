@@ -1,6 +1,7 @@
 import { InstallAppButton } from '@/components/membros/install-app-button'
 import { WhatsAppFloating } from '@/components/membros/whatsapp-button'
 import { ContentImage } from '@/components/membros/content-image'
+import { MaterialHelp } from '@/components/membros/material-help'
 import { freshFormStamp } from '@/lib/auth/login-guard'
 import { coverGradient } from '@/lib/content/cover'
 import { env } from '@/lib/env'
@@ -49,7 +50,7 @@ export default async function EntrarPage({ params, searchParams }: PageProps<'/[
         </div>
       </aside>
 
-      <div className="member-login-panel relative flex w-full flex-col justify-center px-4 py-10 sm:px-6 lg:w-[30rem] lg:shrink-0 lg:border-l lg:border-borda lg:bg-superficie lg:px-10 xl:w-[34rem]">
+      <main className="member-login-panel relative flex w-full flex-col justify-center px-4 py-10 sm:px-6 lg:w-[30rem] lg:shrink-0 lg:border-l lg:border-borda lg:bg-superficie lg:px-10 xl:w-[34rem]">
         <div className="mx-auto w-full max-w-sm">
           <div className="mb-6 flex items-center justify-center gap-3 lg:justify-start">
             {store.logoUrl ? (
@@ -72,12 +73,13 @@ export default async function EntrarPage({ params, searchParams }: PageProps<'/[
               stamp={stamp}
               turnstileSiteKey={env.turnstileSiteKey && env.turnstileSecretKey ? env.turnstileSiteKey : null}
             />
+            <div className="mt-5"><MaterialHelp href={support} context="login" /></div>
           </div>
           <div className="mt-6 flex justify-center lg:justify-start">
             <InstallAppButton />
           </div>
         </div>
-      </div>
+      </main>
 
       <WhatsAppFloating href={support} />
     </div>

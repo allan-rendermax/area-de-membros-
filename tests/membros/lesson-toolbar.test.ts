@@ -4,10 +4,14 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LessonToolbar, type LessonToolbarProps } from '@/components/membros/lesson-toolbar'
 
+import { saveCompletion } from '@/app/[loja]/progresso/actions'
+vi.mock('@/app/[loja]/progresso/actions', () => ({ saveCompletion: vi.fn() }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }))
+
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
 const base: LessonToolbarProps = {
-  storeId: 'store-a', customerId: 'customer-a', productTitle: 'Curso de desenho',
+  storeSlug: 'loja-a', initialCompleted: false, productTitle: 'Curso de desenho',
   moduleTitle: 'Fundamentos', itemId: 'item-a', itemTitle: 'Traços',
   description: 'Aprenda a desenhar com confiança.',
   previous: { href: '/loja/aula/anterior', title: 'Preparação' },
@@ -28,7 +32,7 @@ async function click(element: HTMLElement) { await act(async () => element.click
 
 describe('LessonToolbar', () => {
   beforeEach(async () => {
-    localStorage.clear()
+    vi.mocked(saveCompletion).mockReset()
     container = document.createElement('div')
     document.body.append(container)
     root = createRoot(container)
@@ -37,14 +41,14 @@ describe('LessonToolbar', () => {
   afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.restoreAllMocks() })
 
   it('links to the supplied previous and next lessons', () => {
-    expect(container.querySelector('a[href="/loja/aula/anterior"]')?.textContent).toContain('Aula anterior')
-    expect(container.querySelector('a[href="/loja/aula/proxima"]')?.textContent).toContain('Próxima aula')
+    expect(container.querySelector('a[href="/loja/aula/anterior"]')?.textContent).toContain('Conteúdo anterior')
+    expect(container.querySelector('a[href="/loja/aula/proxima"]')?.textContent).toContain('Próximo conteúdo')
   })
 
   it('disables navigation at the first and last lessons', async () => {
     await render({ ...base, previous: null, next: null })
-    expect((button('Aula anterior') as HTMLButtonElement).disabled).toBe(true)
-    expect((button('Próxima aula') as HTMLButtonElement).disabled).toBe(true)
+    expect((button('Conteúdo anterior') as HTMLButtonElement).disabled).toBe(true)
+    expect((button('Próximo conteúdo') as HTMLButtonElement).disabled).toBe(true)
     expect(container.querySelector('a[href=""]')).toBeNull()
   })
 
@@ -73,35 +77,25 @@ describe('LessonToolbar', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
   })
 
-  it('saves reversible completion only in this browser and restores on remount', async () => {
-    expect(container.textContent).toContain('Salvo neste navegador')
+  it('preserva conclusão anterior quando o servidor recusa a escrita', async () => {
+    await render({ ...base, initialCompleted: true })
+    vi.mocked(saveCompletion).mockResolvedValue({ ok: false, error: 'Não foi possível salvar o progresso. Tente novamente.' })
+    await click(button('Concluído'))
+    expect(button('Concluído').getAttribute('aria-pressed')).toBe('true')
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain('Não foi possível salvar')
+  })
+
+  it('aguarda o servidor, impede repetição pendente e permite desfazer', async () => {
+    let resolve!: (value: { ok: true; completed: boolean }) => void
+    vi.mocked(saveCompletion).mockReturnValueOnce(new Promise((done) => { resolve = done }))
     await click(button('Concluir'))
+    expect((button('Salvando…') as HTMLButtonElement).disabled).toBe(true)
+    await click(button('Salvando…'))
+    expect(saveCompletion).toHaveBeenCalledTimes(1)
+    await act(async () => resolve({ ok: true, completed: true }))
     expect(button('Concluído').getAttribute('aria-pressed')).toBe('true')
-    await act(async () => root.unmount())
-    root = createRoot(container)
-    await render()
-    expect(button('Concluído').getAttribute('aria-pressed')).toBe('true')
+    vi.mocked(saveCompletion).mockResolvedValueOnce({ ok: true, completed: false })
     await click(button('Concluído'))
     expect(button('Concluir').getAttribute('aria-pressed')).toBe('false')
-  })
-
-  it('isolates completion by store, customer and lesson when props change', async () => {
-    await click(button('Concluir'))
-    await render({ ...base, itemId: 'item-b' })
-    expect(button('Concluir').getAttribute('aria-pressed')).toBe('false')
-    await render({ ...base, customerId: 'customer-b' })
-    expect(button('Concluir').getAttribute('aria-pressed')).toBe('false')
-    await render({ ...base, storeId: 'store-b' })
-    expect(button('Concluir').getAttribute('aria-pressed')).toBe('false')
-    await render()
-    expect(button('Concluído').getAttribute('aria-pressed')).toBe('true')
-  })
-
-  it('does not claim completion was saved when local storage rejects writes', async () => {
-    vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('storage denied') })
-    await click(button('Concluir'))
-    expect(button('Concluir').getAttribute('aria-pressed')).toBe('false')
-    expect(container.querySelector('[role="alert"]')?.textContent).toMatch(/não foi possível salvar/i)
-    expect(container.textContent).not.toContain('Salvo neste navegador')
   })
 })

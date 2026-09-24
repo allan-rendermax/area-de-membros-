@@ -6,10 +6,14 @@ export function StoreHeader({
   store,
   email,
   actions,
+  active,
+  legacyHome = false,
 }: {
   store: Pick<Store, 'slug' | 'name' | 'logoUrl'>
   email: string
   actions?: React.ReactNode
+  active?: 'home' | 'materials'
+  legacyHome?: boolean
 }) {
   const architecture = getMemberTheme(store.slug) === 'arquitetura'
   return (
@@ -28,14 +32,15 @@ export function StoreHeader({
         </Link>
         {architecture && (
           <nav className="arq-nav mr-auto" aria-label="Navegação da arquitetura">
-            <Link href={`/${store.slug}`}>Início</Link>
-            <Link href={`/${store.slug}#materiais`}>Meus materiais</Link>
+            <Link href={`/${store.slug}`} aria-current={active === 'home' ? 'page' : undefined}>Início</Link>
+            <Link href={`/${store.slug}#materiais`} aria-current={active === 'materials' ? 'location' : undefined}>Meus materiais</Link>
           </nav>
         )}
         <div className="flex items-center gap-3">
+          {architecture && !legacyHome && <Link href={`/${store.slug}#materiais`} aria-current={active === 'materials' ? 'location' : undefined} className="inline-flex min-h-11 items-center text-xs font-semibold text-texto hover:text-destaque sm:hidden">Meus materiais</Link>}
           {actions}
           <details className="relative">
-            <summary className="cursor-pointer list-none rounded-full bg-superficie-2 px-3 py-1.5 text-sm text-texto-suave hover:text-texto">
+            <summary className={`${legacyHome ? '' : 'flex min-h-11 items-center '}cursor-pointer list-none rounded-full bg-superficie-2 px-3 py-1.5 text-sm text-texto-suave hover:text-texto`}>
               Conta
             </summary>
             <div className="absolute right-0 mt-2 w-64 rounded-md border border-borda bg-superficie p-3 text-sm shadow-xl">

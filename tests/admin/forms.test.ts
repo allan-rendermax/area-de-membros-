@@ -36,7 +36,7 @@ describe('parseProductForm', () => {
       ),
     ).toEqual({
       id: null, storeId: 's1', slug: 'atlas-visual', title: 'Atlas Visual', track: 'Patologias', description: 'texto',
-      coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', upgradeCheckoutUrl: null, role: 'front', isFeatured: true, sortOrder: 3, isPublished: true,
+      coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', upgradeCheckoutUrl: null, studentCheckoutUrl: null, role: 'front', isFeatured: true, sortOrder: 3, isPublished: true,
     })
     expect(parseProductForm(fd({ title: 'Atlas Visual' }), 's1').track).toBe('')
     expect(parseProductForm(fd({ title: 'Atlas Visual', track: '   ' }), 's1').track).toBe('')
@@ -57,6 +57,13 @@ describe('parseProductForm', () => {
   it('aceita checkout de upgrade HTTP(S) e recusa URL inválida', () => {
     expect(parseProductForm(fd({ title: 'Atlas', upgrade_checkout_url: 'https://payt.com/upgrade' }), 's1').upgradeCheckoutUrl).toBe('https://payt.com/upgrade')
     expect(() => parseProductForm(fd({ title: 'Atlas', upgrade_checkout_url: 'javascript:bad' }), 's1')).toThrow('Link inválido')
+  })
+
+  it('preserva checkout de aluno completo, trata vazio como null e recusa protocolo inseguro', () => {
+    const promotional = 'https://checkout.example.test/item?coupon=ALUNO10&utm_source=members#payment'
+    expect(parseProductForm(fd({ title: 'Atlas', student_checkout_url: promotional }), 's1').studentCheckoutUrl).toBe(promotional)
+    expect(parseProductForm(fd({ title: 'Atlas', student_checkout_url: '   ' }), 's1').studentCheckoutUrl).toBeNull()
+    expect(() => parseProductForm(fd({ title: 'Atlas', student_checkout_url: 'javascript:alert(1)' }), 's1')).toThrow('Link inválido')
   })
 })
 

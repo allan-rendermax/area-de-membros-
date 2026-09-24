@@ -17,6 +17,7 @@ const productRow = {
   banner_url: null,
   checkout_url: 'https://checkout.example.com',
   role: 'upsell' as const,
+  student_checkout_url: 'https://checkout.example.com/student?coupon=ALUNO10#payment',
   is_featured: false,
   sort_order: 1,
   is_published: true,
@@ -80,6 +81,7 @@ const product = {
   bannerUrl: null,
   checkoutUrl: productRow.checkout_url,
   role: 'upsell',
+  studentCheckoutUrl: productRow.student_checkout_url,
   isFeatured: false,
   sortOrder: 1,
   isPublished: true,
@@ -261,6 +263,8 @@ describe('consultas de conteúdo', () => {
     expect(url.searchParams.get('id')).toBe(`eq.${firstRow.id}`)
     expect(url.searchParams.get('select')).toContain('modules(')
     expect(url.searchParams.get('select')).toContain('products(')
+    expect(url.searchParams.get('select')).toContain('role')
+    expect(url.searchParams.get('select')).toContain('student_checkout_url')
     expect(url.searchParams.get('select')).toContain('role')
   })
 

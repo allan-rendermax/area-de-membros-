@@ -40,7 +40,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
 
   return (
     <>
-      <StoreHeader store={store} email={customer.email} actions={<InstallAppButton />} />
+      <StoreHeader store={store} email={customer.email} actions={<InstallAppButton />} legacyHome />
       <main className="lesson-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
         <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0">
@@ -76,7 +76,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
                     </div>}
                     {hasResources && <div className={videos.length ? 'mt-8' : ''}>
                       {videos.length > 0 && <h3 className="mb-4 text-lg font-bold">Downloads e links</h3>}
-                      <ResourceList items={module.items} storeSlug={store.slug} />
+                      <ResourceList items={module.items} storeSlug={store.slug} legacyPresentation />
                     </div>}
                   </section>
                 })}
@@ -91,7 +91,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
             </section>}
             <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={productHref} />
           </div>
-          <LessonSidebar modules={modules} storeSlug={store.slug} />
+          <LessonSidebar modules={modules} storeSlug={store.slug} legacyPresentation />
         </div>
       </main>
       <WhatsAppFloating href={support} />

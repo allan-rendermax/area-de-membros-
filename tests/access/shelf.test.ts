@@ -85,9 +85,12 @@ describe('buildShelf', () => {
   })
 
   it('só expõe checkout de produto bloqueado', () => {
-    const shelf = buildShelf(products, new Set(['atlas']))
+    const promotional = 'https://checkout.example.test/item?coupon=ALUNO10&utm_source=members#payment'
+    const shelf = buildShelf(products.map((p) => ({ ...p, studentCheckoutUrl: promotional })), new Set(['atlas']))
     expect(shelf.unlocked[0].checkoutUrl).toBeNull()
+    expect(shelf.unlocked[0].studentCheckoutUrl).toBeNull()
     expect(shelf.locked[0].checkoutUrl).toBe('https://payt/bonus1')
+    expect(shelf.locked[0].studentCheckoutUrl).toBe(promotional)
   })
 
   it('mostra ofertas complementares bloqueadas primeiro, mantendo comprados e destaque', () => {

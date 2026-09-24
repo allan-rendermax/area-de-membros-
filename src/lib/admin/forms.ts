@@ -77,6 +77,7 @@ export type ProductInput = {
   checkoutUrl: string | null
   upgradeCheckoutUrl?: string | null
   role: ProductRole
+  studentCheckoutUrl: string | null
   isFeatured: boolean
   sortOrder: number
   isPublished: boolean
@@ -104,6 +105,7 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
     checkoutUrl,
     upgradeCheckoutUrl: optionalUrl(form, 'upgrade_checkout_url', 'Checkout de upgrade'),
     role,
+    studentCheckoutUrl: optionalUrl(form, 'student_checkout_url', 'Checkout de aluno'),
     isFeatured: checked(form, 'is_featured'),
     sortOrder: Number.isFinite(sortOrder) ? Math.trunc(sortOrder) : 0,
     isPublished: checked(form, 'is_published'),

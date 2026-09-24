@@ -45,6 +45,7 @@ export type Product = {
   checkoutUrl: string | null
   upgradeCheckoutUrl?: string | null
   role: ProductRole
+  studentCheckoutUrl?: string | null
   isFeatured: boolean
   sortOrder: number
   isPublished: boolean

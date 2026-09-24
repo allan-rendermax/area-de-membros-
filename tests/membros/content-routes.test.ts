@@ -1,20 +1,24 @@
-import { createElement } from 'react'
+import { listCompletedItemIds } from '@/lib/data/member-progress'
+import { Children, createElement, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { Window } from 'happy-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { notFound, redirect } from 'next/navigation'
+import { LessonSidebar } from '@/components/membros/lesson-sidebar'
 import ItemPage from '@/app/[loja]/item/[id]/page'
 import ProdutoPage from '@/app/[loja]/produto/[slug]/page'
 import VitrinePage from '@/app/[loja]/page'
 import { loadGrantedProductLevels, loadStoreAccess } from '@/lib/data/access'
-import { listRecentProductIds, recordItemAccess } from '@/lib/data/item-access'
+import { listRecentProductIds, listRecentMaterials, recordItemAccess } from '@/lib/data/item-access'
 import { getItemWithContext, getProductBySlug, listModulesWithItems } from '@/lib/data/products'
 import type { CustomerRow, Item, Module, ModuleWithItems, Product, Store } from '@/lib/domain/types'
 import { requireStoreSession } from '@/lib/membros/session'
 
-vi.mock('next/navigation', () => ({ notFound: vi.fn(), redirect: vi.fn() }))
+vi.mock('@/app/[loja]/progresso/actions', () => ({ saveCompletion: vi.fn() }))
+vi.mock('@/lib/data/member-progress', () => ({ listCompletedItemIds: vi.fn().mockResolvedValue([]) }))
+vi.mock('next/navigation', () => ({ usePathname: () => '/loja-a', useSearchParams: () => new URLSearchParams(), useRouter: () => ({ refresh: vi.fn() }), notFound: vi.fn(), redirect: vi.fn() }))
 vi.mock('@/lib/data/access', () => ({ loadGrantedProductLevels: vi.fn(), loadStoreAccess: vi.fn() }))
-vi.mock('@/lib/data/item-access', () => ({ listRecentProductIds: vi.fn(), recordItemAccess: vi.fn() }))
+vi.mock('@/lib/data/item-access', () => ({ listRecentProductIds: vi.fn().mockResolvedValue([]), listRecentMaterials: vi.fn(), recordItemAccess: vi.fn() }))
 vi.mock('@/lib/data/products', () => ({
   getItemWithContext: vi.fn(),
   getProductBySlug: vi.fn(),
@@ -110,9 +114,21 @@ describe('carregamento do conteúdo', () => {
 describe('vitrine do aluno', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    vi.mocked(listCompletedItemIds).mockResolvedValue([])
+    vi.mocked(listRecentProductIds).mockResolvedValue([])
+    vi.mocked(listRecentMaterials).mockResolvedValue([])
     vi.mocked(requireStoreSession).mockResolvedValue({ store, customer })
     vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product], granted: new Set([product.id]), levels: new Map([[product.id, 'complete']]) })
-    vi.mocked(listRecentProductIds).mockResolvedValue([])
+  })
+
+  it('restaura carrosséis de compras, ofertas e produtos recentes', async () => {
+    vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product, { ...product, id: 'locked', slug: 'locked', title: 'Oferta bloqueada' }], granted: new Set([product.id]), levels: new Map([[product.id, 'complete']]) })
+    vi.mocked(listRecentProductIds).mockResolvedValue([product.id])
+    const html = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({}) }))
+    expect(html).toContain('Continuar')
+    expect(html).toContain(`href="/${store.slug}/produto/${product.slug}"`)
+    expect(html).toContain('Oferta bloqueada')
+    expect(html).not.toContain('Seu acervo, pronto para usar')
   })
 
   it('reutiliza o cliente validado ao carregar catálogo e permissões', async () => {
@@ -129,7 +145,7 @@ describe('vitrine do aluno', () => {
       customer, products: [{ ...product, slug: 'atlas-visual-das-patologias' }], granted: new Set([product.id]), levels: new Map([[product.id, 'complete']]),
     })
     const html = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: arq.slug }), searchParams: Promise.resolve({}) }))
-    expect(html).toContain('Menos tempo no zero.')
+    expect(html).toContain('Tudo pronto para você criar')
     expect(html).toContain('atlas.webp')
     expect(html).toContain('/arquitetura/produto/atlas-visual-das-patologias')
     expect(html).not.toContain('PROJETOS RESIDENCIAIS')
@@ -138,13 +154,16 @@ describe('vitrine do aluno', () => {
     const other = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({}) }))
     expect(other).not.toContain('Menos tempo no zero.')
     expect(other).not.toContain('/themes/arquitetura/')
-    expect(other).not.toContain('Meus materiais')
+    expect(other).toContain(product.title)
   })
 })
 
 describe('rota de produto', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    vi.mocked(listCompletedItemIds).mockResolvedValue([])
+    vi.mocked(listRecentProductIds).mockResolvedValue([])
+    vi.mocked(listRecentMaterials).mockResolvedValue([])
     vi.mocked(notFound).mockImplementation(() => { throw new Error('NEXT_NOT_FOUND') })
     vi.mocked(redirect).mockImplementation((path) => { throw new Error(`NEXT_REDIRECT:${path}`) })
     vi.mocked(requireStoreSession).mockResolvedValue({ store, customer })
@@ -191,6 +210,19 @@ describe('rota de produto', () => {
     await expect(ProdutoPage(productProps()))
       .rejects.toThrow(`NEXT_REDIRECT:/${store.slug}?comprar=${product.slug}`)
     expect(listModulesWithItems).not.toHaveBeenCalled()
+  })
+
+  it('mantém a apresentação original do produto sem retomada', async () => {
+    vi.mocked(listRecentMaterials).mockResolvedValue([{ itemId: item.id, title: item.title, kind: item.kind, productId: product.id, productTitle: product.title, productSlug: product.slug }])
+    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
+    expect(html).not.toContain('Retomar material')
+    expect(listRecentMaterials).not.toHaveBeenCalled()
+    expect(html.match(/<aside/g)).toHaveLength(1)
+    expect(html).toContain('Abrir primeiro conteúdo')
+    expect(html).toContain('Seu material')
+    expect(html).toContain('lesson-workspace-grid')
+    expect(html).not.toContain('lesson-contents')
+    expect(html).toContain('<h2 class="lesson-sidebar-heading')
   })
 
   it('renderiza conteúdo somente depois da autorização', async () => {
@@ -275,6 +307,9 @@ describe('rota de produto', () => {
 describe('rota de item', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    vi.mocked(listCompletedItemIds).mockResolvedValue([])
+    vi.mocked(listRecentProductIds).mockResolvedValue([])
+    vi.mocked(listRecentMaterials).mockResolvedValue([])
     vi.mocked(notFound).mockImplementation(() => { throw new Error('NEXT_NOT_FOUND') })
     vi.mocked(redirect).mockImplementation((path) => { throw new Error(`NEXT_REDIRECT:${path}`) })
     vi.mocked(requireStoreSession).mockResolvedValue({ store, customer })
@@ -297,6 +332,23 @@ describe('rota de item', () => {
     return window.document
   }
 
+  it('mantém downloads acessíveis com aviso quando a leitura de progresso falha', async () => {
+    vi.mocked(listCompletedItemIds).mockRejectedValueOnce(new Error('migration unavailable'))
+    const doc = await renderedItem()
+    expect(doc.querySelector('[role="status"]')?.textContent).toContain('Não foi possível carregar seu progresso')
+    expect(doc.querySelector('iframe')).not.toBeNull()
+    expect([...doc.querySelectorAll('button[disabled]')].some((node) => node.textContent === 'Concluir')).toBe(true)
+    expect(doc.body.textContent).not.toContain('Progresso salvo')
+  })
+
+  it('marca conclusão e item atual no único sumário', async () => {
+    vi.mocked(listCompletedItemIds).mockResolvedValueOnce([item.id])
+    const doc = await renderedItem()
+    expect(doc.querySelectorAll('aside')).toHaveLength(1)
+    expect(doc.querySelector('aside [aria-current="page"]')?.textContent).toContain('Concluído')
+    expect(doc.querySelector('aside [aria-current="page"]')?.textContent).toContain('Conteúdo atual')
+  })
+
   it('avança para o módulo seguinte e exibe todos os módulos, abrindo apenas o atual', async () => {
     vi.mocked(listModulesWithItems).mockResolvedValueOnce([
       { ...courseModule, items: [item] }, { ...nextModule, items: [nextLesson] },
@@ -304,8 +356,8 @@ describe('rota de item', () => {
     const doc = await renderedItem()
     expect(doc.querySelector('a[title="Primeira aula B"]')?.getAttribute('href')).toBe(`/loja-a/item/${nextLesson.id}`)
     const sidebar = doc.querySelector('aside')!
-    expect([...sidebar.querySelectorAll('summary')].map((node) => node.textContent)).toEqual(['Módulo A1⌄', 'Módulo B1⌄'])
-    expect([...sidebar.querySelectorAll('details')].map((node) => node.hasAttribute('open'))).toEqual([true, false])
+    expect([...sidebar.querySelectorAll('.lesson-module > summary')].map((node) => node.textContent)).toEqual(['Módulo A1⌄', 'Módulo B1⌄'])
+    expect([...sidebar.querySelectorAll('.lesson-module')].map((node) => node.hasAttribute('open'))).toEqual([true, false])
     expect(sidebar.querySelector('[aria-current="page"]')?.getAttribute('href')).toBe(`/loja-a/item/${item.id}`)
   })
 
@@ -316,8 +368,8 @@ describe('rota de item', () => {
     ])
     const doc = await renderedItem(nextLesson.id)
     expect(doc.querySelector('a[title="Aula principal"]')?.getAttribute('href')).toBe(`/loja-a/item/${item.id}`)
-    expect([...doc.querySelectorAll('button[disabled]')].map((node) => node.textContent)).toContain('Próxima aula')
-    expect([...doc.querySelectorAll('aside details')].map((node) => node.hasAttribute('open'))).toEqual([false, true])
+    expect([...doc.querySelectorAll('button[disabled]')].map((node) => node.textContent)).toContain('Próximo conteúdo')
+    expect([...doc.querySelectorAll('aside .lesson-module')].map((node) => node.hasAttribute('open'))).toEqual([false, true])
   })
 
   it('pula módulos vazios, rascunhos e destinos inválidos na navegação e no painel', async () => {
@@ -337,7 +389,7 @@ describe('rota de item', () => {
     expect([...doc.querySelectorAll('aside a')].map((node) => node.getAttribute('href'))).toEqual([
       `/loja-a/item/${item.id}`, `/loja-a/item/${nextLesson.id}`,
     ])
-    expect(doc.querySelectorAll('aside details')).toHaveLength(2)
+    expect(doc.querySelectorAll('aside .lesson-module')).toHaveLength(2)
   })
 
   it('mantém downloads do módulo atual mesmo quando o painel inclui materiais de outro módulo', async () => {
@@ -351,7 +403,7 @@ describe('rota de item', () => {
     expect(downloads.querySelector('a')?.getAttribute('href')).toBe('/loja-a/item/local-file/abrir')
     expect(downloads.textContent).not.toContain('PDF do módulo B')
     expect(doc.querySelector('aside a[href="/loja-a/item/other-file"]')).not.toBeNull()
-    expect([...doc.querySelectorAll('button[disabled]')].map((node) => node.textContent)).toContain('Aula anterior')
+    expect([...doc.querySelectorAll('button[disabled]')].map((node) => node.textContent)).toContain('Conteúdo anterior')
   })
 
   it('inicia contexto e permissão antes de qualquer um terminar', async () => {
@@ -480,6 +532,26 @@ describe('rota de item', () => {
     expect(html).not.toContain('Modelos exclusivos')
   })
 
+  it('remove IDs de progresso de extras antigos antes de enviar dados ao sidebar de Básico', async () => {
+    const extra = { ...courseModule, id: 'extra', requiredLevel: 'complete' as const }
+    const extraItem = { ...item, id: '44444444-4444-4444-8444-444444444444', moduleId: extra.id }
+    vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map([[product.id, 'basic']]))
+    vi.mocked(listCompletedItemIds).mockResolvedValueOnce([item.id, extraItem.id])
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [item] }, { ...extra, items: [extraItem] }])
+
+    function sidebarIds(node: ReactNode): string[] | null {
+      if (!isValidElement(node)) return null
+      if (node.type === LessonSidebar) return (node.props as { completedItemIds: string[] }).completedItemIds
+      for (const child of Children.toArray((node.props as { children?: ReactNode }).children)) {
+        const ids = sidebarIds(child)
+        if (ids) return ids
+      }
+      return null
+    }
+
+    expect(sidebarIds(await ItemPage(itemProps()))).toEqual([item.id])
+  })
+
   it('preserva a ordem de anterior e próximo dentro do mesmo módulo', async () => {
     const previous = { ...item, id: '22222222-2222-4222-8222-222222222222', title: 'Aula anterior', sortOrder: 0 }
     const next = { ...item, id: '33333333-3333-4333-8333-333333333333', title: 'Próxima aula', sortOrder: 2 }
@@ -489,9 +561,9 @@ describe('rota de item', () => {
     const html = renderToStaticMarkup(result)
 
     expect(html).toContain(`href="/${store.slug}/item/${previous.id}"`)
-    expect(html).toContain('Aula anterior')
+    expect(html).toContain('Conteúdo anterior')
     expect(html).toContain(`href="/${store.slug}/item/${next.id}"`)
-    expect(html).toContain('Próxima aula')
+    expect(html).toContain('Próximo conteúdo')
     expect(listModulesWithItems).toHaveBeenCalledWith(product.id, { publishedOnly: true })
   })
 })
