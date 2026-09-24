@@ -2,7 +2,7 @@
 Data: 2026-09-24. Branch local: codex/cadastrador-produtos.
 
 ## Resultado verificado
-- npm test: 68 arquivos, 556 testes passaram, saída 0.
+- npm test: 68 arquivos, 561 testes passaram, saída 0 (commit de código 06786aa).
 - npm run lint: saída 0, nenhum erro. Um aviso preexistente em scripts/trocar-admin-e-aluno.mjs:20 (loja não usada).
 - npm run build: Next.js 16.3.5/Turbopack compilou, TypeScript passou e 8 páginas estáticas foram geradas; saída 0.
 - node scripts/cadastrar-produto.mjs "docs/exemplo-pasta-produto" --simular: saída 0; 1 produto, 2 módulos, 3 itens, 91 B.
@@ -92,3 +92,5 @@ M	tests/membros/resource-open.test.ts
 M	tests/membros/store-access.test.ts
 A docs/validacao-cadastrador-produtos.md
 ```
+
+Revisão independente final: P2 (normalização de sufixos de storage) e P3 (mensagens de filesystem) corrigidos em 06786aa e re-review aprovado. Checks integrados posteriores passaram; nenhum achado permanece aberto nesta entrega. Branch mantida localmente, sem merge/push/deploy.
