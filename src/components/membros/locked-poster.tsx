@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ShelfProduct } from '@/lib/access/access'
 import { isHttpUrl } from '@/lib/content/url'
 import { AutoCover } from './auto-cover'
@@ -14,6 +14,7 @@ export function LockedPoster({ product, initiallyOpen = false }: { product: Shel
   const searchParams = useSearchParams()
   const [open, setOpen] = useState(initiallyOpen)
   const [stage, setStage] = useState<'details' | 'coupon'>('details')
+  const trigger = useRef<HTMLButtonElement>(null)
   const primaryAction = useRef<HTMLButtonElement | HTMLAnchorElement>(null)
   const studentCheckoutUrl = product.studentCheckoutUrl && isHttpUrl(product.studentCheckoutUrl) ? product.studentCheckoutUrl : null
   const checkoutUrl = product.checkoutUrl && isHttpUrl(product.checkoutUrl) ? product.checkoutUrl : null
@@ -25,6 +26,10 @@ export function LockedPoster({ product, initiallyOpen = false }: { product: Shel
     setOpen(requestedSlug === product.slug)
     setStage('details')
   }
+
+  useLayoutEffect(() => {
+    if (open) trigger.current?.focus({ preventScroll: true })
+  }, [open])
 
   useEffect(() => {
     if (open) primaryAction.current?.focus({ preventScroll: true })
@@ -43,6 +48,7 @@ export function LockedPoster({ product, initiallyOpen = false }: { product: Shel
   return (
     <>
       <button
+        ref={trigger}
         type="button"
         onClick={(event) => {
           event.currentTarget.focus({ preventScroll: true })

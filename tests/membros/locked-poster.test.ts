@@ -112,6 +112,33 @@ describe('LockedPoster', () => {
     close()
     expect(document.activeElement).toBe(trigger)
   })
+  it('devolve foco ao card após abertura direta por comprar e fechamento com Escape ou Fechar', () => {
+    render(true)
+    const trigger = container.querySelector('button')!
+    expect(dialog()).not.toBeNull()
+    act(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+    expect(document.activeElement).toBe(trigger)
+    controls.search = 'comprar=atlas'
+    render(true)
+    expect(dialog()).not.toBeNull()
+    close()
+    expect(document.activeElement).toBe(trigger)
+  })
+  it('devolve foco ao card quando comprar abre via busca com outro elemento focado', () => {
+    controls.search = ''
+    render(false)
+    const trigger = container.querySelector('button')!
+    const other = document.createElement('button')
+    document.body.append(other)
+    try {
+      other.focus()
+      controls.search = 'comprar=atlas'
+      render(false)
+      expect(dialog()).not.toBeNull()
+      close()
+      expect(document.activeElement).toBe(trigger)
+    } finally { other.remove() }
+  })
 
   it('resgata desconto em estágio sequencial, move foco, volta e reabre nos detalhes', () => {
     controls.search = ''
