@@ -94,7 +94,20 @@ set search_path = ''
 as $$
 declare
   v_grants jsonb;
+  v_store_id uuid;
+  v_code text;
 begin
+  if p_id is not null then
+    -- Serialize with tier-aware edits before snapshotting existing link levels.
+    select o.store_id, o.payt_product_code into v_store_id, v_code
+      from public.offers o where o.id = p_id for update;
+    if not found or v_store_id is distinct from p_store_id then
+      raise exception 'Oferta não encontrada nesta loja. Recarregue a página.';
+    end if;
+    if v_code is distinct from p_product_code then
+      raise exception 'O código da Payt não pode ser alterado. Cadastre uma nova oferta para usar outro código.';
+    end if;
+  end if;
   select coalesce(jsonb_agg(jsonb_build_object(
     'product_id', selected.product_id,
     'grant_level', coalesce(existing.grant_level, 'complete')

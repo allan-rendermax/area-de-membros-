@@ -69,6 +69,20 @@ describe('product access migration', () => {
     expect((await state(db)).map((r) => [r.product_id, r.grant_level])).toEqual([[productA, 'basic'], [productB, 'complete']])
   })
 
+  it('locks the existing offer before reading links in the legacy wrapper', async () => {
+    const db = await setup()
+    const result = await db.query<{ definition: string }>(`
+      select pg_get_functiondef('public.save_offer_atomic(uuid,uuid,text,text,uuid[])'::regprocedure) as definition`)
+    const definition = result.rows[0].definition.toLowerCase()
+    const lockAt = definition.indexOf('for update;')
+    const levelsAt = definition.indexOf('select coalesce(jsonb_agg')
+    expect(lockAt).toBeGreaterThan(0)
+    expect(levelsAt).toBeGreaterThan(lockAt)
+    await expect(db.query('select public.save_offer_atomic($1::uuid,$2::uuid,$3::text,$4::text,$5::uuid[])',
+      [offer, storeB, 'Wrong store', 'CODE', [productA]])).rejects.toThrow()
+    expect(await state(db)).toEqual([{ name: 'Original', product_id: productA, grant_level: 'complete' }])
+  })
+
   it('rejects invalid levels, conflicts, wrong store and changed code without partial writes', async () => {
     const db = await setup()
     for (const [store, code, grants] of [
