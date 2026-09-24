@@ -31,3 +31,12 @@ Executar npm run dev -- --port 3331. Login pela interface com aluno@example.test
 4. Conferir manualmente preço/desconto no checkout real após cadastrar. Nenhum link real foi fornecido ou validado nesta entrega.
 
 Sem publicação, migração remota, alteração de cadastros, envio de WhatsApp/e-mail ou mudança nos títulos de download. E-mail informado é suporte, não remetente transacional.
+
+## Encerramento
+
+- Build de produção: npm run build, exit 0, compilação e TypeScript concluídos.
+- Configuração de WhatsApp confirmada também no aplicativo em modo produção (npm run start): link wa.me com número sintético e mensagem contextual corretos, e-mail preservado, sem overflow a 375px. O link externo não foi acionado e nenhuma mensagem foi enviada.
+- Após reiniciar em modo produção, consulta de erros JavaScript da sessão ficou vazia.
+- Revisão final de toda a branch aprovada, sem achados pendentes. [Parecer independente](revisao-final.md).
+- Evidências: [cupom mobile](cupom-mobile.png), [cupom desktop](cupom-desktop.png), [login e ajuda](login-ajuda-mobile.png), [WhatsApp configurado localmente](suporte-whatsapp-mobile.png).
+- Implementação preservada na branch codex/cupom-suporte-membros, worktree C:/Users/arqal/.codex/worktrees/cupom-suporte-membros/Area de membros. Sem merge, push ou deploy; a pasta original conserva as alterações locais que já existiam.
