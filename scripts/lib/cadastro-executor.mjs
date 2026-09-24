@@ -4,6 +4,36 @@ const BUCKET = 'arquivos'
 const PRIVATE_BUCKET = 'arquivos-restritos'
 const effectiveOffers = plano => plano.ofertas ?? [{ codigo: plano.ficha.id, nivel: 'complete', nome: plano.ficha.nome }]
 
+function ownPublicFile(url, supabaseUrl) {
+  if (typeof url !== 'string') return false
+  try {
+    const parsed = new URL(url)
+    if (parsed.origin !== new URL(supabaseUrl).origin) return false
+    const prefix = '/storage/v1/object/public/arquivos/'
+    if (parsed.pathname.startsWith(prefix)) return true
+    return decodeURIComponent(parsed.pathname).startsWith(prefix)
+  } catch {
+    return false
+  }
+}
+
+function preflightCompleteFiles(db, plano, currentModules, currentItems) {
+  function checkItem(item) {
+    if (item.arquivo ? (item.arquivo.bucket ?? BUCKET) === BUCKET : ownPublicFile(item.url, db.supabaseUrl)) {
+      throw new Error(`Item ${item.title} usa arquivo público próprio em módulo Completo; reenvie para o bucket privado antes de cadastrar.`)
+    }
+  }
+  for (const modulo of plano.modulos) {
+    if (modulo.requiredLevel !== 'complete') continue
+    const existing = currentModules.find(row => row.title === modulo.title)
+    for (const item of modulo.itens) checkItem(item)
+    for (const item of currentItems.filter(row => row.module_id === existing?.id && !modulo.itens.some(incoming => incoming.title === row.title))) checkItem(item)
+  }
+  for (const modulo of currentModules.filter(row => row.required_level === 'complete' && !plano.modulos.some(incoming => incoming.title === row.title))) {
+    for (const item of currentItems.filter(row => row.module_id === modulo.id)) checkItem(item)
+  }
+}
+
 async function rows(db, table, columns = '*', filters = {}) {
   const all = []
   const pageSize = 1000
@@ -86,6 +116,7 @@ async function preflight(db, planos) {
         }
       }
     }
+    preflightCompleteFiles(db, plano, modules, items)
     for (const { spec, existing } of offers) {
       if (existing && existing.store_id !== store.id) throw new Error(`Código Payt ${spec.codigo} já pertence a outra loja.`)
       if (existing && links.some(row => row.offer_id === existing.id && row.product_id !== product?.id)) {

@@ -240,6 +240,7 @@ describe('rota de produto', () => {
     const html = renderToStaticMarkup(await ProdutoPage(productProps()))
     expect(html).toContain('Seu acesso: Básico')
     expect(html).toContain('Modelos exclusivos')
+    expect(html).toContain('1 conteúdo bloqueado</span>')
     expect(html).toContain('Desbloquear versão completa')
     expect(html).toContain('href="https://checkout.example.com/upgrade"')
     expect(html).toContain('Já paguei, atualizar acesso')

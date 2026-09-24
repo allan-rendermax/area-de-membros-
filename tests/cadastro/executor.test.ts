@@ -73,6 +73,50 @@ async function plan(overrides: Row = {}) {
 }
 
 describe('executor do cadastro', () => {
+  it('recusa promoção a Completo quando item público extra seria preservado', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit' })
+    db.rows.modules.push({ id: 'module-1', product_id: 'product-1', title: 'Material', required_level: 'basic' })
+    db.rows.items.push({ id: 'old-1', module_id: 'module-1', title: 'Antigo', kind: 'arquivo', url: 'https://supabase.example/storage/v1/object/public/arquivos/kit/Antigo.pdf?download=1#arquivo' })
+    const p = await plan()
+    p.modulos[0].requiredLevel = 'complete'
+    p.arquivos[0].bucket = 'arquivos-restritos'
+    await expect(executarPlanos(db, [p])).rejects.toThrow(/Antigo|público|privado/i)
+    expect(db.writes).toBe(0)
+    expect(db.uploads).toHaveLength(0)
+  })
+  it('recusa link público próprio recebido em módulo Completo', async () => {
+    const db = new FakeDb()
+    const p = await plan()
+    p.modulos[0].requiredLevel = 'complete'
+    p.arquivos[0].bucket = 'arquivos-restritos'
+    ;(p.modulos[0].itens as Row[]).push({ title: 'Público', kind: 'link', sortOrder: 2, url: 'https://supabase.example/storage/v1/object/public/arquivos/kit/Publico.pdf?download=1#x', arquivo: null })
+    await expect(executarPlanos(db, [p])).rejects.toThrow(/Público|privado/i)
+    expect(db.writes).toBe(0)
+    expect(db.uploads).toHaveLength(0)
+  })
+  it('trata upload sem bucket como público em módulo Completo', async () => {
+    const db = new FakeDb()
+    const p = await plan()
+    p.modulos[0].requiredLevel = 'complete'
+    delete (p.arquivos[0] as Row).bucket
+    await expect(executarPlanos(db, [p])).rejects.toThrow(/público|privado/i)
+    expect(db.writes).toBe(0)
+  })
+  it('permite substituir arquivo público existente por upload privado no mesmo item', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit' })
+    db.rows.modules.push({ id: 'module-1', product_id: 'product-1', title: 'Material', required_level: 'basic' })
+    db.rows.items.push({ id: 'old-1', module_id: 'module-1', title: 'Guia', kind: 'arquivo', url: 'https://supabase.example/storage/v1/object/public/arquivos/kit/Guia.pdf?download=Guia.pdf' })
+    const p = await plan()
+    p.modulos[0].requiredLevel = 'complete'
+    p.arquivos[0].bucket = 'arquivos-restritos'
+    await executarPlanos(db, [p], { log: () => {} })
+    expect(db.rows.modules[0].required_level).toBe('complete')
+    expect(db.rows.items[0].url).toContain('/object/authenticated/arquivos-restritos/')
+    expect(db.uploads).toHaveLength(1)
+    expect(db.uploads[0].bucket).toBe('arquivos-restritos')
+  })
   it('grava três vínculos de um produto por nível e reexecuta sem duplicar', async () => {
     const db = new FakeDb()
     const p = await plan({ id: undefined, checkoutUpgrade: 'https://example.com/upgrade', modoNiveis: true })

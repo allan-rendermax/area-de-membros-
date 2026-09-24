@@ -86,7 +86,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
               <h2 className="mb-4 text-xl font-bold">Módulos da versão completa</h2>
               <ul className="space-y-3">{lockedModules.map((module) => <li key={module.id} className="rounded-xl border border-borda bg-superficie p-4">
                 <span className="font-semibold">{module.title}</span>
-                <span className="ml-3 text-sm text-texto-suave">{module.items.length} {module.items.length === 1 ? 'conteúdo' : 'conteúdos'} bloqueados</span>
+                <span className="ml-3 text-sm text-texto-suave">{module.items.length} {module.items.length === 1 ? 'conteúdo bloqueado' : 'conteúdos bloqueados'}</span>
               </li>)}</ul>
             </section>}
             <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={productHref} />
