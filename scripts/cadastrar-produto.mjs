@@ -40,17 +40,22 @@ function printPlan(plano) {
   console.log(`  Arquivos: ${plano.arquivos.length}; total: ${plano.arquivos.reduce((sum, file) => sum + file.size, 0)} B`)
 }
 
+async function listarPasta(folder, options) {
+  try { return await readdir(folder, options) }
+  catch (cause) { throw new Error(`Não foi possível listar a pasta ${folder}.`, { cause }) }
+}
+
 export async function main(args = process.argv.slice(2)) {
   const opts = options(args)
   const config = await env()
   let folders = [opts.folder]
   if (opts.todos) {
-    const entries = await readdir(opts.folder, { withFileTypes: true })
+    const entries = await listarPasta(opts.folder, { withFileTypes: true })
     folders = []
     for (const entry of entries) {
       if (!entry.isDirectory()) { console.log(`Ignorada: ${entry.name}`); continue }
       const folder = join(opts.folder, entry.name)
-      const contents = await readdir(folder)
+      const contents = await listarPasta(folder)
       if (contents.includes('produto.txt')) folders.push(folder)
       else console.log(`Ignorada: ${entry.name} (sem produto.txt)`)
     }

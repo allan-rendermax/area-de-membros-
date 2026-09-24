@@ -75,6 +75,21 @@ describe('plano do produto', () => {
     expect(plano.modulos[0].itens[0].title).toBe('A#B%')
   })
 
+  it('normaliza delimitadores após o ponto em pasta de módulo e extensão', () => {
+    const plano = montarPlano({ ficha, arquivos: [arquivo('entregaveis/01 Bonus.v2#final%/Guia.pd#f%')] })
+    expect(plano.arquivos[0].storagePath).toBe('kit-de-inspecao/entregaveis/01 Bonus.v2-final-/Guia.pd-f-')
+    expect(plano.arquivos[0].downloadName).toBe('Guia.pd#f%')
+    expect(plano.modulos[0].title).toBe('Bonus.v2#final%')
+    expect(plano.modulos[0].itens[0].title).toBe('Guia')
+  })
+
+  it('rejeita colisão no caminho final normalizado após o ponto', () => {
+    expect(() => montarPlano({ ficha, arquivos: [
+      arquivo('entregaveis/01 Bonus.v2#final/Guia.pdf'),
+      arquivo('entregaveis/01 Bonus.v2-final/Guia.pdf'),
+    ] })).toThrow(/storage|destino|colis/i)
+  })
+
   it('rejeita colisão de storage criada pela normalização de #', () => {
     expect(() => montarPlano({ ficha, arquivos: [arquivo('entregaveis/A#B.pdf'), arquivo('entregaveis/A-B.pdf')] })).toThrow(/storage|destino|colis/i)
   })

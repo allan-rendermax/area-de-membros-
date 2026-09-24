@@ -45,10 +45,15 @@ export async function lerPastaProduto(directory, { defaultStoreSlug } = {}) {
   try { root = await lstat(folder) } catch { throw new Error(`Pasta do produto não encontrada: ${folder}.`) }
   if (root.isSymbolicLink() || !root.isDirectory()) throw new Error(`Pasta do produto inválida ou link simbólico: ${folder}.`)
   await regularFile(join(folder, 'produto.txt'), 'produto.txt')
-  const ficha = lerFicha(await readFile(join(folder, 'produto.txt'), 'utf8'), { defaultStoreSlug })
+  let fichaTexto
+  try { fichaTexto = await readFile(join(folder, 'produto.txt'), 'utf8') }
+  catch (cause) { throw new Error(`Não foi possível ler produto.txt na pasta ${folder}.`, { cause }) }
+  const ficha = lerFicha(fichaTexto, { defaultStoreSlug })
   const files = []
   let linksTexto = ''
-  const entries = await readdir(folder, { withFileTypes: true })
+  let entries
+  try { entries = await readdir(folder, { withFileTypes: true }) }
+  catch (cause) { throw new Error(`Não foi possível listar a pasta do produto ${folder}.`, { cause }) }
   for (const entry of entries) {
     const name = entry.name
     const path = join(folder, name)

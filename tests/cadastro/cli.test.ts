@@ -51,4 +51,15 @@ describe('CLI de cadastro', () => {
     expect(run(folder, '--inexistente').status).not.toBe(0)
     expect(run(join(dir, 'ausente'), '--simular').status).not.toBe(0)
   })
+  it('explica em português falhas nativas ao listar a pasta --todos', async () => {
+    const dir = await root()
+    const file = join(dir, 'arquivo.txt')
+    await writeFile(file, 'não é uma pasta')
+    for (const path of [join(dir, 'ausente'), file]) {
+      const result = run(path, '--todos', '--simular')
+      expect(result.status).not.toBe(0)
+      expect(result.stderr).toMatch(/não foi possível.*listar.*pasta/i)
+      expect(result.stderr).not.toMatch(/ENOENT|ENOTDIR|scandir|no such file|not a directory/i)
+    }
+  })
 })

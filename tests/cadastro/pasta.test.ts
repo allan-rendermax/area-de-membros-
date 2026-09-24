@@ -1,8 +1,13 @@
-import { afterEach, describe, expect, it } from 'vitest'
-import { mkdtemp, mkdir, writeFile, symlink, rm } from 'node:fs/promises'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { mkdtemp, mkdir, writeFile, symlink, rm, readdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { lerPastaProduto } from '../../scripts/lib/cadastro-pasta.mjs'
+
+vi.mock('node:fs/promises', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>()
+  return { ...actual, readdir: vi.fn(actual.readdir) }
+})
 
 const temporarios: string[] = []
 async function pasta() {
@@ -30,6 +35,16 @@ describe('leitura local da pasta', () => {
     const directory = await mkdtemp(join(tmpdir(), 'cadastro-pasta-'))
     temporarios.push(directory)
     await expect(lerPastaProduto(directory)).rejects.toThrow(/produto\.txt/i)
+  })
+
+  it('explica em português falha nativa ao listar a raiz e preserva a causa', async () => {
+    const directory = await pasta()
+    const nativeError = new Error('EACCES: permission denied')
+    vi.mocked(readdir).mockRejectedValueOnce(nativeError)
+    await expect(lerPastaProduto(directory, { defaultStoreSlug: 'arquitetura' })).rejects.toMatchObject({
+      message: expect.stringMatching(/não foi possível.*listar.*pasta/i),
+      cause: nativeError,
+    })
   })
 
   it('rejeita symlink dentro de entregáveis', async () => {

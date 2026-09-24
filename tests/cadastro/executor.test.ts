@@ -86,6 +86,24 @@ describe('executor do cadastro', () => {
     expect(new URL(publicUrl).hash).toBe('')
     expect(new URL(publicUrl).pathname).toMatch(/\/A-B\.pdf$/)
   })
+  it('preserva caminho completo no URL público do SDK para módulo pontuado', async () => {
+    const requested: string[] = []
+    const fetchStub: typeof fetch = async input => {
+      requested.push(input instanceof Request ? input.url : String(input))
+      return new Response(JSON.stringify({ Key: 'arquivos/kit/entregaveis/01 Bonus.v2-final-/Guia.pd-f-' }), { status: 200, headers: { 'content-type': 'application/json' } })
+    }
+    const db = createClient('https://supabase.example', 'public-test-key', { global: { fetch: fetchStub }, auth: { persistSession: false } })
+    const ficha = lerFicha('nome: Kit\nid: TEST\ntag: front\nloja: loja')
+    const file = montarPlano({ ficha, arquivos: [{ relativePath: 'entregaveis/01 Bonus.v2#final%/Guia.pd#f%', absolutePath: 'C:/example/Guia.pd#f%', size: 1 }] }).arquivos[0]
+    const uploaded = await db.storage.from('arquivos').upload(file.storagePath, Buffer.from('x'), { upsert: true, contentType: file.contentType })
+    expect(uploaded.error).toBeNull()
+    expect(requested).toHaveLength(1)
+    expect(new URL(requested[0]).hash).toBe('')
+    expect(new URL(requested[0]).pathname).toContain('/01%20Bonus.v2-final-/Guia.pd-f-')
+    const publicUrl = db.storage.from('arquivos').getPublicUrl(file.storagePath).data.publicUrl
+    expect(new URL(publicUrl).hash).toBe('')
+    expect(new URL(publicUrl).pathname).toContain('/01%20Bonus.v2-final-/Guia.pd-f-')
+  })
   it('reexecuta sem duplicar e atualiza publicação, ordem e URL enquanto preserva extras', async () => {
     const db = new FakeDb()
     const p = await plan()

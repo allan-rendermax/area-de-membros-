@@ -94,9 +94,9 @@ function assignOrders(entries) {
 function storageComponent(name) {
   const ext = extname(name).toLowerCase()
   const stem = name.slice(0, name.length - ext.length)
-  const normalized = stem.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\\/:*?"<>|#%\x00-\x1f]/g, '-').trim()
+  const normalized = (stem + ext).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[\\/:*?"<>|#%\x00-\x1f]/g, '-').trim()
   if (!normalized || normalized === '.' || normalized === '..') throw new Error(`Nome de arquivo inválido: ${name}.`)
-  return normalized + ext
+  return normalized
 }
 
 function downloadName(title, extension) {
