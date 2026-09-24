@@ -16,7 +16,7 @@ A versão validada foi incorporada por fast-forward à `main` local, na pasta or
 
 - Suíte integrada: **675 testes em 87 arquivos aprovados**.
 - TypeScript e build de produção aprovados.
-- ESLint: zero erros; permanece o aviso anterior de variável não utilizada em `scripts/trocar-admin-e-aluno.mjs`.
+- ESLint no worktree: zero erros e o aviso anterior de variável não utilizada em `scripts/trocar-admin-e-aluno.mjs`. Na pasta original também terminou com zero erros; apresentou 189 avisos ao incluir os scripts locais não versionados da skill Impeccable em `.agents/`. Esses scripts de terceiros foram preservados.
 - Simulações de cadastro legado e com Básico/Completo aprovadas, sem rede ou gravação remota.
 - O teste SQL verifica a reaplicação da migration de categoria; outra regressão verifica que todas as versões de migrations são únicas.
 - Testes novos cobrem conclusão/desmarcação negadas para Básico em extra e filtragem de progresso histórico no componente enviado ao navegador.
