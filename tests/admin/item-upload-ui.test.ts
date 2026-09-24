@@ -9,11 +9,12 @@ Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
 const actions = vi.hoisted(() => ({ prepararUploadArquivo: vi.fn(), salvarItem: vi.fn(), salvarModulo: vi.fn(), excluirItem: vi.fn(), excluirModulo: vi.fn(), moverItem: vi.fn(), moverModulo: vi.fn() }))
 const upload = vi.hoisted(() => vi.fn())
+const bucketFrom = vi.hoisted(() => vi.fn(() => ({ uploadToSignedUrl: upload })))
 vi.mock('@/app/admin/(painel)/produtos/actions', () => actions)
-vi.mock('@supabase/supabase-js', () => ({ createClient: () => ({ storage: { from: () => ({ uploadToSignedUrl: upload }) } }) }))
+vi.mock('@supabase/supabase-js', () => ({ createClient: () => ({ storage: { from: bucketFrom } }) }))
 
 const moduleFixture: ModuleWithItems = { id: 'module-1', productId: 'product-1', title: 'Módulo', sortOrder: 0, isPublished: true, items: [{ id: 'item-1', moduleId: 'module-1', title: 'Apostila', kind: 'arquivo', url: 'https://old.example/file.pdf', coverUrl: null, sortOrder: 0, isPublished: true }] }
-const ticket = { path: 'folder/file.pdf', token: 'signed-token', publicUrl: 'https://public.example/file.pdf', supabaseUrl: 'https://storage.example', publishableKey: 'publishable-key' }
+const ticket = { path: 'folder/file.pdf', token: 'signed-token', bucket: 'arquivos-restritos', publicUrl: 'https://storage.example/storage/v1/object/authenticated/arquivos-restritos/folder/file.pdf', supabaseUrl: 'https://storage.example', publishableKey: 'publishable-key' }
 let container: HTMLDivElement
 let root: Root
 
@@ -48,12 +49,13 @@ describe('ContentEditor item upload', () => {
     expect(container.textContent).toContain('mesmo módulo')
   })
 
-  it('uploads a selected file and leaves its public URL editable', async () => {
+  it('uploads a selected file to its ticket bucket and leaves its reference URL editable', async () => {
     const form = itemForm()
     const input = fileInput(form)
     expect(input.name).toBe('')
     expect(form.querySelector<HTMLButtonElement>('button[type="button"]')?.textContent).toContain('Enviar arquivo')
     await choose(form, new File(['PDF'], 'apostila.pdf', { type: 'application/pdf' }))
+    expect(bucketFrom).toHaveBeenCalledWith('arquivos-restritos')
     const url = form.querySelector<HTMLInputElement>('input[name="url"]')!
     expect(url.value).toBe(ticket.publicUrl)
     await act(async () => {

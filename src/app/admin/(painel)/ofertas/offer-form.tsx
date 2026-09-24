@@ -17,13 +17,20 @@ export function OfferForm({ offer, products, initialCode, storeId }: { offer: Ad
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm font-medium text-texto-suave">Produtos liberados</legend>
         {products.map((p) => (
-          <label key={p.id} className={ui.checkbox}>
-            <input type="checkbox" name="product_ids" value={p.id} defaultChecked={offer?.productIds.includes(p.id)} />
-            {p.title}
-          </label>
+          <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-borda p-2">
+            <label className={ui.checkbox}>
+              <input type="checkbox" name="product_ids" value={p.id} defaultChecked={offer?.productIds.includes(p.id)} />
+              {p.title}
+            </label>
+            <select name={`grant_level_${p.id}`} aria-label={`Nível liberado para ${p.title}`} defaultValue={offer?.productLevels?.[p.id] ?? 'complete'} className={ui.input}>
+              <option value="basic">Básico</option>
+              <option value="complete">Completo</option>
+            </select>
+          </div>
         ))}
         {products.length === 0 && <p className="text-sm text-texto-suave">Cadastre produtos nesta loja primeiro.</p>}
       </fieldset>
+      <p className="text-sm text-texto-suave">Alterar o nível de uma oferta também muda o acesso de quem já comprou essa oferta.</p>
       <button type="submit" className={`${ui.button} self-start`}>Salvar</button>
     </form>
   )

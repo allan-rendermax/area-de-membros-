@@ -36,7 +36,7 @@ describe('parseProductForm', () => {
       ),
     ).toEqual({
       id: null, storeId: 's1', slug: 'atlas-visual', title: 'Atlas Visual', track: 'Patologias', description: 'texto',
-      coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', role: 'front', isFeatured: true, sortOrder: 3, isPublished: true,
+      coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', upgradeCheckoutUrl: null, role: 'front', isFeatured: true, sortOrder: 3, isPublished: true,
     })
     expect(parseProductForm(fd({ title: 'Atlas Visual' }), 's1').track).toBe('')
     expect(parseProductForm(fd({ title: 'Atlas Visual', track: '   ' }), 's1').track).toBe('')
@@ -53,17 +53,26 @@ describe('parseProductForm', () => {
     expect(() => parseProductForm(fd({ title: 'Extra', role: 'fake' }), 's1')).toThrow('Papel')
     expect(() => parseProductForm(fd({ title: 'Extra', role: 'upsell' }), 's1')).toThrow('checkout')
   })
+
+  it('aceita checkout de upgrade HTTP(S) e recusa URL inválida', () => {
+    expect(parseProductForm(fd({ title: 'Atlas', upgrade_checkout_url: 'https://payt.com/upgrade' }), 's1').upgradeCheckoutUrl).toBe('https://payt.com/upgrade')
+    expect(() => parseProductForm(fd({ title: 'Atlas', upgrade_checkout_url: 'javascript:bad' }), 's1')).toThrow('Link inválido')
+  })
 })
 
 describe('parseModuleForm', () => {
   it('lê o módulo', () => {
     expect(parseModuleForm(fd({ title: 'Módulo 1', product_id: UUID, is_published: 'on' }))).toEqual({
-      id: null, productId: UUID, title: 'Módulo 1', isPublished: true,
+      id: null, productId: UUID, title: 'Módulo 1', isPublished: true, requiredLevel: 'basic',
     })
   })
 
   it('recusa nome vazio', () => {
     expect(() => parseModuleForm(fd({ title: ' ', product_id: UUID }))).toThrow('Informe o nome do módulo')
+  })
+  it('aceita complete e recusa nível inválido', () => {
+    expect(parseModuleForm(fd({ title: 'Extras', product_id: UUID, required_level: 'complete' })).requiredLevel).toBe('complete')
+    expect(() => parseModuleForm(fd({ title: 'Extras', product_id: UUID, required_level: 'vip' }))).toThrow('Nível')
   })
 })
 
@@ -85,7 +94,7 @@ describe('parseItemForm', () => {
 describe('parseOfferForm', () => {
   it('lê código e produtos', () => {
     expect(parseOfferForm(fd({ name: 'Plano Completo', payt_product_code: 'ATLAS-COMPLETO', product_ids: [UUID] }), 's1')).toEqual({
-      id: null, storeId: 's1', name: 'Plano Completo', paytProductCode: 'ATLAS-COMPLETO', productIds: [UUID],
+      id: null, storeId: 's1', name: 'Plano Completo', paytProductCode: 'ATLAS-COMPLETO', productIds: [UUID], productLevels: { [UUID]: 'complete' },
     })
   })
 
@@ -96,5 +105,9 @@ describe('parseOfferForm', () => {
 
   it('recusa oferta sem produto', () => {
     expect(() => parseOfferForm(fd({ name: 'X', payt_product_code: 'OK' }), 's1')).toThrow('produto')
+  })
+  it('lê nível por produto e recusa valor inválido', () => {
+    expect(parseOfferForm(fd({ name: 'Básico', payt_product_code: 'BASIC', product_ids: [UUID], [`grant_level_${UUID}`]: 'basic' }), 's1').productLevels).toEqual({ [UUID]: 'basic' })
+    expect(() => parseOfferForm(fd({ name: 'X', payt_product_code: 'OK', product_ids: [UUID], [`grant_level_${UUID}`]: 'vip' }), 's1')).toThrow('Nível')
   })
 })

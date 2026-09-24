@@ -2,6 +2,8 @@ import type { ItemInput, ModuleInput, OfferInput, ProductInput } from '@/lib/adm
 import { itemUploadFilename, validateItemUpload, type ItemUploadTicket } from '@/lib/admin/item-upload'
 import { moveInList } from '@/lib/admin/order'
 import { env } from '@/lib/env'
+import { isLegacyPublicFileUrl, privateFileUrl, PRIVATE_FILES_BUCKET } from '@/lib/content/private-files'
+import type { AccessLevel } from '@/lib/domain/types'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024
@@ -34,6 +36,7 @@ export async function saveProduct(input: ProductInput): Promise<string> {
     cover_url: input.coverUrl,
     banner_url: input.bannerUrl,
     checkout_url: input.checkoutUrl,
+    upgrade_checkout_url: input.upgradeCheckoutUrl ?? null,
     role: input.role,
     is_featured: input.isFeatured,
     sort_order: input.sortOrder,
@@ -68,11 +71,20 @@ async function renumber(table: 'modules' | 'items', ids: string[]): Promise<void
 
 export async function saveModule(input: ModuleInput): Promise<void> {
   const db = createAdminClient()
+  const requiredLevel = input.requiredLevel ?? 'basic'
+  if (requiredLevel === 'complete' && input.id) {
+    const { data: items, error: itemsError } = await db.from('items').select('url').eq('module_id', input.id)
+    if (itemsError) throw itemsError
+    if (items.some((item) => isLegacyPublicFileUrl(item.url as string, env.supabaseUrl))) {
+      throw new Error('Reenvie os arquivos públicos deste módulo para o armazenamento privado antes de marcar como Completo.')
+    }
+  }
   const { error } = input.id
-    ? await db.from('modules').update({ title: input.title, is_published: input.isPublished, updated_at: now() }).eq('id', input.id).eq('product_id', input.productId)
+    ? await db.from('modules').update({ title: input.title, required_level: requiredLevel, is_published: input.isPublished, updated_at: now() }).eq('id', input.id).eq('product_id', input.productId)
     : await db.from('modules').insert({
         product_id: input.productId,
         title: input.title,
+        required_level: requiredLevel,
         is_published: input.isPublished,
         sort_order: await nextSortOrder('modules', 'product_id', input.productId),
       })
@@ -90,8 +102,14 @@ export async function moveModule(id: string, productId: string, direction: 'up' 
   await renumber('modules', moveInList(data.map((r) => r.id as string), id, direction))
 }
 
-export async function saveItem(input: ItemInput): Promise<void> {
+export async function saveItem(input: ItemInput, productId?: string): Promise<void> {
   const db = createAdminClient()
+  const { data: module, error: moduleError } = await db.from('modules').select('product_id, required_level').eq('id', input.moduleId).maybeSingle()
+  if (moduleError) throw moduleError
+  if (!module || (productId && module.product_id !== productId)) throw new Error('Módulo inválido para este produto.')
+  if (module.required_level === 'complete' && isLegacyPublicFileUrl(input.url, env.supabaseUrl)) {
+    throw new Error('Reenvie este arquivo para o armazenamento privado antes de salvar em um módulo Completo.')
+  }
   const row = { title: input.title, kind: input.kind, url: input.url, cover_url: input.coverUrl, is_published: input.isPublished, updated_at: now() }
   const { error } = input.id
     ? await db.from('items').update(row).eq('id', input.id).eq('module_id', input.moduleId)
@@ -124,26 +142,27 @@ export async function createItemUpload(name: string, size: number): Promise<Item
   const validationError = validateItemUpload(name, size)
   if (validationError) throw new Error(validationError)
   const path = `${crypto.randomUUID()}/${itemUploadFilename(name)}`
-  const bucket = createAdminClient().storage.from('arquivos')
+  const bucket = createAdminClient().storage.from(PRIVATE_FILES_BUCKET)
   const { data, error } = await bucket.createSignedUploadUrl(path, { upsert: false })
   if (error || !data?.token) throw new Error('Não foi possível preparar o envio do arquivo. Tente novamente.')
   return {
     path,
     token: data.token,
-    publicUrl: bucket.getPublicUrl(path).data.publicUrl,
+    bucket: PRIVATE_FILES_BUCKET,
+    publicUrl: privateFileUrl(env.supabaseUrl, path),
     supabaseUrl: env.supabaseUrl,
     publishableKey: env.supabasePublishableKey,
   }
 }
 
-export type AdminOffer = { id: string; name: string; paytProductCode: string; productIds: string[] }
+export type AdminOffer = { id: string; name: string; paytProductCode: string; productIds: string[]; productLevels?: Record<string, AccessLevel> }
 
-type DbOffer = { id: string; name: string; payt_product_code: string; offer_products: { product_id: string }[] }
+type DbOffer = { id: string; name: string; payt_product_code: string; offer_products: { product_id: string; grant_level?: AccessLevel }[] }
 
-const OFFER_COLUMNS = 'id, name, payt_product_code, offer_products(product_id)'
+const OFFER_COLUMNS = 'id, name, payt_product_code, offer_products(product_id, grant_level)'
 
 function toOffer(row: DbOffer): AdminOffer {
-  return { id: row.id, name: row.name, paytProductCode: row.payt_product_code, productIds: row.offer_products.map((p) => p.product_id) }
+  return { id: row.id, name: row.name, paytProductCode: row.payt_product_code, productIds: row.offer_products.map((p) => p.product_id), productLevels: Object.fromEntries(row.offer_products.map((p) => [p.product_id, p.grant_level ?? 'complete'])) }
 }
 
 export async function listOffers(storeId: string): Promise<AdminOffer[]> {
@@ -160,12 +179,17 @@ export async function getOffer(id: string, storeId: string): Promise<AdminOffer 
 
 export async function saveOffer(input: OfferInput): Promise<void> {
   if (input.productIds.length === 0) throw new Error('Selecione ao menos um produto para a oferta.')
-  const { error } = await createAdminClient().rpc('save_offer_atomic', {
+  const grants = input.productIds.map((productId) => {
+    const level = input.productLevels?.[productId] ?? 'complete'
+    if (level !== 'basic' && level !== 'complete') throw new Error('Nível de acesso inválido na oferta.')
+    return { product_id: productId, grant_level: level }
+  })
+  const { error } = await createAdminClient().rpc('save_offer_levels_atomic', {
     p_id: input.id,
     p_store_id: input.storeId,
     p_name: input.name,
     p_product_code: input.paytProductCode,
-    p_product_ids: input.productIds,
+    p_grants: grants,
   })
   if (error?.code === 'PGRST202' || error?.code === '42883') {
     throw new Error('A migração de persistência administrativa ainda não foi aplicada. A oferta não foi salva.')

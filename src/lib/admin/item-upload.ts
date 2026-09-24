@@ -1,4 +1,5 @@
 export type ItemUploadTicket = {
+  bucket?: string
   path: string
   token: string
   publicUrl: string

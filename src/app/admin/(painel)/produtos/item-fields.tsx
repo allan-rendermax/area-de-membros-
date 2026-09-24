@@ -38,11 +38,11 @@ export function ItemFields({ moduleId, productId, item }: { moduleId: string; pr
             return
           }
           setStage('sending')
-          const { path, token, publicUrl, supabaseUrl, publishableKey } = result.data
+          const { path, token, publicUrl, supabaseUrl, publishableKey, bucket } = result.data
           const supabase = createClient(supabaseUrl, publishableKey, {
             auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
           })
-          const { error: storageError } = await supabase.storage.from('arquivos').uploadToSignedUrl(path, token, file)
+          const { error: storageError } = await supabase.storage.from(bucket ?? 'arquivos').uploadToSignedUrl(path, token, file)
           if (storageError) {
             setError('Não foi possível enviar o arquivo. Tente novamente.')
             setStage('idle')
@@ -91,7 +91,7 @@ export function ItemFields({ moduleId, productId, item }: { moduleId: string; pr
             }} />
           <button type="button" className={`${ui.buttonGhost} shrink-0`} disabled={uploading} onClick={() => fileInput.current?.click()}>Enviar arquivo</button>
         </div>
-        <p className="mt-2 text-xs text-texto-suave">Use Link externo para Drive, sites e versões editáveis. Em Arquivo, o download direto funciona com arquivos enviados aqui; outros servidores podem abrir o arquivo no navegador.</p>
+        <p className="mt-2 text-xs text-texto-suave">Arquivos enviados aqui ficam privados. Use Link externo para Drive, sites e versões editáveis; esses provedores controlam sua própria proteção.</p>
         {retryFile && !uploading && error && <button type="button" className={`${ui.buttonGhost} mt-2`} onClick={() => upload(retryFile)}>Tentar novamente</button>}
         {uploading && <div role="status" aria-live="polite" className="mt-2 text-sm text-texto-suave">
           {stage === 'preparing' ? 'Preparando envio…' : 'Enviando arquivo…'}

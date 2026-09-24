@@ -64,6 +64,12 @@ export function ContentEditor({ productId, modules }: { productId: string; modul
             <form action={salvarModulo} className="flex flex-1 flex-wrap items-end gap-3">
               <Hidden values={{ id: m.id, product_id: productId }} />
               <label className={`${ui.label} min-w-48 flex-1`}>Módulo<input name="title" required defaultValue={m.title} className={ui.input} /></label>
+              <label className={ui.label}>Acesso
+                <select name="required_level" defaultValue={m.requiredLevel ?? 'basic'} className={ui.input}>
+                  <option value="basic">Incluído no Básico</option>
+                  <option value="complete">Exclusivo do Completo</option>
+                </select>
+              </label>
               <label className={ui.checkbox}><input name="is_published" type="checkbox" defaultChecked={m.isPublished} /> Publicado</label>
               <button type="submit" className={ui.buttonGhost}>Salvar</button>
             </form>
@@ -112,8 +118,15 @@ export function ContentEditor({ productId, modules }: { productId: string; modul
           Novo módulo
           <input name="title" required placeholder="Ex.: Módulo 1 — Fissuras" className={ui.input} />
         </label>
+        <label className={ui.label}>Acesso
+          <select name="required_level" defaultValue="basic" className={ui.input}>
+            <option value="basic">Incluído no Básico</option>
+            <option value="complete">Exclusivo do Completo</option>
+          </select>
+        </label>
         <button type="submit" className={ui.button}>Criar módulo</button>
       </form>
+      <p className="text-sm text-texto-suave">Ao mudar um módulo para Completo, reenvie antes os arquivos públicos antigos. A alteração afeta também compras existentes.</p>
     </div>
   )
 }

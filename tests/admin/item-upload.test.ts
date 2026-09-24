@@ -61,10 +61,11 @@ describe('assinatura de arquivo de item', () => {
     expect(result.data).toMatchObject({
       token: 'signed-token', supabaseUrl: 'https://project.supabase.co', publishableKey: 'publishable-test',
       path: expect.stringMatching(/^[0-9a-f-]{36}\/Material\.PDF$/),
-      publicUrl: expect.stringMatching(/^https:\/\/project\.supabase\.co\/storage\/v1\/object\/public\/arquivos\//),
+      bucket: 'arquivos-restritos',
+      publicUrl: expect.stringMatching(/^https:\/\/project\.supabase\.co\/storage\/v1\/object\/authenticated\/arquivos-restritos\//),
     })
     expect(JSON.stringify(result)).not.toContain('secret-test')
-    expect(io.from).toHaveBeenCalledWith('arquivos')
+    expect(io.from).toHaveBeenCalledWith('arquivos-restritos')
     expect(io.createSignedUploadUrl).toHaveBeenCalledWith(result.data?.path, { upsert: false })
   })
 

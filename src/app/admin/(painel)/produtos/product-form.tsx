@@ -51,6 +51,10 @@ export function ProductForm({ product, tracks, storeId }: { product: Product | n
           Link do checkout (botão &quot;Quero acessar&quot;)
           <input name="checkout_url" type="url" defaultValue={product?.checkoutUrl ?? ''} className={ui.input} />
         </label>
+        <label className={ui.label}>
+          Link do checkout para upgrade ao Completo
+          <input name="upgrade_checkout_url" type="url" defaultValue={product?.upgradeCheckoutUrl ?? ''} className={ui.input} />
+        </label>
         <label className={ui.label}>Ordem<input name="sort_order" type="number" defaultValue={product?.sortOrder ?? 0} className={ui.input} /></label>
         <label className={ui.checkbox}>
           <input name="is_featured" type="checkbox" defaultChecked={product?.isFeatured ?? false} /> Destaque no topo da vitrine

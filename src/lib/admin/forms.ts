@@ -1,7 +1,7 @@
 import { isValidSlug, isValidStoreSlug, slugify } from '@/lib/content/slug'
 import { isHttpUrl, isUuid } from '@/lib/content/url'
 import { toVideoEmbed } from '@/lib/content/video'
-import type { ItemKind, ProductRole } from '@/lib/domain/types'
+import type { AccessLevel, ItemKind, ProductRole } from '@/lib/domain/types'
 import { normalizeWhatsapp } from '@/lib/support/whatsapp'
 
 export class FormError extends Error {}
@@ -75,6 +75,7 @@ export type ProductInput = {
   coverUrl: string | null
   bannerUrl: string | null
   checkoutUrl: string | null
+  upgradeCheckoutUrl?: string | null
   role: ProductRole
   isFeatured: boolean
   sortOrder: number
@@ -101,6 +102,7 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
     coverUrl: optionalUrl(form, 'cover_url', 'Capa'),
     bannerUrl: optionalUrl(form, 'banner_url', 'Banner'),
     checkoutUrl,
+    upgradeCheckoutUrl: optionalUrl(form, 'upgrade_checkout_url', 'Checkout de upgrade'),
     role,
     isFeatured: checked(form, 'is_featured'),
     sortOrder: Number.isFinite(sortOrder) ? Math.trunc(sortOrder) : 0,
@@ -108,12 +110,14 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
   }
 }
 
-export type ModuleInput = { id: string | null; productId: string; title: string; isPublished: boolean }
+export type ModuleInput = { id: string | null; productId: string; title: string; isPublished: boolean; requiredLevel?: AccessLevel }
 
 export function parseModuleForm(form: FormData): ModuleInput {
   const title = text(form, 'title')
   if (!title) throw new FormError('Informe o nome do módulo.')
-  return { id: optionalId(form, 'id'), productId: requiredId(form, 'product_id'), title, isPublished: checked(form, 'is_published') }
+  const requiredLevel = text(form, 'required_level') || 'basic'
+  if (requiredLevel !== 'basic' && requiredLevel !== 'complete') throw new FormError('Nível de acesso inválido.')
+  return { id: optionalId(form, 'id'), productId: requiredId(form, 'product_id'), title, isPublished: checked(form, 'is_published'), requiredLevel }
 }
 
 const KINDS: readonly ItemKind[] = ['arquivo', 'video', 'link']
@@ -147,7 +151,7 @@ export function parseItemForm(form: FormData): ItemInput {
   }
 }
 
-export type OfferInput = { id: string | null; storeId: string; name: string; paytProductCode: string; productIds: string[] }
+export type OfferInput = { id: string | null; storeId: string; name: string; paytProductCode: string; productIds: string[]; productLevels?: Record<string, AccessLevel> }
 
 export function parseOfferForm(form: FormData, storeId: string): OfferInput {
   const name = text(form, 'name')
@@ -157,5 +161,11 @@ export function parseOfferForm(form: FormData, storeId: string): OfferInput {
   const productIds = form.getAll('product_ids').map(String)
   if (!productIds.every(isUuid)) throw new FormError('Produto inválido.')
   if (productIds.length === 0) throw new FormError('Selecione ao menos um produto para a oferta.')
-  return { id: optionalId(form, 'id'), storeId, name, paytProductCode, productIds }
+  const productLevels: Record<string, AccessLevel> = {}
+  for (const id of productIds) {
+    const level = text(form, `grant_level_${id}`) || 'complete'
+    if (level !== 'basic' && level !== 'complete') throw new FormError('Nível de acesso inválido na oferta.')
+    productLevels[id] = level
+  }
+  return { id: optionalId(form, 'id'), storeId, name, paytProductCode, productIds, productLevels }
 }

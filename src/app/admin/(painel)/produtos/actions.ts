@@ -101,7 +101,7 @@ export async function moverModulo(formData: FormData) {
 
 export async function salvarItem(formData: FormData) {
   const { store, product } = await requireOwnProduct(field(formData, 'product_id'))
-  const message = await attempt(() => saveItem(parseItemForm(formData)), 'Item salvo.')
+  const message = await attempt(() => saveItem(parseItemForm(formData), product.id), 'Item salvo.')
   done(store.slug, product.id, 'conteudo', message)
 }
 
