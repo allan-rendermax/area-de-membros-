@@ -22,7 +22,7 @@ export type LoginDeps = {
   now(): number
   countAttemptsByIp(ip: string, sinceIso: string): Promise<number>
   countAttemptsByEmailHash(hash: string, sinceIso: string): Promise<number>
-  recordAttempt(entry: { ip: string; emailHash: string | null; storeId: string }): Promise<void>
+  recordAttempt(entry: { ip: string; emailHash: string | null; storeId: string; email?: string }): Promise<void>
   sleep(ms: number): Promise<void>
   verifyTurnstile: ((token: string, ip: string) => Promise<boolean>) | null
   findCustomerByEmail(email: string): Promise<CustomerRow | null>
@@ -50,7 +50,7 @@ export async function decideCustomerLogin(input: LoginInput, deps: LoginDeps): P
   const emailHash = hashEmail(email, deps.guardSecret)
   const previous = await deps.countAttemptsByEmailHash(emailHash, since)
   if (previous >= GUARD.emailLimit) return { ok: false, reason: 'rate_limited' }
-  await deps.recordAttempt({ ip: input.ip, emailHash, storeId: input.storeId })
+  await deps.recordAttempt({ ip: input.ip, emailHash, storeId: input.storeId, email })
 
   const delay = progressiveDelayMs(previous)
   if (delay > 0) await deps.sleep(delay)

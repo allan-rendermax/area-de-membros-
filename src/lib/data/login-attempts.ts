@@ -20,9 +20,12 @@ export async function countLoginAttemptsByEmailHash(hash: string, sinceIso: stri
   return count ?? 0
 }
 
-export async function recordLoginAttempt(entry: { ip: string; emailHash: string | null; storeId: string }): Promise<void> {
-  const { error } = await createAdminClient()
-    .from('login_attempts')
-    .insert({ ip: entry.ip, email_hash: entry.emailHash, store_id: entry.storeId })
+export async function recordLoginAttempt(entry: { ip: string; emailHash: string | null; storeId: string; email?: string }): Promise<void> {
+  const { error } = await createAdminClient().rpc('record_login_attempt_atomic', {
+    p_ip: entry.ip,
+    p_email_hash: entry.emailHash,
+    p_store_id: entry.storeId,
+    p_email: entry.email ?? null,
+  })
   if (error) throw error
 }

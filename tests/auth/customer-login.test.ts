@@ -46,7 +46,7 @@ describe('decideCustomerLogin', () => {
   it('entra com e-mail de cliente que comprou na loja, normalizando', async () => {
     const { deps, recorded } = setup()
     expect(await decideCustomerLogin(input({ email: ' JOAO@gmail.com ' }), deps)).toEqual({ ok: true, email: 'joao@gmail.com', customerId: 'c1' })
-    expect(recorded).toEqual([{ ip: '1.1.1.1', emailHash: hashEmail('joao@gmail.com', SECRET), storeId: 's1' }])
+    expect(recorded).toEqual([{ ip: '1.1.1.1', emailHash: hashEmail('joao@gmail.com', SECRET), storeId: 's1', email: 'joao@gmail.com' }])
   })
 
   it('campo-armadilha preenchido é robô e não registra tentativa', async () => {

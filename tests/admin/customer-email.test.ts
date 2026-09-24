@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { changeCustomerEmail } from '@/lib/data/customers'
+import { hashEmail } from '@/lib/auth/login-guard'
 
 const io = vi.hoisted(() => ({
   email: 'old@example.com',
@@ -17,6 +18,7 @@ vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({
 }) }))
 
 beforeEach(() => {
+  vi.stubEnv('LOGIN_GUARD_SECRET', 'test-secret')
   io.email = 'old@example.com'
   io.authUpdate.mockReset().mockResolvedValue({ error: null })
   io.rpc.mockReset().mockResolvedValue({ error: null })
@@ -27,8 +29,9 @@ beforeEach(() => {
 describe('correção de email', () => {
   it('envia email anterior como precondição da RPC', async () => {
     await changeCustomerEmail('customer', 'new@example.com')
-    expect(io.rpc).toHaveBeenCalledWith('change_customer_email_atomic', {
+    expect(io.rpc).toHaveBeenCalledWith('change_customer_email_tracked_atomic', {
       p_id: 'customer', p_expected_email: 'old@example.com', p_new_email: 'new@example.com',
+      p_previous_email_hash: hashEmail('old@example.com', 'test-secret'),
     })
     expect(io.authUpdate).toHaveBeenCalledWith('customer', { email: 'new@example.com', email_confirm: true })
   })

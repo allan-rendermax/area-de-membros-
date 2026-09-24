@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto'
+import { hashEmail } from '@/lib/auth/login-guard'
+import { env } from '@/lib/env'
 import type { CustomerRow } from '@/lib/domain/types'
 import { createAdminClient } from '@/lib/supabase/admin'
 
@@ -115,6 +117,7 @@ export async function changeCustomerEmail(id: string, newEmail: string): Promise
   if (!current) throw new Error('Cliente não encontrado')
   if (current.email === newEmail) return
   if (await findCustomerByEmail(newEmail)) throw new Error('Já existe um cliente com este email')
+  const previousEmailHash = hashEmail(current.email, env.loginGuardSecret)
 
   const { error: authError } = await db.auth.admin.updateUserById(id, { email: newEmail, email_confirm: true })
   if (authError) throw authError
@@ -122,10 +125,11 @@ export async function changeCustomerEmail(id: string, newEmail: string): Promise
   let rpcFailure: unknown
   let definitelyRejected = false
   try {
-    const { error } = await db.rpc('change_customer_email_atomic', {
+    const { error } = await db.rpc('change_customer_email_tracked_atomic', {
       p_id: id,
       p_expected_email: current.email,
       p_new_email: newEmail,
+      p_previous_email_hash: previousEmailHash,
     })
     if (error) {
       rpcFailure = error

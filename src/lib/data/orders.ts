@@ -1,8 +1,7 @@
 import type { OrderRef, OrderStatus } from '@/lib/domain/types'
-import { buildManualOrder, canRevoke } from '@/lib/admin/manual-access'
+import { canRevoke } from '@/lib/admin/manual-access'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getCustomer } from './customers'
-import { getOffer } from './products-admin'
 
 export async function listAllOrderRefsByEmail(email: string): Promise<OrderRef[]> {
   const { data, error } = await createAdminClient()
@@ -121,23 +120,18 @@ export async function createManualOrder(input: {
   adminEmail: string
   note: string
 }): Promise<void> {
-  const [offer, customer] = await Promise.all([
-    getOffer(input.offerId, input.storeId),
-    getCustomer(input.customerId),
-  ])
-  if (!offer) throw new Error('Oferta não encontrada na loja atual.')
-  if (!customer) throw new Error('Cliente não encontrado.')
-  const row = buildManualOrder({
-    storeId: input.storeId,
-    offer,
-    customer,
-    adminEmail: input.adminEmail,
-    note: input.note,
-    transactionId: 'MANUAL-' + crypto.randomUUID(),
-    now: new Date().toISOString(),
+  const { error } = await createAdminClient().rpc('create_manual_order_atomic', {
+    p_store_id: input.storeId,
+    p_offer_id: input.offerId,
+    p_customer_id: input.customerId,
+    p_admin_email: input.adminEmail,
+    p_note: input.note,
   })
-  const { error } = await createAdminClient().from('orders').insert(row)
-  if (error) throw error
+  if (error?.code === 'PGRST202' || error?.code === '42883') {
+    throw new Error('A liberação manual ainda não está disponível. A migração de integridade precisa ser aplicada.')
+  }
+  if (error?.code === 'P0001') throw new Error(error.message)
+  if (error) throw new Error('Não foi possível confirmar a liberação. Recarregue a ficha antes de tentar novamente.')
 }
 
 export async function revokeManualOrder(input: { orderId: string; storeId: string; customerId: string }): Promise<void> {
