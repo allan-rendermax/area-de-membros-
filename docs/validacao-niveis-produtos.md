@@ -12,6 +12,17 @@ Implementação local na branch `codex/niveis-produtos`, baseada em `codex/cadas
 - Revisões por tarefa concluídas e revisão final aprovada após correção específica: o importador verifica os itens que permanecerão em módulos Completo antes de qualquer upload ou escrita. Arquivos públicos próprios remanescentes e links públicos recebidos são recusados; substituir o mesmo item por um upload privado é permitido.
 - QA de interface usa Vercel `agent-browser@0.38.1`, build de produção local e um provedor sintético. Evidências em `docs/qa/niveis-produtos/`.
 
+## Fluxos integrados conferidos
+
+- Básico: badge correto, extras bloqueados, checkout de upgrade e bloqueio das rotas diretas. O HTML e a resposta RSC não continham o endereço nem o identificador do item extra.
+- Completo e upgrade pago: conteúdo Básico mais extras, sem botão de upgrade. Reembolso com Básico ainda pago retorna ao acesso Básico. Cliente bloqueado não entra no produto.
+- Desktop 1440px e celular 390px: sem overflow horizontal nos cenários verificados.
+- Admin: checkout de upgrade, nível do módulo e nível da oferta salvos e recuperados após recarregar. Upload privado salvo no item e recuperado após recarregar.
+- Download do item recém-enviado: rota real retornou 307 para URL assinada; destino sintético retornou 200 `application/pdf`; assinatura solicitada por 60 segundos e acesso registrado. Evidência: `docs/qa/niveis-produtos/download-evidence.json`.
+- Webhook real, com provedor e pedidos fictícios: `paid` retornou 200/`liberado`, página autenticada passou de Básico para Completo; `refunded` retornou 200/`atualizado`, página voltou ao Básico, sem recadastro do produto. Evidência: `docs/qa/niveis-produtos/webhook-evidence.json`.
+
+Os testes HTTP de webhook e download complementam a navegação com agent-browser. O Storage sintético devolve um PDF de teste, sem provar a expiração ou as políticas do Storage real. A navegação direta ao PDF encerrou o contexto CDP da ferramenta; status, destino e corpo foram verificados separadamente por HTTP. Nenhum email externo foi enviado.
+
 ## Ativação no ambiente real
 
 Nenhuma migration, alteração de catálogo real, publicação, push ou merge foi executada. Antes de publicar esta versão, aplicar as migrations pendentes na ordem do repositório, incluindo:
