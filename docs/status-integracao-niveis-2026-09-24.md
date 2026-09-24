@@ -2,6 +2,8 @@
 
 A implementação de uma capa por produto foi integrada às entregas recentes de login/item aprovados, progresso sincronizado, cupom para alunos, suporte e email de acesso. O trabalho anterior de níveis estava isolado em `87f9ac7`; a versão recente de `main` era `cb065f6`. O merge revisado está em `ba57a4c`, na branch `codex/integracao-niveis-produtos`.
 
+A versão validada foi incorporada por fast-forward à `main` local, na pasta original do projeto. Os dois documentos que já tinham alterações locais foram preservados e seus hashes SHA256 permaneceram iguais. Na pasta original, os 675 testes passaram novamente e o build concluiu com sucesso. Nenhum push foi realizado.
+
 ## Correções da revisão
 
 - A ação de concluir ou desfazer conclusão agora verifica o nível do módulo antes de qualquer escrita. Comprar o Básico não permite alterar progresso dos extras do Completo por chamada direta.
