@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getItemWithContext, listModulesWithItems, listPublishedItemsInModule } from '@/lib/data/products'
+import { getItemWithContext, getProductLinks, listModulesWithItems, listPublishedItemsInModule, toModule, toProduct } from '@/lib/data/products'
 
 const admin = vi.hoisted(() => ({ createAdminClient: vi.fn() }))
 
@@ -16,7 +16,7 @@ const productRow = {
   cover_url: null,
   banner_url: null,
   checkout_url: 'https://checkout.example.com',
-  role: 'upsell',
+  role: 'upsell' as const,
   is_featured: false,
   sort_order: 1,
   is_published: true,
@@ -66,6 +66,7 @@ const parent = {
   title: moduleRow.title,
   sortOrder: 1,
   isPublished: true,
+  requiredLevel: 'basic',
 }
 
 const product = {
@@ -82,6 +83,7 @@ const product = {
   isFeatured: false,
   sortOrder: 1,
   isPublished: true,
+  upgradeCheckoutUrl: null,
 }
 
 function json(body: unknown, status = 200) {
@@ -181,6 +183,25 @@ function useModulesTable() {
 describe('consultas de conteúdo', () => {
   beforeEach(() => {
     admin.createAdminClient.mockReset()
+  })
+
+  it('maps level and upgrade fields while defaulting legacy rows', () => {
+    expect(toProduct({ ...productRow, upgrade_checkout_url: 'https://pay.example/upgrade' }).upgradeCheckoutUrl).toBe('https://pay.example/upgrade')
+    expect(toProduct(productRow).upgradeCheckoutUrl).toBeNull()
+    expect(toModule({ ...moduleRow, required_level: 'complete' }).requiredLevel).toBe('complete')
+    expect(toModule(moduleRow).requiredLevel).toBe('basic')
+  })
+
+  it('reads grant levels from offer links and defaults legacy rows to complete', async () => {
+    const requests = useResponses(json([
+      { payt_product_code: 'B', offer_products: [{ product_id: 'P', grant_level: 'basic' }] },
+      { payt_product_code: 'OLD', offer_products: [{ product_id: 'L' }] },
+    ]))
+    await expect(getProductLinks('store-a')).resolves.toEqual([
+      { productCode: 'B', productId: 'P', grantLevel: 'basic' },
+      { productCode: 'OLD', productId: 'L', grantLevel: 'complete' },
+    ])
+    expect(new URL(requests[0].url).searchParams.get('select')).toContain('grant_level')
   })
 
   it('carrega módulos e itens publicados ordenados em uma consulta relacional', async () => {

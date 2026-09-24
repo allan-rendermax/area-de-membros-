@@ -31,6 +31,7 @@ export type OrderRef = { productCode: string; status: OrderStatus }
 
 export type ItemKind = 'arquivo' | 'video' | 'link'
 export type ProductRole = 'front' | 'orderbump' | 'upsell'
+export type AccessLevel = 'basic' | 'complete'
 
 export type Product = {
   id: string
@@ -42,6 +43,7 @@ export type Product = {
   coverUrl: string | null
   bannerUrl: string | null
   checkoutUrl: string | null
+  upgradeCheckoutUrl?: string | null
   role: ProductRole
   isFeatured: boolean
   sortOrder: number
@@ -54,6 +56,7 @@ export type Module = {
   title: string
   sortOrder: number
   isPublished: boolean
+  requiredLevel?: AccessLevel
 }
 
 export type Item = {
@@ -69,7 +72,7 @@ export type Item = {
 
 export type ModuleWithItems = Module & { items: Item[] }
 
-export type ProductLink = { productCode: string; productId: string }
+export type ProductLink = { productCode: string; productId: string; grantLevel?: AccessLevel }
 
 export type EmailKind = 'acesso_novo' | 'produto_novo' | 'reenvio'
 

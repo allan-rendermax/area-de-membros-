@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { loadGrantedProductIds, loadStoreAccess } from '@/lib/data/access'
+import { loadGrantedProductIds, loadGrantedProductLevels, loadStoreAccess } from '@/lib/data/access'
 import { findCustomerByEmail } from '@/lib/data/customers'
 import { listAllOrderRefsByEmail } from '@/lib/data/orders'
 import { getProductLinks, listProducts } from '@/lib/data/products'
@@ -96,6 +96,18 @@ describe('loadGrantedProductIds', () => {
     expect(getProductLinks).not.toHaveBeenCalled()
     expect(listAllOrderRefsByEmail).not.toHaveBeenCalled()
   })
+
+  it('loads the current level and falls back to basic after complete refund', async () => {
+    vi.mocked(getProductLinks).mockResolvedValue([
+      { productCode: 'B', productId: product.id, grantLevel: 'basic' },
+      { productCode: 'C', productId: product.id, grantLevel: 'complete' },
+    ])
+    vi.mocked(listAllOrderRefsByEmail).mockResolvedValue([
+      { productCode: 'B', status: 'pago' },
+      { productCode: 'C', status: 'reembolsado' },
+    ])
+    await expect(loadGrantedProductLevels('store-a', customer)).resolves.toEqual(new Map([[product.id, 'basic']]))
+  })
 })
 
 describe('loadStoreAccess', () => {
@@ -111,6 +123,7 @@ describe('loadStoreAccess', () => {
       customer,
       products: [product],
       granted: new Set(['product-a']),
+      levels: new Map([['product-a', 'complete']]),
     })
     expect(findCustomerByEmail).not.toHaveBeenCalled()
   })
@@ -122,6 +135,7 @@ describe('loadStoreAccess', () => {
       customer,
       products: [product],
       granted: new Set(['product-a']),
+      levels: new Map([['product-a', 'complete']]),
     })
     expect(findCustomerByEmail).toHaveBeenCalledWith(customer.email)
   })
@@ -133,6 +147,7 @@ describe('loadStoreAccess', () => {
       customer: null,
       products: [product],
       granted: new Set(),
+      levels: new Map(),
     })
   })
 })

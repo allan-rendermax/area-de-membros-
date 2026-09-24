@@ -1,18 +1,27 @@
-import type { OrderRef, Product, ProductLink, ProductRole } from '@/lib/domain/types'
+import type { AccessLevel, OrderRef, Product, ProductLink, ProductRole } from '@/lib/domain/types'
 
 function lockedPriority(role: ProductRole = 'front'): number {
   return role === 'front' ? 1 : 0
 }
 
 export function grantedProductIds(orders: OrderRef[], links: ProductLink[], blocked: boolean): Set<string> {
-  const granted = new Set<string>()
-  if (blocked) return granted
+  return new Set(grantedProductLevels(orders, links, blocked).keys())
+}
 
+export function grantedProductLevels(orders: OrderRef[], links: ProductLink[], blocked: boolean): Map<string, AccessLevel> {
+  const granted = new Map<string, AccessLevel>()
+  if (blocked) return granted
   const paidCodes = new Set(orders.filter((o) => o.status === 'pago').map((o) => o.productCode))
   for (const link of links) {
-    if (paidCodes.has(link.productCode)) granted.add(link.productId)
+    if (!paidCodes.has(link.productCode)) continue
+    const level = link.grantLevel ?? 'complete'
+    if (level === 'complete' || !granted.has(link.productId)) granted.set(link.productId, level)
   }
   return granted
+}
+
+export function canAccessLevel(granted: AccessLevel | undefined, required: AccessLevel = 'basic'): boolean {
+  return granted === 'complete' || (granted === 'basic' && required === 'basic')
 }
 
 export type ShelfProduct = {

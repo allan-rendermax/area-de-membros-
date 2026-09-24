@@ -1,9 +1,9 @@
-import type { Item, ItemKind, Module, ModuleWithItems, Product, ProductLink, ProductRole, StoreRef } from '@/lib/domain/types'
+import type { AccessLevel, Item, ItemKind, Module, ModuleWithItems, Product, ProductLink, ProductRole, StoreRef } from '@/lib/domain/types'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const PRODUCT_COLUMNS =
-  'id, store_id, slug, title, track, description, cover_url, banner_url, checkout_url, role, is_featured, sort_order, is_published'
-export const MODULE_COLUMNS = 'id, product_id, title, sort_order, is_published'
+  'id, store_id, slug, title, track, description, cover_url, banner_url, checkout_url, upgrade_checkout_url, role, is_featured, sort_order, is_published'
+export const MODULE_COLUMNS = 'id, product_id, title, required_level, sort_order, is_published'
 export const ITEM_COLUMNS = 'id, module_id, title, kind, url, cover_url, sort_order, is_published'
 
 export type DbProduct = {
@@ -16,13 +16,14 @@ export type DbProduct = {
   cover_url: string | null
   banner_url: string | null
   checkout_url: string | null
+  upgrade_checkout_url?: string | null
   role: ProductRole
   is_featured: boolean
   sort_order: number
   is_published: boolean
 }
 
-export type DbModule = { id: string; product_id: string; title: string; sort_order: number; is_published: boolean }
+export type DbModule = { id: string; product_id: string; title: string; required_level?: AccessLevel; sort_order: number; is_published: boolean }
 
 export type DbItem = {
   id: string
@@ -46,6 +47,7 @@ export function toProduct(row: DbProduct): Product {
     coverUrl: row.cover_url,
     bannerUrl: row.banner_url,
     checkoutUrl: row.checkout_url,
+    upgradeCheckoutUrl: row.upgrade_checkout_url ?? null,
     role: row.role,
     isFeatured: row.is_featured,
     sortOrder: row.sort_order,
@@ -54,7 +56,7 @@ export function toProduct(row: DbProduct): Product {
 }
 
 export function toModule(row: DbModule): Module {
-  return { id: row.id, productId: row.product_id, title: row.title, sortOrder: row.sort_order, isPublished: row.is_published }
+  return { id: row.id, productId: row.product_id, title: row.title, requiredLevel: row.required_level ?? 'basic', sortOrder: row.sort_order, isPublished: row.is_published }
 }
 
 export function toItem(row: DbItem): Item {
@@ -148,13 +150,14 @@ export async function listPublishedItemsInModule(moduleId: string): Promise<Item
 export async function getProductLinks(storeId: string): Promise<ProductLink[]> {
   const { data, error } = await createAdminClient()
     .from('offers')
-    .select('payt_product_code, offer_products(product_id)')
+    .select('payt_product_code, offer_products(product_id, grant_level)')
     .eq('store_id', storeId)
   if (error) throw error
   return data.flatMap((offer) =>
-    (offer.offer_products as { product_id: string }[]).map((link) => ({
+    (offer.offer_products as { product_id: string; grant_level?: AccessLevel }[]).map((link) => ({
       productCode: offer.payt_product_code as string,
       productId: link.product_id,
+      grantLevel: link.grant_level ?? 'complete',
     })),
   )
 }
