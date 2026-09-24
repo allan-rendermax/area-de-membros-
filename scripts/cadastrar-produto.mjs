@@ -32,7 +32,7 @@ async function env() {
 function printPlan(plano) {
   const { ficha } = plano
   console.log(`${ficha.nome} — ${ficha.loja}/${ficha.slug} (${ficha.tag})`)
-  console.log(`  Payt: ${ficha.id}; link: /${ficha.loja}/${ficha.slug}`)
+  console.log(`  Payt: ${ficha.id}; link: /${ficha.loja}/produto/${ficha.slug}`)
   for (const modulo of plano.modulos) {
     console.log(`  Módulo ${modulo.sortOrder}: ${modulo.title}`)
     for (const item of modulo.itens) console.log(`    ${item.sortOrder}. ${item.title} — ${item.arquivo ? `${item.arquivo.size} B` : item.url}`)
@@ -60,14 +60,15 @@ export async function main(args = process.argv.slice(2)) {
   for (const folder of folders) planos.push(await lerPastaProduto(folder, { defaultStoreSlug: config.DEFAULT_STORE_SLUG }))
   validarLote(planos)
   for (const plano of planos) printPlan(plano)
-  if (opts.simular) { console.log(`Simulação concluída: ${planos.length} produto(s).`); return }
+  const totals = `${planos.length} produto(s), ${planos.reduce((sum, plano) => sum + plano.modulos.length, 0)} módulo(s), ${planos.reduce((sum, plano) => sum + plano.modulos.reduce((count, item) => count + item.itens.length, 0), 0)} item(ns)`
+  if (opts.simular) { console.log(`Simulação concluída: ${totals}.`); return }
   const url = config.SUPABASE_URL || config.NEXT_PUBLIC_SUPABASE_URL
   const key = config.SUPABASE_SECRET_KEY
   if (!url || !key) throw new Error('Configure SUPABASE_URL (ou NEXT_PUBLIC_SUPABASE_URL) e SUPABASE_SECRET_KEY em .env.local.')
   const { createClient } = await import('@supabase/supabase-js')
   const db = createClient(url, key, { auth: { persistSession: false } })
-  const result = await executarPlanos(db, planos)
-  console.log(`Cadastro concluído: ${result.length} produto(s).`)
+  await executarPlanos(db, planos)
+  console.log(`Cadastro concluído: ${totals}.`)
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

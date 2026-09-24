@@ -15,9 +15,12 @@ class FakeDb {
     const filters: [string, unknown][] = []
     let operation: 'select' | 'insert' | 'update' = 'select'
     let values: Row = {}
+    let page: [number, number] = [0, 999]
     const query: any = {
       select() { return query },
       eq(field: string, value: unknown) { filters.push([field, value]); return query },
+      order() { return query },
+      range(start: number, end: number) { page = [start, end]; return query },
       insert(value: Row) { operation = 'insert'; values = value; return query },
       update(value: Row) { operation = 'update'; values = value; return query },
       single() { return run(true) },
@@ -27,7 +30,7 @@ class FakeDb {
     const run = (one: boolean) => {
       if (this.failTable === table && operation === 'select') return { data: null, error: { message: 'sensitive-secret' } }
       const matches = this.rows[table].filter(row => filters.every(([field, value]) => row[field] === value))
-      if (operation === 'select') return { data: one ? matches[0] ?? null : matches.map(row => ({ ...row })), error: null }
+      if (operation === 'select') return { data: one ? matches[0] ?? null : matches.slice(page[0], Math.min(page[1] + 1, page[0] + 500)).map(row => ({ ...row })), error: null }
       this.writes++
       if (operation === 'insert') {
         const row = { ...values, id: values.id ?? `${table}-${this.rows[table].length + 1}` }
@@ -70,6 +73,7 @@ describe('executor do cadastro', () => {
     await executarPlanos(db, [p], { log: value => logs.push(value) })
     db.rows.modules.push({ id: 'extra-module', product_id: 'products-1', title: 'Extra' })
     db.rows.items.push({ id: 'extra-item', module_id: 'modules-1', title: 'Antigo' })
+    db.rows.items.push({ id: 'extra-child', module_id: 'extra-module', title: 'Conteúdo oculto' })
     p.modulos[0].sortOrder = 8
     p.modulos[0].itens[0].sortOrder = 7
     await executarPlanos(db, [p], { log: value => logs.push(value) })
@@ -77,13 +81,15 @@ describe('executor do cadastro', () => {
     expect(db.rows.products[0]).toMatchObject({ role: 'front', is_published: true, sort_order: 2 })
     expect(db.rows.modules).toHaveLength(2)
     expect(db.rows.modules[0]).toMatchObject({ sort_order: 8, is_published: true })
-    expect(db.rows.items).toHaveLength(2)
+    expect(db.rows.items).toHaveLength(3)
     expect(db.rows.items[0]).toMatchObject({ sort_order: 7, is_published: true, url: 'https://files.example/kit/entregaveis/Guia.pdf?download=Guia.pdf' })
     expect(db.rows.offers).toHaveLength(1)
     expect(db.rows.offer_products).toHaveLength(1)
     expect(db.uploads).toHaveLength(2)
     expect(db.uploads[0]).toMatchObject({ path: 'kit/entregaveis/Guia.pdf', bytes: 3, options: { upsert: true, contentType: 'application/pdf' } })
     expect(logs.join(' ')).toMatch(/Extra|Antigo/)
+    expect(logs.join(' ')).toContain('Conteúdo oculto')
+    expect(logs.join(' ')).toContain('/loja/produto/kit')
   })
 
   it('rejeita conflito de código Payt com produto existente antes de qualquer escrita', async () => {
@@ -106,6 +112,15 @@ describe('executor do cadastro', () => {
     db.rows.products.push({ id: 'products-1', store_id: 'store-1', slug: 'kit', role: 'front' })
     db.rows.modules.push({ id: 'a', product_id: 'products-1', title: 'Material' }, { id: 'b', product_id: 'products-1', title: 'Material' })
     await expect(executarPlanos(db, [await plan()])).rejects.toThrow(/duplicad|módulo/i)
+    expect(db.writes).toBe(0)
+  })
+
+  it('detecta título duplicado além da primeira página da consulta', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'products-1', store_id: 'store-1', slug: 'kit', role: 'front' })
+    for (let index = 0; index < 1000; index++) db.rows.modules.push({ id: `module-${index}`, product_id: 'products-1', title: `Outro ${index}` })
+    db.rows.modules.push({ id: 'duplicate-a', product_id: 'products-1', title: 'Material' }, { id: 'duplicate-b', product_id: 'products-1', title: 'Material' })
+    await expect(executarPlanos(db, [await plan()], { log: () => {} })).rejects.toThrow(/duplicado/i)
     expect(db.writes).toBe(0)
   })
 

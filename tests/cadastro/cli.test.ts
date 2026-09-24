@@ -25,7 +25,9 @@ describe('CLI de cadastro', () => {
     const folder = await product(dir, 'kit')
     const result = run(folder, '--simular')
     expect(result.status).toBe(0)
-    expect(result.stdout).toMatch(/Kit|Material|Guia|3 B|P1|\/loja\/kit/)
+    expect(result.stdout).toContain('/loja/produto/kit')
+    expect(result.stdout).toMatch(/Kit[\s\S]*Material[\s\S]*Guia[\s\S]*3 B/)
+    expect(result.stdout).toMatch(/1 produto\(s\).*1 módulo\(s\).*1 item\(ns\)/)
   })
   it('lote com segunda pasta inválida falha sem pedir credenciais', async () => {
     const dir = await root()

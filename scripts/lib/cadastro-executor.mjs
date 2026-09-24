@@ -3,12 +3,19 @@ import { readFile } from 'node:fs/promises'
 const BUCKET = 'arquivos'
 
 async function rows(db, table, columns = '*', filters = {}) {
-  let query = db.from(table).select(columns)
-  for (const [field, value] of Object.entries(filters)) query = query.eq(field, value)
-  const { data, error } = await query
-  if (error) throw new Error(`Falha na consulta de ${table}. Confira o esquema, as permissões e a conexão.`)
-  if (!Array.isArray(data)) throw new Error(`Resposta inválida na consulta de ${table}.`)
-  return data
+  const all = []
+  const pageSize = 1000
+  for (let start = 0; ;) {
+    let query = db.from(table).select(columns)
+    for (const [field, value] of Object.entries(filters)) query = query.eq(field, value)
+    query = table === 'offer_products' ? query.order('offer_id').order('product_id') : query.order('id')
+    const { data, error } = await query.range(start, start + pageSize - 1)
+    if (error) throw new Error(`Falha na consulta de ${table}. Confira o esquema, as permissões e a conexão.`)
+    if (!Array.isArray(data)) throw new Error(`Resposta inválida na consulta de ${table}.`)
+    all.push(...data)
+    if (!data.length) return all
+    start += data.length
+  }
 }
 
 async function write(query, label, returning = false) {
@@ -119,7 +126,10 @@ async function content(db, productId, plano, urls, currentModules, currentItems,
     }
     for (const extra of currentItems.filter(row => row.module_id === moduleId && !modulo.itens.some(item => item.title === row.title))) log(`Item extra preservado: ${extra.title}`)
   }
-  for (const extra of currentModules.filter(row => row.product_id === productId && !plano.modulos.some(module => module.title === row.title))) log(`Módulo extra preservado: ${extra.title}`)
+  for (const extra of currentModules.filter(row => row.product_id === productId && !plano.modulos.some(module => module.title === row.title))) {
+    log(`Módulo extra preservado: ${extra.title}`)
+    for (const child of currentItems.filter(row => row.module_id === extra.id)) log(`Item extra preservado em ${extra.title}: ${child.title}`)
+  }
 }
 
 export async function executarPlanos(db, planos, { log = console.log } = {}) {
@@ -147,7 +157,7 @@ export async function executarPlanos(db, planos, { log = console.log } = {}) {
     if (!entry.links.some(row => row.offer_id === offerId && row.product_id === productId)) {
       await write(db.from('offer_products').insert({ offer_id: offerId, product_id: productId }), `vínculo da oferta ${ficha.id}`)
     }
-    log(`Oferta Payt ${ficha.id} vinculada; link: /${ficha.loja}/${ficha.slug}`)
+    log(`Oferta Payt ${ficha.id} vinculada; link: /${ficha.loja}/produto/${ficha.slug}`)
     results.push({ productId, offerId, status: product ? 'atualizado' : 'criado' })
   }
   return results
