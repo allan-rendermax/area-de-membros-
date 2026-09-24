@@ -30,6 +30,12 @@ Confira uma pasta antes de cadastrar:
 node scripts/cadastrar-produto.mjs "C:\caminho com espaços\meu-produto" --simular
 ```
 
+Depois de conferir a simulação e preparar o banco, cadastre essa pasta:
+
+```powershell
+node scripts/cadastrar-produto.mjs "C:\caminho com espaços\meu-produto"
+```
+
 Para várias pastas de produto sob uma pasta principal:
 
 ```powershell
@@ -39,7 +45,7 @@ node scripts/cadastrar-produto.mjs "C:\caminho com espaços\lote" --todos
 
 `--todos` considera somente subpastas imediatas com `produto.txt` e mostra quais entradas ignorou. Toda a lista é validada antes de qualquer gravação. A simulação mostra módulos, itens, tamanhos, código Payt e link, sem criar cliente Supabase ou fazer rede.
 
-Para o cadastro real, configure `SUPABASE_URL` ou `NEXT_PUBLIC_SUPABASE_URL`, mais `SUPABASE_SECRET_KEY`, em `.env.local` na raiz do projeto. Variáveis do processo prevalecem. Aplique antes a migration `supabase/migrations/20260924000001_product_role.sql` manualmente no SQL Editor do projeto correto. O script consulta a coluna `role` no preflight e interrompe se ela faltar. Não imprima nem compartilhe a chave secreta.
+Para o cadastro real, configure `SUPABASE_URL` ou `NEXT_PUBLIC_SUPABASE_URL`, mais `SUPABASE_SECRET_KEY`, em `.env.local` na raiz do projeto. Variáveis do processo prevalecem. Aplique antes a migration `supabase/migrations/20260924000001_product_role.sql` manualmente no SQL Editor do projeto correto. O script consulta a coluna `role` no preflight e interrompe se ela faltar. No painel Supabase Storage do mesmo projeto, confira que o bucket `arquivos` existe e é público; o aplicativo já depende dele. Não imprima nem compartilhe a chave secreta.
 
 Uma reexecução atualiza produto por loja e slug, módulo por título dentro do produto, item por título dentro do módulo, e oferta pelo código Payt. Também atualiza ordem e publicação. Módulos e itens extras já existentes são relatados e preservados. Um código Payt vinculado a outro produto ou loja e um slug existente em outra loja são conflitos: corrija-os antes de repetir. Execute um único processo de cadastro por vez, pois títulos de módulos e itens não têm restrição única no banco.
 

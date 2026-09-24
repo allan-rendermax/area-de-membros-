@@ -68,6 +68,17 @@ describe('plano do produto', () => {
     expect(plano.arquivos.find((a: {relativePath: string}) => a.relativePath.endsWith('.foo'))?.contentType).toBe('application/octet-stream')
   })
 
+  it('normaliza delimitadores de URL no storage sem mudar título ou download', () => {
+    const plano = montarPlano({ ficha, arquivos: [arquivo('entregaveis/A#B%.pdf')] })
+    expect(plano.arquivos[0].storagePath).toBe('kit-de-inspecao/entregaveis/A-B-.pdf')
+    expect(plano.arquivos[0].downloadName).toBe('A#B%.pdf')
+    expect(plano.modulos[0].itens[0].title).toBe('A#B%')
+  })
+
+  it('rejeita colisão de storage criada pela normalização de #', () => {
+    expect(() => montarPlano({ ficha, arquivos: [arquivo('entregaveis/A#B.pdf'), arquivo('entregaveis/A-B.pdf')] })).toThrow(/storage|destino|colis/i)
+  })
+
   it.each([
     ['títulos de módulos', [arquivo('entregaveis/01 Guia/A.pdf'), arquivo('entregaveis/02 Guia/B.pdf')], /módulo|colis/i],
     ['títulos normalizados de módulos', [arquivo('entregaveis/01 Guia/A.pdf'), arquivo('entregaveis/02 Guía/B.pdf')], /módulo|colis/i],
