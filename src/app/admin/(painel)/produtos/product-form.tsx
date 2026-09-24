@@ -12,16 +12,16 @@ export function ProductForm({ product, tracks, storeId }: { product: Product | n
       <input type="hidden" name="cover_url" value={product?.coverUrl ?? ''} />
       <input type="hidden" name="banner_url" value={product?.bannerUrl ?? ''} />
 
-      <div className="flex flex-col gap-4">
-        <div>
+      <div className="flex min-w-0 flex-col gap-4">
+        <div className="min-w-0">
           <p className="mb-2 text-sm text-texto-suave">Capa (vertical 2:3) (até 2 MB)</p>
           <AutoCover seed={seed} title={product?.title ?? 'Novo produto'} imageUrl={product?.coverUrl ?? null} aspect="poster" />
-          <input name="cover" type="file" accept="image/*" className="mt-2 text-sm" />
+          <input name="cover" type="file" accept="image/*" className="mt-2 block w-full min-w-0 max-w-full text-sm" />
         </div>
-        <div>
+        <div className="min-w-0">
           <p className="mb-2 text-sm text-texto-suave">Banner (horizontal 16:9) (até 2 MB)</p>
           <AutoCover seed={seed} title="" imageUrl={product?.bannerUrl ?? null} aspect="banner" />
-          <input name="banner" type="file" accept="image/*" className="mt-2 text-sm" />
+          <input name="banner" type="file" accept="image/*" className="mt-2 block w-full min-w-0 max-w-full text-sm" />
         </div>
       </div>
 
