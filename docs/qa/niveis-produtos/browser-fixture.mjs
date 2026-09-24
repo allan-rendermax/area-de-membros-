@@ -9,9 +9,12 @@ const uuid = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`
 const imageUrl = name => `/themes/arquitetura/${name}.webp`
 const store = (n, slug, name) => ({ id:uuid(n),slug,name,logo_url:null,support_url:null,support_whatsapp:null,login_image_url:null })
 const stores = [store(1,'arquitetura','Arquitetura QA'),store(2,'outra','Outra loja QA'),store(3,'admin-loja','Admin Loja QA')]
-const product = (n, storeId, slug, title, role='front', sortOrder=n, published=true) => ({ id:uuid(n),store_id:uuid(storeId),slug,title,role,track:'Materiais',description:'Material fictício para teste local de níveis.',cover_url:null,banner_url:null,checkout_url:'https://example.test/checkout/basic',upgrade_checkout_url:'https://example.test/checkout/upgrade',is_featured:n===10,sort_order:sortOrder,is_published:published })
+stores[0].support_url='http://127.0.0.1:54341/reference?support=1'
+stores[0].support_whatsapp='5511999999999' // Synthetic number: inspect the link only; never send a message.
+const product = (n, storeId, slug, title, role='front', sortOrder=n, published=true) => ({ id:uuid(n),store_id:uuid(storeId),slug,title,role,track:'Materiais',description:'Material fictício para teste local de níveis.',cover_url:null,banner_url:null,checkout_url:'http://127.0.0.1:54341/reference?checkout=regular',student_checkout_url:null,upgrade_checkout_url:'http://127.0.0.1:54341/reference?checkout=upgrade',is_featured:n===10,sort_order:sortOrder,is_published:published })
 const products = [
   product(10,1,'atlas','Atlas de Níveis QA','front',10),
+  {...product(11,1,'oferta-aluno','Oferta com Cupom QA','front',11),student_checkout_url:'http://127.0.0.1:54341/reference?coupon=ALUNO10&utm_source=members#payment'},
   product(12,2,'exclusivo','Exclusivo outra loja','front',12),
   product(14,3,'curso','Curso Admin Loja','front',14),
 ]
@@ -58,7 +61,7 @@ const orders = [
   order(206,'bloqueado@example.test','COMPLETE-QA','pago','COMPLETE-206'),
 ]
 const email_log = customers.map((c,i)=>({id:uuid(300+i),customer_id:c.id,store_id:uuid(1),to_email:c.email,product_ids:[uuid(10)],status:'enviado',created_at:new Date().toISOString()}))
-const tables = {stores,products,modules,items,customers,offers,offer_products,orders,item_access:[],login_attempts:[],customer_devices:[],email_log,payt_events:[]}
+const tables = {stores,products,modules,items,customers,offers,offer_products,orders,item_access:[],member_progress:[],login_attempts:[],customer_devices:[],email_log,payt_events:[]}
 const userFor = email => ({...(customers.find(c=>c.email===email)||admin),aud:'authenticated',role:'authenticated',created_at:new Date().toISOString(),email_confirmed_at:new Date().toISOString(),app_metadata:{provider:'email'},user_metadata:{}})
 const tokens = new Map()
 const enc = value => Buffer.from(JSON.stringify(value)).toString('base64url')
@@ -69,7 +72,7 @@ const sessionFor = email => {
   tokens.set(token,user)
   return {access_token:token,token_type:'bearer',expires_in:3600,expires_at:now+3600,refresh_token:'local-qa-refresh',user}
 }
-const requests = []; const mutations=[]; const storageEvents=[]; let generatedEmail='basico@example.test'; let imagesEnabled=true
+const requests = []; const mutations=[]; const storageEvents=[]; let generatedEmail='basico@example.test'; let imagesEnabled=true; let progressFailure=false; let nextRowId=500
 const withImages = (table, rows) => rows.map(row => {
   if(!imagesEnabled)return row
   if(table==='stores'&&row.id===uuid(1))return {...row,login_image_url:imageUrl('hero')}
@@ -164,9 +167,15 @@ const server = http.createServer(async(req,res)=>{
   if(url.pathname==='/__control' && req.method==='POST'){
     if(input.blocked!==undefined)customers.find(c=>c.email==='bloqueado@example.test').blocked_at=input.blocked?new Date().toISOString():null
     if(input.images!==undefined)imagesEnabled=Boolean(input.images)
-    return send({ok:true,images:imagesEnabled})
+    if(input.supportWhatsapp!==undefined)stores[0].support_whatsapp=input.supportWhatsapp?'5511999999999':null
+    if(input.progressFailure!==undefined)progressFailure=Boolean(input.progressFailure)
+    return send({ok:true,images:imagesEnabled,supportWhatsapp:Boolean(stores[0].support_whatsapp),progressFailure})
   }
-  if(url.pathname==='/__audit')return send({itemAccess:tables.item_access,loginAttempts:tables.login_attempts.length,mutations,storageEvents,offers:offers.map(o=>offerWithRelations(o,'offer_products(grant_level)')),orders,modules,products,paytEvents:tables.payt_events})
+  if(url.pathname==='/__audit')return send({itemAccess:tables.item_access,memberProgress:tables.member_progress,loginAttempts:tables.login_attempts.length,mutations,storageEvents,offers:offers.map(o=>offerWithRelations(o,'offer_products(grant_level)')),orders,modules,products,paytEvents:tables.payt_events})
+  if(url.pathname==='/reference'){
+    res.writeHead(200,{'content-type':'text/html; charset=utf-8',...cors})
+    return res.end('<h1>Destino local de QA</h1><p>Checkout e suporte fictícios. Nenhum serviço externo.</p>')
+  }
   if(url.pathname.startsWith('/storage/v1/object/upload/sign/')&&req.method==='POST'){
     const parts=url.pathname.split('/');const bucket=parts[6],path=parts.slice(7).join('/')
     if(bucket!=='arquivos-restritos')return send({message:'bucket inválido'},400)
@@ -201,10 +210,17 @@ const server = http.createServer(async(req,res)=>{
   if(url.pathname==='/rest/v1/rpc/apply_order_status')return send(rpcOrder(input))
   const table=url.pathname.replace('/rest/v1/','')
   if(!tables[table]){console.log('UNHANDLED',req.method,url.pathname);return send({message:'fixture unsupported'},404)}
+  if(table==='member_progress'&&progressFailure&&['POST','DELETE'].includes(req.method))return send({code:'QA_FAILURE',message:'Falha sintética ao salvar progresso'},503)
   if(req.method==='POST'){
-    const rows=(Array.isArray(input)?input:[input]).map(x=>({id:uuid(500+tables[table].length),created_at:new Date().toISOString(),...x}))
-    tables[table].push(...rows)
-    mutations.push({table,method:'POST',rows:rows.map(row=>row.id),at:Date.now()})
+    const rows=(Array.isArray(input)?input:[input]).map(x=>{
+      const conflict=url.searchParams.get('on_conflict')?.split(',')
+      const existing=table==='member_progress'&&conflict&&tables[table].find(row=>conflict.every(key=>row[key]===x[key]))
+      if(existing){Object.assign(existing,x,{updated_at:new Date().toISOString()});return existing}
+      const row={id:uuid(nextRowId++),created_at:new Date().toISOString(),...x}
+      tables[table].push(row)
+      return row
+    })
+    mutations.push({table,method:table==='member_progress'?'UPSERT':'POST',rows:rows.map(row=>row.id),at:Date.now()})
     const representation=req.headers.prefer?.includes('return=representation')
     return send(representation?(req.headers.accept?.includes('vnd.pgrst.object+json')?rows[0]:rows):null,201)
   }

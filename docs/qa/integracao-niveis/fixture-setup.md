@@ -1,0 +1,9 @@
+# Fixture local da integração de níveis
+
+Use `docs/qa/niveis-produtos/browser-fixture.mjs --production` após `npm run build`. Ela inicia o aplicativo em `http://127.0.0.1:3191` e o provedor sintético em `http://127.0.0.1:54341`. Todos os dados são fictícios. O preload herdado pelo Next bloqueia `fetch` fora de loopback; mantenha o navegador restrito a `127.0.0.1,localhost`. Não abra o link externo do WhatsApp: confira apenas o destino e o texto pré-preenchido.
+
+Contas sintéticas: `basico@example.test` (Básico), `completo@example.test` (Completo), `upgrade@example.test` (dois pedidos pagos), `reembolso@example.test` (Básico pago e upgrade reembolsado), `bloqueado@example.test` (bloqueado) e `admin@example.test` (admin). O login usa o código local `12345678`. Atlas (`/arquitetura/produto/atlas`) tem módulo Básico e extra Completo. `oferta-aluno` é publicado na mesma loja e não pertence a nenhum pedido: sua vitrine deve abrir o cupom de aluno; o checkout normal, o checkout do cupom e o de upgrade usam URLs locais distintas.
+
+O provedor mantém `member_progress` em memória. A toolbar deve criar uma linha ao concluir, reutilizar a mesma linha em novo upsert e removê-la ao desfazer. Inspecione `http://127.0.0.1:54341/__audit`: `memberProgress` mostra o estado e `mutations` mostra `UPSERT`/`DELETE`. Para validar erro de gravação, envie `POST /__control` com `{"progressFailure":true}` e depois restaure `false`. O mesmo controle aceita `{"supportWhatsapp":false}` para exercitar o `support_url` local, ou `true` para conferir o link sintético do WhatsApp. `{"images":false}` evita que o formulário admin rejeite capas relativas da fixture ao salvar.
+
+Reiniciar o processo limpa os dados em memória. Finalize-o após o QA. Esta configuração não executa migrations SQL, políticas RLS, email, checkout nem serviço externo.
