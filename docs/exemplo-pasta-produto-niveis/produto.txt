@@ -1,0 +1,9 @@
+nome: Kit de Arquitetura
+id_basico: KITBASIC01
+id_completo: KITFULL01
+id_upgrade: KITUP01
+tag: front
+loja: arquitetura
+checkout_upgrade: https://example.com/upgrade
+checkout: https://example.com/kit
+descricao: Exemplo de cadastro com uma capa e três ofertas Payt.

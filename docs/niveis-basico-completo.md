@@ -1,0 +1,9 @@
+# Configurar e converter produtos com Básico e Completo
+
+Use um produto e uma capa. `role` (front, orderbump ou upsell) descreve a posição comercial; `basic` e `complete` descrevem acesso. Crie ofertas Payt distintas para Básico, Completo e, se desejar, Upgrade. O código de upgrade concede Completo diretamente, mesmo que a pessoa não tenha uma compra Básico. Configure o preço no checkout Payt. Cadastre o URL do checkout de upgrade para mostrar o botão de desbloqueio ao cliente Básico.
+
+Aplique primeiro a migration de role e depois a migration de níveis no Supabase correto; confira também o bucket privado `arquivos-restritos`. Faça simulação da pasta com `--simular`, confira códigos, níveis, módulos e links e só então execute o cadastro real. Downloads de fichas antigas continuam públicos no bucket `arquivos`; novos entregáveis de fichas com níveis usam o bucket privado. Um módulo Completo com arquivo público próprio exige reenvio privado antes de publicar.
+
+Para converter um catálogo já separado em dois produtos, escolha o produto principal e reimporte ou recrie nele os extras como módulos Completo. Configure conscientemente cada oferta existente para conceder Básico ou Completo, pois compras antigas passam a seguir esse vínculo. Confira acesso Básico, Completo, upgrade e reembolso com pedidos de teste. Despublique o produto duplicado só depois dessa conferência. Não apague pedidos e não adivinhe a correspondência de códigos. Reimportar não revoga URLs públicas antigas já divulgadas; retire-as no provedor quando necessário.
+
+Os links externos e vídeos seguem as permissões do provedor externo. O app não exibe links de módulos completos para clientes Básico, mas uma URL externa compartilhada anteriormente pode continuar funcionando. Conceda acesso manual escolhendo uma oferta existente: ela transmite o nível configurado. Execute um processo de cadastro por vez.

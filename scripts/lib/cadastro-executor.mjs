@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises'
 
 const BUCKET = 'arquivos'
+const PRIVATE_BUCKET = 'arquivos-restritos'
+const effectiveOffers = plano => plano.ofertas ?? [{ codigo: plano.ficha.id, nivel: 'complete', nome: plano.ficha.nome }]
 
 async function rows(db, table, columns = '*', filters = {}) {
   const all = []
@@ -30,12 +32,23 @@ export function validarLote(planos) {
   const keys = new Set(), codes = new Set(), slugs = new Map()
   for (const plano of planos) {
     const ficha = plano?.ficha
-    if (!ficha?.loja || !ficha.slug || !ficha.id || !Array.isArray(plano.arquivos) || !Array.isArray(plano.modulos)) throw new Error('Plano de produto inválido.')
+    if (!ficha?.loja || !ficha.slug || !Array.isArray(plano.arquivos) || !Array.isArray(plano.modulos)) throw new Error('Plano de produto inválido.')
+    const offers = effectiveOffers(plano)
+    if (!Array.isArray(offers) || !offers.length || offers.some(offer => !offer?.codigo || !['basic', 'complete'].includes(offer.nivel) || !offer.nome)) throw new Error('Ofertas do plano inválidas.')
+    if (plano.modulos.some(modulo => modulo.requiredLevel && !['basic', 'complete'].includes(modulo.requiredLevel))) throw new Error('Nível de módulo inválido.')
+    for (const file of plano.arquivos) {
+      const bucket = file.bucket ?? BUCKET
+      if (![BUCKET, PRIVATE_BUCKET].includes(bucket)) throw new Error(`Bucket inválido para ${file.relativePath}.`)
+      if (ficha.modoNiveis && file.relativePath.startsWith('entregaveis/') && bucket !== PRIVATE_BUCKET) throw new Error(`Entregável ${file.relativePath} deve usar bucket privado.`)
+    }
     const key = `${ficha.loja}/${ficha.slug}`
     if (keys.has(key)) throw new Error(`Produto repetido no lote: ${key}.`)
-    if (codes.has(ficha.id)) throw new Error(`Código Payt repetido no lote: ${ficha.id}.`)
+    for (const offer of offers) {
+      if (codes.has(offer.codigo)) throw new Error(`Código Payt repetido no lote: ${offer.codigo}.`)
+      codes.add(offer.codigo)
+    }
     if (slugs.has(ficha.slug) && slugs.get(ficha.slug) !== ficha.loja) throw new Error(`Slug ${ficha.slug} usado por lojas diferentes no lote; storage compartilhado.`)
-    keys.add(key); codes.add(ficha.id); slugs.set(ficha.slug, ficha.loja)
+    keys.add(key); slugs.set(ficha.slug, ficha.loja)
   }
 }
 
@@ -46,18 +59,18 @@ async function preflight(db, planos) {
     const { ficha } = plano
     // Consultas filtradas evitam o limite padrão de linhas do PostgREST.
     // Consultar role detecta migration ausente mesmo quando o slug não existe.
-    const [stores, sameSlug, offers] = await Promise.all([
+    const [stores, sameSlug, ...offerRows] = await Promise.all([
       rows(db, 'stores', 'id,slug', { slug: ficha.loja }),
-      rows(db, 'products', 'id,store_id,slug,role', { slug: ficha.slug }),
-      rows(db, 'offers', 'id,store_id,payt_product_code', { payt_product_code: ficha.id }),
+      rows(db, 'products', 'id,store_id,slug,role,upgrade_checkout_url', { slug: ficha.slug }),
+      ...effectiveOffers(plano).map(offer => rows(db, 'offers', 'id,store_id,payt_product_code', { payt_product_code: offer.codigo })),
     ])
     const store = stores.find(row => row.slug === ficha.loja)
     if (!store) throw new Error(`Loja não encontrada: ${ficha.loja}.`)
     if (sameSlug.some(row => row.store_id !== store.id)) throw new Error(`Slug ${ficha.slug} já pertence a outra loja; o storage seria compartilhado.`)
     const product = sameSlug.find(row => row.store_id === store.id) ?? null
-    const offer = offers.find(row => row.payt_product_code === ficha.id) ?? null
-    const links = await rows(db, 'offer_products', 'offer_id,product_id', { offer_id: offer?.id ?? '00000000-0000-0000-0000-000000000000' })
-    const modules = await rows(db, 'modules', 'id,product_id,title,sort_order,is_published', { product_id: product?.id ?? '00000000-0000-0000-0000-000000000000' })
+    const offers = effectiveOffers(plano).map((spec, index) => ({ spec, existing: offerRows[index].find(row => row.payt_product_code === spec.codigo) ?? null }))
+    const links = (await Promise.all(offers.map(({ existing }) => rows(db, 'offer_products', 'offer_id,product_id,grant_level', { offer_id: existing?.id ?? '00000000-0000-0000-0000-000000000000' })))).flat()
+    const modules = await rows(db, 'modules', 'id,product_id,title,sort_order,is_published,required_level', { product_id: product?.id ?? '00000000-0000-0000-0000-000000000000' })
     const items = []
     for (const entry of modules.length ? modules : [{ id: '00000000-0000-0000-0000-000000000000' }]) {
       items.push(...await rows(db, 'items', 'id,module_id,title,kind,url,sort_order,is_published', { module_id: entry.id }))
@@ -73,11 +86,13 @@ async function preflight(db, planos) {
         }
       }
     }
-    if (offer && offer.store_id !== store.id) throw new Error(`Código Payt ${ficha.id} já pertence a outra loja.`)
-    if (offer && links.some(row => row.offer_id === offer.id && row.product_id !== product?.id)) {
-      throw new Error(`Oferta Payt ${ficha.id} já libera outro produto; vínculo preservado.`)
+    for (const { spec, existing } of offers) {
+      if (existing && existing.store_id !== store.id) throw new Error(`Código Payt ${spec.codigo} já pertence a outra loja.`)
+      if (existing && links.some(row => row.offer_id === existing.id && row.product_id !== product?.id)) {
+        throw new Error(`Oferta Payt ${spec.codigo} já libera outro produto; vínculo preservado.`)
+      }
     }
-    prepared.push({ plano, store, product, offer, modules, items, links, bytes: new Map() })
+    prepared.push({ plano, store, product, offers, modules, items, links, bytes: new Map() })
   }
   // Ler todo o lote antes da primeira mutação: uma falha na segunda pasta não envia a primeira.
   for (const entry of prepared) {
@@ -99,19 +114,29 @@ function publicUrl(db, file) {
   return resolved.toString()
 }
 
+function privateUrl(db, file) {
+  const origin = new URL(db.supabaseUrl)
+  if (!['http:', 'https:'].includes(origin.protocol) || origin.username || origin.password || origin.pathname !== '/') throw new Error('Origem Supabase inválida para arquivo privado.')
+  const path = file.storagePath.split('/').map(encodeURIComponent).join('/')
+  const url = new URL(`/storage/v1/object/authenticated/${PRIVATE_BUCKET}/${path}`, origin)
+  return url.toString()
+}
+
 async function upload(db, entry) {
   const urls = new Map()
   for (const file of entry.plano.arquivos) {
-    const { error } = await db.storage.from(BUCKET).upload(file.storagePath, entry.bytes.get(file), { upsert: true, contentType: file.contentType })
+    const bucket = file.bucket ?? BUCKET
+    if (![BUCKET, PRIVATE_BUCKET].includes(bucket)) throw new Error(`Bucket inválido para ${file.relativePath}.`)
+    const { error } = await db.storage.from(bucket).upload(file.storagePath, entry.bytes.get(file), { upsert: true, contentType: file.contentType })
     if (error) throw new Error(`Falha no upload de ${file.relativePath}. Reexecute para retomar.`)
-    urls.set(file, publicUrl(db, file))
+    urls.set(file, bucket === PRIVATE_BUCKET ? privateUrl(db, file) : publicUrl(db, file))
   }
   return urls
 }
 
 async function content(db, productId, plano, urls, currentModules, currentItems, log) {
   for (const modulo of plano.modulos) {
-    const data = { product_id: productId, title: modulo.title, sort_order: modulo.sortOrder, is_published: true }
+    const data = { product_id: productId, title: modulo.title, sort_order: modulo.sortOrder, required_level: modulo.requiredLevel ?? 'basic', is_published: true }
     const found = currentModules.find(row => row.product_id === productId && row.title === modulo.title)
     const moduleId = found
       ? (await write(db.from('modules').update(data).eq('id', found.id), `módulo ${modulo.title}`), found.id)
@@ -136,12 +161,12 @@ export async function executarPlanos(db, planos, { log = console.log } = {}) {
   const entries = await preflight(db, planos)
   const results = []
   for (const entry of entries) {
-    const { plano, store, product, offer } = entry
+    const { plano, store, product, offers } = entry
     const urls = await upload(db, entry)
     const { ficha } = plano
     const data = {
       store_id: store.id, slug: ficha.slug, title: ficha.nome, description: ficha.descricao,
-      track: ficha.trilha, checkout_url: ficha.checkout, role: ficha.tag,
+      track: ficha.trilha, checkout_url: ficha.checkout, upgrade_checkout_url: ficha.checkoutUpgrade ?? null, role: ficha.tag,
       is_featured: ficha.destaque, sort_order: ficha.ordem, is_published: true,
       cover_url: plano.imagens.capa ? urls.get(plano.imagens.capa) : null,
       banner_url: plano.imagens.banner ? urls.get(plano.imagens.banner) : null,
@@ -151,14 +176,18 @@ export async function executarPlanos(db, planos, { log = console.log } = {}) {
       : (await write(db.from('products').insert(data), `produto ${ficha.nome}`, true)).id
     log(`Produto ${product ? 'atualizado' : 'criado'}: ${ficha.nome}`)
     await content(db, productId, plano, urls, entry.modules, entry.items, log)
-    const offerId = offer
-      ? (await write(db.from('offers').update({ name: ficha.nome }).eq('id', offer.id), `oferta ${ficha.id}`), offer.id)
-      : (await write(db.from('offers').insert({ store_id: store.id, name: ficha.nome, payt_product_code: ficha.id }), `oferta ${ficha.id}`, true)).id
-    if (!entry.links.some(row => row.offer_id === offerId && row.product_id === productId)) {
-      await write(db.from('offer_products').insert({ offer_id: offerId, product_id: productId }), `vínculo da oferta ${ficha.id}`)
+    const offerIds = []
+    for (const { spec, existing } of offers) {
+      const offerId = existing
+        ? (await write(db.from('offers').update({ name: spec.nome }).eq('id', existing.id), `oferta ${spec.codigo}`), existing.id)
+        : (await write(db.from('offers').insert({ store_id: store.id, name: spec.nome, payt_product_code: spec.codigo }), `oferta ${spec.codigo}`, true)).id
+      const link = entry.links.find(row => row.offer_id === offerId && row.product_id === productId)
+      if (link) await write(db.from('offer_products').update({ grant_level: spec.nivel }).eq('offer_id', offerId).eq('product_id', productId), `vínculo da oferta ${spec.codigo}`)
+      else await write(db.from('offer_products').insert({ offer_id: offerId, product_id: productId, grant_level: spec.nivel }), `vínculo da oferta ${spec.codigo}`)
+      log(`Oferta Payt ${spec.codigo} (${spec.nivel}) vinculada; link: /${ficha.loja}/produto/${ficha.slug}`)
+      offerIds.push(offerId)
     }
-    log(`Oferta Payt ${ficha.id} vinculada; link: /${ficha.loja}/produto/${ficha.slug}`)
-    results.push({ productId, offerId, status: product ? 'atualizado' : 'criado' })
+    results.push({ productId, offerId: offerIds[0], offerIds, status: product ? 'atualizado' : 'criado' })
   }
   return results
 }

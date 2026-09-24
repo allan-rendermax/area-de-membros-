@@ -6,20 +6,24 @@ import { join } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 import { lerFicha, montarPlano } from '../../scripts/lib/cadastro-plano.mjs'
 import { executarPlanos } from '../../scripts/lib/cadastro-executor.mjs'
+import { privateFilePath } from '../../src/lib/content/private-files'
 
 type Row = Record<string, any>
 class FakeDb {
+  supabaseUrl = 'https://supabase.example'
   rows: Record<string, Row[]> = { stores: [{ id: 'store-1', slug: 'loja' }, { id: 'store-2', slug: 'outra' }], products: [], offers: [], offer_products: [], modules: [], items: [] }
-  uploads: { path: string; options: Row; bytes: number }[] = []
+  uploads: { bucket: string; path: string; options: Row; bytes: number }[] = []
   writes = 0
   failTable = ''
+  failColumn = ''
   from(table: string) {
     const filters: [string, unknown][] = []
     let operation: 'select' | 'insert' | 'update' = 'select'
     let values: Row = {}
     let page: [number, number] = [0, 999]
+    let columns = '*'
     const query: any = {
-      select() { return query },
+      select(value = '*') { columns = value; return query },
       eq(field: string, value: unknown) { filters.push([field, value]); return query },
       order() { return query },
       range(start: number, end: number) { page = [start, end]; return query },
@@ -30,7 +34,7 @@ class FakeDb {
       then(resolve: (value: any) => void, reject?: (reason: any) => void) { return Promise.resolve(run(false)).then(resolve, reject) },
     }
     const run = (one: boolean) => {
-      if (this.failTable === table && operation === 'select') return { data: null, error: { message: 'sensitive-secret' } }
+      if ((this.failTable === table || (this.failColumn && columns.split(',').includes(this.failColumn))) && operation === 'select') return { data: null, error: { message: 'sensitive-secret' } }
       const matches = this.rows[table].filter(row => filters.every(([field, value]) => row[field] === value))
       if (operation === 'select') return { data: one ? matches[0] ?? null : matches.slice(page[0], Math.min(page[1] + 1, page[0] + 500)).map(row => ({ ...row })), error: null }
       this.writes++
@@ -45,8 +49,8 @@ class FakeDb {
     return query
   }
   storage = {
-    from: () => ({
-      upload: async (path: string, bytes: Uint8Array, options: Row) => { this.writes++; this.uploads.push({ path, bytes: bytes.length, options }); return { error: null } },
+    from: (bucket: string) => ({
+      upload: async (path: string, bytes: Uint8Array, options: Row) => { this.writes++; this.uploads.push({ bucket, path, bytes: bytes.length, options }); return { error: null } },
       getPublicUrl: (path: string) => ({ data: { publicUrl: `https://files.example/${encodeURI(path)}` } }),
     }),
   }
@@ -59,15 +63,55 @@ async function plan(overrides: Row = {}) {
   dirs.push(dir)
   const absolutePath = join(dir, 'Guia.pdf')
   await writeFile(absolutePath, 'pdf')
-  const file = { absolutePath, relativePath: 'entregaveis/Guia.pdf', size: 3, storagePath: `${overrides.slug ?? 'kit'}/entregaveis/Guia.pdf`, contentType: 'application/pdf', downloadName: 'Guia.pdf' }
+  const file = { absolutePath, relativePath: 'entregaveis/Guia.pdf', size: 3, storagePath: `${overrides.slug ?? 'kit'}/entregaveis/Guia.pdf`, contentType: 'application/pdf', downloadName: 'Guia.pdf', bucket: 'arquivos' }
   return {
     ficha: { nome: 'Kit', id: 'PAYT1', tag: 'front', loja: 'loja', slug: 'kit', trilha: 'Técnica', checkout: null, destaque: true, ordem: 2, descricao: 'Descrição', ...overrides },
     arquivos: [file], imagens: { capa: null, banner: null },
-    modulos: [{ title: 'Material', sortOrder: 1, itens: [{ title: 'Guia', kind: 'arquivo', sortOrder: 1, url: null, arquivo: file }] }],
+    ofertas: undefined as undefined | { codigo: string; nivel: string; nome: string }[],
+    modulos: [{ title: 'Material', sortOrder: 1, requiredLevel: 'basic', itens: [{ title: 'Guia', kind: 'arquivo', sortOrder: 1, url: null, arquivo: file }] }],
   }
 }
 
 describe('executor do cadastro', () => {
+  it('grava três vínculos de um produto por nível e reexecuta sem duplicar', async () => {
+    const db = new FakeDb()
+    const p = await plan({ id: undefined, checkoutUpgrade: 'https://example.com/upgrade', modoNiveis: true })
+    p.ofertas = [
+      { codigo: 'BASIC', nivel: 'basic', nome: 'Kit — Básico' },
+      { codigo: 'FULL', nivel: 'complete', nome: 'Kit — Completo' },
+      { codigo: 'UPGRADE', nivel: 'complete', nome: 'Kit — Upgrade' },
+    ]
+    p.modulos[0].requiredLevel = 'complete'
+    p.arquivos[0].bucket = 'arquivos-restritos'
+    p.arquivos[0].storagePath = 'kit/entregaveis/completo/01 Extras/Meu Guia.pdf'
+    p.arquivos[0].downloadName = 'Meu Guia.pdf'
+    await executarPlanos(db, [p], { log: () => {} })
+    await executarPlanos(db, [p], { log: () => {} })
+    expect(db.rows.products).toHaveLength(1)
+    expect(db.rows.products[0].upgrade_checkout_url).toBe('https://example.com/upgrade')
+    expect(db.rows.modules[0].required_level).toBe('complete')
+    expect(db.rows.offers).toHaveLength(3)
+    expect(db.rows.offer_products.map(row => row.grant_level)).toEqual(['basic', 'complete', 'complete'])
+    expect(db.rows.items[0].url).toBe('https://supabase.example/storage/v1/object/authenticated/arquivos-restritos/kit/entregaveis/completo/01%20Extras/Meu%20Guia.pdf')
+    expect(new URL(db.rows.items[0].url).search).toBe('')
+    expect(privateFilePath(db.rows.items[0].url, db.supabaseUrl)).toBe('kit/entregaveis/completo/01 Extras/Meu Guia.pdf')
+    expect(db.uploads.every(upload => upload.bucket === 'arquivos-restritos')).toBe(true)
+  })
+  it('bloqueia o lote inteiro quando o terceiro código conflita', async () => {
+    const db = new FakeDb()
+    db.rows.offers.push({ id: 'old', store_id: 'store-2', payt_product_code: 'UPGRADE' })
+    const p = await plan({ id: undefined, checkoutUpgrade: 'https://example.com/upgrade', modoNiveis: true })
+    p.ofertas = [{ codigo: 'BASIC', nivel: 'basic', nome: 'Básico' }, { codigo: 'UPGRADE', nivel: 'complete', nome: 'Upgrade' }]
+    p.arquivos[0].bucket = 'arquivos-restritos'
+    await expect(executarPlanos(db, [p])).rejects.toThrow(/UPGRADE|Payt|loja/i)
+    expect(db.writes).toBe(0)
+  })
+  it('detecta schema de níveis ausente antes de enviar qualquer arquivo', async () => {
+    const db = new FakeDb()
+    db.failColumn = 'grant_level'
+    await expect(executarPlanos(db, [await plan()])).rejects.toThrow(/esquema|consulta/i)
+    expect(db.writes).toBe(0)
+  })
   it('usa o SDK instalado para upload e link público sem fragmento nem rede', async () => {
     const requested: string[] = []
     const fetchStub: typeof fetch = async input => {

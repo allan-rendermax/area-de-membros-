@@ -1,0 +1,2 @@
+Aula inicial | https://example.com/aula | basico
+Aula extra | https://example.com/extra | completo

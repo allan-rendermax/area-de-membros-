@@ -38,11 +38,11 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
   if (typeof text !== 'string') throw new Error('A ficha produto.txt deve ser texto.')
   const fields = {}
   const lines = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n')
-  const allowed = new Set(['nome', 'id', 'tag', 'loja', 'slug', 'trilha', 'checkout', 'destaque', 'ordem', 'descricao'])
+  const allowed = new Set(['nome', 'id', 'id_basico', 'id_completo', 'id_upgrade', 'tag', 'loja', 'slug', 'trilha', 'checkout', 'checkout_upgrade', 'destaque', 'ordem', 'descricao'])
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index].trim()
     if (!line || line.startsWith('#')) continue
-    const match = /^([\p{L}]+):\s*(.*)$/u.exec(line)
+    const match = /^([\p{L}_]+):\s*(.*)$/u.exec(line)
     if (!match) throw new Error(`produto.txt linha ${index + 1}: use chave: valor.`)
     const key = match[1].toLowerCase()
     if (!allowed.has(key)) throw new Error(`produto.txt linha ${index + 1}: campo desconhecido ${key}.`)
@@ -53,8 +53,16 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
     }
     fields[key] = match[2].trim()
   }
-  for (const field of ['nome', 'id', 'tag']) if (!fields[field]) throw new Error(`produto.txt: campo ${field} obrigatório.`)
-  if (/\s/.test(fields.id)) throw new Error('produto.txt: id não pode conter espaços.')
+  for (const field of ['nome', 'tag']) if (!fields[field]) throw new Error(`produto.txt: campo ${field} obrigatório.`)
+  const modoNiveis = Object.keys(fields).some(key => ['id_basico', 'id_completo', 'id_upgrade', 'checkout_upgrade'].includes(key))
+  if (modoNiveis) {
+    if (fields.id) throw new Error('produto.txt: id legado não pode ser usado com id_basico/id_completo/id_upgrade.')
+    if (!fields.id_basico || !(fields.id_completo || fields.id_upgrade)) throw new Error('produto.txt: id_basico e ao menos id_completo ou id_upgrade são obrigatórios.')
+    if (!fields.checkout_upgrade) throw new Error('produto.txt: checkout_upgrade obrigatório.')
+  } else if (!fields.id) throw new Error('produto.txt: campo id obrigatório.')
+  const codes = modoNiveis ? [fields.id_basico, fields.id_completo, fields.id_upgrade].filter(Boolean) : [fields.id]
+  if (codes.some(code => /\s/.test(code))) throw new Error('produto.txt: id/código Payt não pode conter espaços.')
+  if (new Set(codes).size !== codes.length) throw new Error('produto.txt: códigos Payt repetidos.')
   if (!['front', 'orderbump', 'upsell'].includes(fields.tag)) throw new Error('produto.txt: tag deve ser front, orderbump ou upsell.')
   const loja = fields.loja || defaultStoreSlug
   if (!loja) throw new Error('produto.txt: loja obrigatória ou configure DEFAULT_STORE_SLUG.')
@@ -69,7 +77,14 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
   if (fields.ordem !== undefined && (!/^-?\d+$/.test(fields.ordem) || !Number.isInteger(ordem) || ordem < -2147483648 || ordem > 2147483647)) {
     throw new Error('produto.txt: ordem deve ser inteiro PostgreSQL válido.')
   }
-  return { nome: fields.nome, id: fields.id, tag: fields.tag, loja, slug, trilha: fields.trilha || '', checkout, destaque, ordem, descricao: fields.descricao || '' }
+  const base = { nome: fields.nome, tag: fields.tag, loja, slug, trilha: fields.trilha || '', checkout, destaque, ordem, descricao: fields.descricao || '' }
+  if (!modoNiveis) return { ...base, id: fields.id }
+  const ofertas = [
+    { codigo: fields.id_basico, nivel: 'basic', nome: `${fields.nome} — Básico` },
+    fields.id_completo && { codigo: fields.id_completo, nivel: 'complete', nome: `${fields.nome} — Completo` },
+    fields.id_upgrade && { codigo: fields.id_upgrade, nivel: 'complete', nome: `${fields.nome} — Upgrade` },
+  ].filter(Boolean)
+  return { ...base, modoNiveis: true, checkoutUpgrade: httpUrl(fields.checkout_upgrade, 'checkout_upgrade'), ofertas }
 }
 
 function titled(name) {
@@ -120,7 +135,8 @@ export function montarPlano({ ficha, arquivos, linksTexto = '' }) {
     }
     const parts = relativePath.split('/')
     const rootImage = parts.length === 1 && /^(capa|banner)\.(jpe?g|png|webp)$/i.exec(parts[0])
-    if (!rootImage && (parts[0] !== 'entregaveis' || parts.length < 2 || parts.length > 3)) {
+    const levelFolder = ficha.modoNiveis && ['basico', 'completo'].includes(parts[1])
+    if (!rootImage && (parts[0] !== 'entregaveis' || parts.length < 2 || parts.length > (levelFolder ? 4 : 3) || (levelFolder && parts.length < 3))) {
       throw new Error(`Subpasta profunda ou arquivo fora de entregaveis: ${relativePath}.`)
     }
     const storagePath = `${ficha.slug}/${parts.map(storageComponent).join('/')}`
@@ -129,7 +145,7 @@ export function montarPlano({ ficha, arquivos, linksTexto = '' }) {
     seenStorage.add(collisionKey)
     const extension = extname(parts.at(-1)).toLowerCase()
     const itemTitle = titled(parts.at(-1).slice(0, -extension.length || undefined))
-    const upload = { relativePath, absolutePath: file.absolutePath, size: file.size, storagePath, contentType: MIME[extension.slice(1)] || 'application/octet-stream', downloadName: downloadName(itemTitle.title, extension) }
+    const upload = { relativePath, absolutePath: file.absolutePath, size: file.size, storagePath, contentType: MIME[extension.slice(1)] || 'application/octet-stream', downloadName: downloadName(itemTitle.title, extension), bucket: ficha.modoNiveis && !rootImage ? 'arquivos-restritos' : 'arquivos' }
     uploads.push(upload)
     if (rootImage) {
       const role = rootImage[1].toLowerCase()
@@ -137,11 +153,12 @@ export function montarPlano({ ficha, arquivos, linksTexto = '' }) {
       images[role] = upload
       continue
     }
-    const moduleName = parts.length === 2 ? 'Material' : parts[1]
-    if (!groups.has(moduleName)) groups.set(moduleName, [])
-    groups.get(moduleName).push({ ...itemTitle, upload })
+    const moduleName = levelFolder ? parts.length === 3 ? (parts[1] === 'basico' ? 'Material básico' : 'Extras do Completo') : parts[2] : parts.length === 2 ? 'Material' : parts[1]
+    const groupKey = `${levelFolder ? parts[1] : 'direto'}/${moduleName}`
+    if (!groups.has(groupKey)) groups.set(groupKey, { name: moduleName, requiredLevel: levelFolder && parts[1] === 'completo' ? 'complete' : 'basic', items: [] })
+    groups.get(groupKey).items.push({ ...itemTitle, upload })
   }
-  const modules = [...groups].map(([name, items]) => ({ ...titled(name), items }))
+  const modules = [...groups.values()].map(group => ({ ...titled(group.name), ...group }))
   const titles = new Set()
   for (const group of modules) {
     const key = titleKey(group.title)
@@ -160,30 +177,33 @@ export function montarPlano({ ficha, arquivos, linksTexto = '' }) {
       itemTitles.add(key)
       return { title: item.title, kind: 'arquivo', sortOrder: itemOrders[itemIndex], url: null, arquivo: item.upload }
     })
-    return { title: group.title, sortOrder: moduleOrders[index], itens }
+    return { title: group.title, sortOrder: moduleOrders[index], requiredLevel: group.requiredLevel, itens }
   })
-  const online = []
-  const onlineTitles = new Set()
+  const online = { basic: [], complete: [] }
+  const onlineTitles = { basic: new Set(), complete: new Set() }
   if (typeof linksTexto !== 'string') throw new Error('links.txt deve ser texto.')
   for (const [index, raw] of linksTexto.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n').entries()) {
     const line = raw.trim()
     if (!line || line.startsWith('#')) continue
-    const bar = line.indexOf('|')
-    if (bar < 1) throw new Error(`links.txt linha ${index + 1}: use Título | URL.`)
-    const title = line.slice(0, bar).trim()
-    const url = line.slice(bar + 1).trim()
+    const columns = line.split('|').map(value => value.trim())
+    if (columns.length < 2 || columns.length > 3) throw new Error(`links.txt linha ${index + 1}: use Título | URL | basico/completo.`)
+    const [title, url, nivel = 'basico'] = columns
     if (!title || !url) throw new Error(`links.txt linha ${index + 1}: título ou URL vazia.`)
+    if (!['basico', 'completo'].includes(nivel) || (!ficha.modoNiveis && nivel === 'completo')) throw new Error(`links.txt linha ${index + 1}: nível inválido.`)
+    const requiredLevel = nivel === 'completo' ? 'complete' : 'basic'
     const key = titleKey(title)
-    if (onlineTitles.has(key)) throw new Error(`Colisão de título de item em Conteúdo online: ${title}.`)
-    onlineTitles.add(key)
+    if (onlineTitles[requiredLevel].has(key)) throw new Error(`Colisão de título de item em Conteúdo online: ${title}.`)
+    onlineTitles[requiredLevel].add(key)
     httpUrl(url, `links.txt linha ${index + 1}`)
     const host = new URL(url).hostname.toLowerCase()
     const video = ['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be', 'vimeo.com', 'www.vimeo.com', 'player.vimeo.com'].includes(host)
-    online.push({ title, kind: video ? 'video' : 'link', sortOrder: online.length + 1, url, arquivo: null })
+    online[requiredLevel].push({ title, kind: video ? 'video' : 'link', sortOrder: online[requiredLevel].length + 1, url, arquivo: null })
   }
-  if (online.length) {
-    if (titles.has(titleKey('Conteúdo online'))) throw new Error('Colisão de título de módulo: Conteúdo online.')
-    result.push({ title: 'Conteúdo online', sortOrder: validOrder(Math.max(0, ...moduleOrders) + 1, 'Conteúdo online'), itens: online })
+  for (const [index, requiredLevel] of ['basic', 'complete'].entries()) {
+    if (!online[requiredLevel].length) continue
+    const title = requiredLevel === 'basic' ? 'Conteúdo online' : 'Conteúdo online — Completo'
+    if (titles.has(titleKey(title))) throw new Error(`Colisão de título de módulo: ${title}.`)
+    result.push({ title, requiredLevel, sortOrder: validOrder(Math.max(0, ...moduleOrders) + index + 1, title), itens: online[requiredLevel] })
   }
-  return { ficha, imagens: images, modulos: result, arquivos: uploads }
+  return { ficha, ofertas: ficha.ofertas, imagens: images, modulos: result, arquivos: uploads }
 }

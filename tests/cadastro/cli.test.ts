@@ -20,6 +20,15 @@ function run(...args: string[]) {
   return spawnSync(process.execPath, [script, ...args], { cwd: resolve('.'), encoding: 'utf8', env: { ...process.env, SUPABASE_URL: '', SUPABASE_SECRET_KEY: '', NEXT_PUBLIC_SUPABASE_URL: '' } })
 }
 describe('CLI de cadastro', () => {
+  it('simula a pasta exemplo com três ofertas e módulos por nível sem credenciais', () => {
+    const result = run('docs/exemplo-pasta-produto-niveis', '--simular')
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('KITBASIC01 (basic')
+    expect(result.stdout).toContain('KITFULL01 (complete')
+    expect(result.stdout).toContain('KITUP01 (complete')
+    expect(result.stdout).toContain('Extras (complete)')
+    expect(result.stdout).toContain('Checkout upgrade: https://example.com/upgrade')
+  })
   it('simula sem credenciais e mostra resumo, tamanho, Payt e link', async () => {
     const dir = await root()
     const folder = await product(dir, 'kit')

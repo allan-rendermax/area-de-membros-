@@ -50,3 +50,31 @@ Para o cadastro real, configure `SUPABASE_URL` ou `NEXT_PUBLIC_SUPABASE_URL`, ma
 Uma reexecução atualiza produto por loja e slug, módulo por título dentro do produto, item por título dentro do módulo, e oferta pelo código Payt. Também atualiza ordem e publicação. Módulos e itens extras já existentes são relatados e preservados. Um código Payt vinculado a outro produto ou loja e um slug existente em outra loja são conflitos: corrija-os antes de repetir. Execute um único processo de cadastro por vez, pois títulos de módulos e itens não têm restrição única no banco.
 
 Falhas de rede podem deixar uploads ou registros parciais. Corrija a causa e reexecute a mesma pasta; o processo retoma pelos registros existentes. A validação inicial protege o lote contra pasta inválida ou arquivo ilegível, mas não constitui transação entre storage e banco.
+
+## Produto com Básico e Completo
+
+A ficha antiga com `id: CODIGO` continua válida: esse código libera o produto completo e os módulos existentes permanecem básicos. Para um produto novo com níveis, use `id_basico`, pelo menos um de `id_completo` ou `id_upgrade`, e `checkout_upgrade`. Não misture `id` com esses campos. Cada código Payt precisa ser distinto no lote. `checkout` continua sendo o checkout de entrada; `checkout_upgrade` é o link do botão de upgrade dentro da área de membros. O app não calcula diferença de preço: configure esse valor no checkout Payt correspondente.
+
+Simule [a pasta de exemplo](exemplo-pasta-produto-niveis/produto.txt) antes de adaptar os códigos, links, loja e arquivos:
+
+```powershell
+node scripts/cadastrar-produto.mjs "docs/exemplo-pasta-produto-niveis" --simular
+```
+
+```text
+produto.txt
+links.txt
+entregaveis/
+  basico/
+    01 Material principal/Guia.pdf
+  completo/
+    02 Extras/Modelo.zip
+```
+
+Arquivos soltos em `basico` vão para **Material básico**; em `completo`, para **Extras do Completo**. Pastas de módulos diretamente em `entregaveis` continuam básicas. Aceita-se um nível de módulo dentro de `basico` ou `completo`, sem subpastas mais profundas. Os títulos dos módulos precisam ser únicos entre todos os níveis. Em `links.txt`, a terceira coluna opcional é `basico` ou `completo`: `Título | https://exemplo.com | completo`. Sem ela, o link é básico. Links completos ficam em **Conteúdo online — Completo**. Links e vídeos externos dependem também das regras do provedor externo; o app oculta seus endereços do cliente Básico, mas não controla URLs já compartilhadas fora dele.
+
+No Payt, configure o código Básico para a compra inicial, o código Completo para a compra integral e, se usado, o código Upgrade para o checkout próprio de upgrade. Completo e Upgrade concedem acesso Completo ao mesmo produto; não crie um segundo produto para o upgrade. Confira no painel a correspondência entre cada código, checkout e nível antes de publicar. O produto mostra uma capa e módulos completos bloqueados para quem tem Básico.
+
+Antes de executar o cadastro real, aplique manualmente a migration de role indicada acima e a migration de níveis, nessa ordem, no projeto Supabase correto. Crie/confira o bucket privado `arquivos-restritos` e suas políticas conforme a migration de níveis. A capa e o banner continuam públicos no bucket `arquivos`; entregáveis de fichas com níveis vão para `arquivos-restritos`. O cadastro grava referências privadas estáveis e o servidor assina downloads somente após conferir acesso. A simulação não cria cliente Supabase nem faz rede. Execute um cadastro por vez e confira a saída inteira antes da execução real.
+
+Reexecutar a mesma pasta atualiza o produto, módulos, itens, ofertas e níveis de vínculo sem apagar conteúdo extra existente. O preflight recusa códigos associados a outro produto ou loja e verifica todos os arquivos antes de começar uploads. Falhas após o preflight podem deixar gravações parciais; corrija a causa e reexecute. Reembolsar o pedido Completo ou Upgrade retira apenas o nível concedido por aquele pedido: se ainda houver um pedido Básico pago, o acesso volta a Básico. Acesso manual usa uma oferta existente e herda o nível dessa oferta.

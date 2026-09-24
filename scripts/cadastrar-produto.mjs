@@ -32,9 +32,11 @@ async function env() {
 function printPlan(plano) {
   const { ficha } = plano
   console.log(`${ficha.nome} — ${ficha.loja}/${ficha.slug} (${ficha.tag})`)
-  console.log(`  Payt: ${ficha.id}; link: /${ficha.loja}/produto/${ficha.slug}`)
+  const ofertas = plano.ofertas ?? [{ codigo: ficha.id, nivel: 'complete', nome: ficha.nome }]
+  for (const oferta of ofertas) console.log(`  Payt: ${oferta.codigo} (${oferta.nivel}, ${oferta.nome}); link: /${ficha.loja}/produto/${ficha.slug}`)
+  if (ficha.checkoutUpgrade) console.log(`  Checkout upgrade: ${ficha.checkoutUpgrade}`)
   for (const modulo of plano.modulos) {
-    console.log(`  Módulo ${modulo.sortOrder}: ${modulo.title}`)
+    console.log(`  Módulo ${modulo.sortOrder}: ${modulo.title} (${modulo.requiredLevel ?? 'basic'})`)
     for (const item of modulo.itens) console.log(`    ${item.sortOrder}. ${item.title} — ${item.arquivo ? `${item.arquivo.size} B` : item.url}`)
   }
   console.log(`  Arquivos: ${plano.arquivos.length}; total: ${plano.arquivos.reduce((sum, file) => sum + file.size, 0)} B`)

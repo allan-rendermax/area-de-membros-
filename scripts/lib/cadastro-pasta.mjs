@@ -12,7 +12,7 @@ async function regularFile(path, label) {
   return stat
 }
 
-async function list(directory, prefix, depth, files) {
+async function list(directory, prefix, depth, files, tiered) {
   let entries
   try { entries = await readdir(directory, { withFileTypes: true }) }
   catch (cause) { throw new Error(`Não foi possível listar a pasta ${prefix.join('/')}.`, { cause }) }
@@ -25,8 +25,8 @@ async function list(directory, prefix, depth, files) {
     catch (cause) { throw new Error(`Não foi possível verificar ${relativePath}.`, { cause }) }
     if (stat.isSymbolicLink()) throw new Error(`Link simbólico não permitido: ${relativePath}.`)
     if (stat.isDirectory()) {
-      if (depth >= 1) throw new Error(`Subpasta profunda não permitida: ${relativePath}.`)
-      await list(absolutePath, [...prefix, entry.name], depth + 1, files)
+      if (depth >= (tiered && ['basico', 'completo'].includes(prefix[1]) ? 2 : 1)) throw new Error(`Subpasta profunda não permitida: ${relativePath}.`)
+      await list(absolutePath, [...prefix, entry.name], depth + 1, files, tiered)
     } else if (stat.isFile()) {
       try {
         await access(absolutePath, constants.R_OK)
@@ -65,7 +65,7 @@ export async function lerPastaProduto(directory, { defaultStoreSlug } = {}) {
       linksTexto = await readFile(path, 'utf8')
     } else if (name === 'entregaveis') {
       if (!stat.isDirectory()) throw new Error('entregaveis deve ser uma pasta.')
-      await list(path, ['entregaveis'], 0, files)
+      await list(path, ['entregaveis'], 0, files, ficha.modoNiveis)
     } else if (/^(capa|banner)\.(jpe?g|png|webp)$/i.test(name)) {
       await regularFile(path, name)
       await readFile(path)
