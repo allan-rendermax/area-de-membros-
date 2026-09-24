@@ -1,4 +1,8 @@
-import type { OrderRef, Product, ProductLink } from '@/lib/domain/types'
+import type { OrderRef, Product, ProductLink, ProductRole } from '@/lib/domain/types'
+
+function lockedPriority(role: ProductRole = 'front'): number {
+  return role === 'front' ? 1 : 0
+}
 
 export function grantedProductIds(orders: OrderRef[], links: ProductLink[], blocked: boolean): Set<string> {
   const granted = new Set<string>()
@@ -22,6 +26,7 @@ export type ShelfProduct = {
   bannerUrl: string | null
   unlocked: boolean
   checkoutUrl: string | null
+  role?: ProductRole
 }
 
 export type Shelf = { featured: ShelfProduct | null; unlocked: ShelfProduct[]; locked: ShelfProduct[] }
@@ -41,10 +46,12 @@ export function buildShelf(products: Product[], granted: Set<string>): Shelf {
       bannerUrl: p.bannerUrl,
       unlocked,
       checkoutUrl: unlocked ? null : p.checkoutUrl,
+      role: p.role,
     }
   })
   const unlocked = all.filter((p) => p.unlocked)
   const locked = all.filter((p) => !p.unlocked)
+    .sort((a, b) => lockedPriority(a.role) - lockedPriority(b.role) || a.sortOrder - b.sortOrder)
   const featuredId = visible.find((p) => p.isFeatured)?.id
   const featured = all.find((p) => p.id === featuredId) ?? unlocked[0] ?? locked[0] ?? null
   return { featured, unlocked, locked }
@@ -66,11 +73,15 @@ export function buildTracks(shelf: Shelf): Track[] {
 
   return [...groups].map(([name, products]) => ({
     name,
-    products: products.sort((a, b) => Number(b.unlocked) - Number(a.unlocked) || a.sortOrder - b.sortOrder),
+    products: products.sort((a, b) => Number(b.unlocked) - Number(a.unlocked)
+      || (!a.unlocked ? lockedPriority(a.role) - lockedPriority(b.role) : 0)
+      || a.sortOrder - b.sortOrder),
     hasUnlocked: products.some((p) => p.unlocked),
+    lockedPriority: Math.min(...products.filter((p) => !p.unlocked).map((p) => lockedPriority(p.role)), 1),
     minSortOrder: products.reduce((min, p) => Math.min(min, p.sortOrder), Infinity),
   })).sort((a, b) =>
     Number(b.hasUnlocked) - Number(a.hasUnlocked)
+    || (!a.hasUnlocked ? a.lockedPriority - b.lockedPriority : 0)
     || a.minSortOrder - b.minSortOrder
     || a.name.localeCompare(b.name, 'pt-BR'),
   ).map(({ name, products }) => ({ name, products }))

@@ -13,7 +13,7 @@ function product(id: string, sortOrder: number, extra: Partial<Product> = {}): P
   return {
     id, storeId: 's1', slug: id, title: id, track: '', description: `sobre ${id}`,
     coverUrl: null, bannerUrl: null, checkoutUrl: `https://payt/${id}`,
-    isFeatured: false, sortOrder, isPublished: true, ...extra,
+    role: 'front', isFeatured: false, sortOrder, isPublished: true, ...extra,
   }
 }
 
@@ -81,5 +81,15 @@ describe('buildShelf', () => {
     const shelf = buildShelf(products, new Set(['atlas']))
     expect(shelf.unlocked[0].checkoutUrl).toBeNull()
     expect(shelf.locked[0].checkoutUrl).toBe('https://payt/bonus1')
+  })
+
+  it('mostra ofertas complementares bloqueadas primeiro, mantendo comprados e destaque', () => {
+    const products = [product('front', 0), product('upsell', 4, { role: 'upsell' }),
+      product('orderbump', 2, { role: 'orderbump', isFeatured: true }),
+      product('comprado', 1), product('rascunho', -1, { role: 'upsell', isPublished: false })]
+    const shelf = buildShelf(products, new Set(['comprado']))
+    expect(shelf.locked.map((p) => p.id)).toEqual(['orderbump', 'upsell', 'front'])
+    expect(shelf.unlocked.map((p) => p.id)).toEqual(['comprado'])
+    expect(shelf.featured?.id).toBe('orderbump')
   })
 })

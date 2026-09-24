@@ -1,8 +1,8 @@
-import type { Item, ItemKind, Module, ModuleWithItems, Product, ProductLink, StoreRef } from '@/lib/domain/types'
+import type { Item, ItemKind, Module, ModuleWithItems, Product, ProductLink, ProductRole, StoreRef } from '@/lib/domain/types'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const PRODUCT_COLUMNS =
-  'id, store_id, slug, title, track, description, cover_url, banner_url, checkout_url, is_featured, sort_order, is_published'
+  'id, store_id, slug, title, track, description, cover_url, banner_url, checkout_url, role, is_featured, sort_order, is_published'
 export const MODULE_COLUMNS = 'id, product_id, title, sort_order, is_published'
 export const ITEM_COLUMNS = 'id, module_id, title, kind, url, cover_url, sort_order, is_published'
 
@@ -16,6 +16,7 @@ export type DbProduct = {
   cover_url: string | null
   banner_url: string | null
   checkout_url: string | null
+  role: ProductRole
   is_featured: boolean
   sort_order: number
   is_published: boolean
@@ -45,6 +46,7 @@ export function toProduct(row: DbProduct): Product {
     coverUrl: row.cover_url,
     bannerUrl: row.banner_url,
     checkoutUrl: row.checkout_url,
+    role: row.role,
     isFeatured: row.is_featured,
     sortOrder: row.sort_order,
     isPublished: row.is_published,

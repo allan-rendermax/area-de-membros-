@@ -16,6 +16,7 @@ const productRow = {
   cover_url: null,
   banner_url: null,
   checkout_url: 'https://checkout.example.com',
+  role: 'upsell',
   is_featured: false,
   sort_order: 1,
   is_published: true,
@@ -77,6 +78,7 @@ const product = {
   coverUrl: null,
   bannerUrl: null,
   checkoutUrl: productRow.checkout_url,
+  role: 'upsell',
   isFeatured: false,
   sortOrder: 1,
   isPublished: true,
@@ -238,6 +240,7 @@ describe('consultas de conteúdo', () => {
     expect(url.searchParams.get('id')).toBe(`eq.${firstRow.id}`)
     expect(url.searchParams.get('select')).toContain('modules(')
     expect(url.searchParams.get('select')).toContain('products(')
+    expect(url.searchParams.get('select')).toContain('role')
   })
 
   it.each([

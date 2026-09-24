@@ -48,7 +48,7 @@ const product: Product = {
   description: 'Descrição do produto',
   coverUrl: null,
   bannerUrl: null,
-  checkoutUrl: 'https://checkout.example.com',
+  checkoutUrl: 'https://checkout.example.com', role: 'front',
   isFeatured: false,
   sortOrder: 1,
   isPublished: true,

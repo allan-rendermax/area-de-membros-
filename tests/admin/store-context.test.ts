@@ -80,6 +80,19 @@ describe('contexto da loja no envio', () => {
     expect(io.saveOffer).toHaveBeenCalledOnce()
   })
 
+  it('leva o papel complementar do formulário pela action até a persistência', async () => {
+    await expect(salvarProduto(form({ store_id: storeB.id, title: 'Extra', role: 'upsell', checkout_url: 'https://payt.example/extra' })))
+      .rejects.toThrow(/NEXT_REDIRECT/)
+    expect(io.saveProduct).toHaveBeenCalledWith(expect.objectContaining({ role: 'upsell', checkoutUrl: 'https://payt.example/extra' }))
+  })
+
+  it('expõe a escolha de papel no formulário de criação', () => {
+    const html = renderToStaticMarkup(ProductForm({ product: null, tracks: [], storeId: storeA.id }))
+    expect(html).toContain('name="role"')
+    expect(html).toContain('value="orderbump"')
+    expect(html).toContain('value="upsell"')
+  })
+
   it('aceita a loja atual para as ações manuais e reenvio', async () => {
     await expect(reenviarAcesso(form({ store_id: storeB.id, id: customerId }))).rejects.toThrow(/NEXT_REDIRECT/)
     await expect(liberarAcessoManual(form({ store_id: storeB.id, id: customerId, offerId }))).rejects.toThrow(/NEXT_REDIRECT/)

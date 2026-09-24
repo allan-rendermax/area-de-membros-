@@ -6,7 +6,7 @@ function product(id: string, track: string, sortOrder: number, extra: Partial<Pr
   return {
     id, storeId: 's1', slug: id, title: id, description: '', track,
     coverUrl: null, bannerUrl: null, checkoutUrl: `https://payt/${id}`,
-    isFeatured: false, sortOrder, isPublished: true, ...extra,
+    role: 'front', isFeatured: false, sortOrder, isPublished: true, ...extra,
   }
 }
 
@@ -18,6 +18,13 @@ function rows(products: Product[], granted: string[] = []) {
 }
 
 describe('buildTracks', () => {
+  it('preserva prioridade complementar dentro da trilha sem reordenar os comprados', () => {
+    expect(rows([product('front', 'A', 0), product('comprado', 'A', 1),
+      product('orderbump', 'A', 2, { role: 'orderbump' }),
+      product('upsell', 'A', 4, { role: 'upsell' }),
+      product('rascunho', 'A', -1, { role: 'upsell', isPublished: false })], ['comprado']))
+      .toEqual([{ name: 'A', ids: ['comprado', 'orderbump', 'upsell', 'front'] }])
+  })
   it('agrupa por trilha e ordena liberados antes de bloqueados, por sortOrder em cada grupo', () => {
     expect(rows([
       product('liberado-tarde', 'Patologias', 9),
@@ -39,6 +46,11 @@ describe('buildTracks', () => {
       { name: 'Patologias', ids: ['liberado'] },
       { name: 'Detalhamento', ids: ['bloqueado'] },
     ])
+  })
+
+  it('trilha bloqueada com oferta complementar precede trilha bloqueada apenas front', () => {
+    expect(rows([product('front', 'A', 0), product('bump', 'B', 2, { role: 'orderbump' })]))
+      .toEqual([{ name: 'B', ids: ['bump'] }, { name: 'A', ids: ['front'] }])
   })
 
   it('ordena trilhas de cada grupo pela menor sortOrder, incluindo produtos bloqueados', () => {

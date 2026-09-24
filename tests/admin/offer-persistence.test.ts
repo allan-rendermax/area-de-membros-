@@ -57,7 +57,7 @@ function textContent(node: ReactNode): string {
 }
 const product: Product = {
   id: 'product-1', storeId: 'store-1', slug: 'produto', title: 'Produto', track: '',
-  description: '', coverUrl: null, bannerUrl: null, checkoutUrl: null,
+  description: '', coverUrl: null, bannerUrl: null, checkoutUrl: null, role: 'front',
   isFeatured: false, sortOrder: 0, isPublished: true,
 }
 describe('formulário de oferta', () => {

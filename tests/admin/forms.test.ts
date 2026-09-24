@@ -36,7 +36,7 @@ describe('parseProductForm', () => {
       ),
     ).toEqual({
       id: null, storeId: 's1', slug: 'atlas-visual', title: 'Atlas Visual', track: 'Patologias', description: 'texto',
-      coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', isFeatured: true, sortOrder: 3, isPublished: true,
+      coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', role: 'front', isFeatured: true, sortOrder: 3, isPublished: true,
     })
     expect(parseProductForm(fd({ title: 'Atlas Visual' }), 's1').track).toBe('')
     expect(parseProductForm(fd({ title: 'Atlas Visual', track: '   ' }), 's1').track).toBe('')
@@ -45,6 +45,13 @@ describe('parseProductForm', () => {
   it('recusa título vazio e endereço inválido', () => {
     expect(() => parseProductForm(fd({ title: '' }), 's1')).toThrow('Informe o título')
     expect(() => parseProductForm(fd({ title: 'A', slug: 'Com Espaço' }), 's1')).toThrow('Endereço do produto inválido')
+  })
+
+  it('aceita papéis complementares com checkout e rejeita papel inválido ou checkout ausente', () => {
+    expect(parseProductForm(fd({ title: 'Bônus', role: 'orderbump', checkout_url: 'https://payt.com/bump' }), 's1').role).toBe('orderbump')
+    expect(parseProductForm(fd({ title: 'Extra', role: 'upsell', checkout_url: 'https://payt.com/extra' }), 's1').role).toBe('upsell')
+    expect(() => parseProductForm(fd({ title: 'Extra', role: 'fake' }), 's1')).toThrow('Papel')
+    expect(() => parseProductForm(fd({ title: 'Extra', role: 'upsell' }), 's1')).toThrow('checkout')
   })
 })
 

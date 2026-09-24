@@ -30,6 +30,7 @@ export type CustomerRow = {
 export type OrderRef = { productCode: string; status: OrderStatus }
 
 export type ItemKind = 'arquivo' | 'video' | 'link'
+export type ProductRole = 'front' | 'orderbump' | 'upsell'
 
 export type Product = {
   id: string
@@ -41,6 +42,7 @@ export type Product = {
   coverUrl: string | null
   bannerUrl: string | null
   checkoutUrl: string | null
+  role: ProductRole
   isFeatured: boolean
   sortOrder: number
   isPublished: boolean

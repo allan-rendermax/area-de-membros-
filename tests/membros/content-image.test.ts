@@ -49,7 +49,7 @@ const product: Product = {
   description: 'Descrição',
   coverUrl: '/covers/atlas.jpg',
   bannerUrl: '/covers/atlas-banner.jpg',
-  checkoutUrl: null,
+  checkoutUrl: null, role: 'front',
   isFeatured: true,
   sortOrder: 1,
   isPublished: true,

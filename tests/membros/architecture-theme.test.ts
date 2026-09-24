@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { getMemberTheme, withMemberArtwork } from '@/lib/membros/theme'
 import type { Product } from '@/lib/domain/types'
 
-const product: Product = { id: 'p', storeId: 's', slug: 'atlas-visual-das-patologias', title: 'Atlas', track: 'Patologias', description: '', coverUrl: null, bannerUrl: null, checkoutUrl: null, isFeatured: true, sortOrder: 0, isPublished: true }
+const product: Product = { id: 'p', storeId: 's', slug: 'atlas-visual-das-patologias', title: 'Atlas', track: 'Patologias', description: '', coverUrl: null, bannerUrl: null, checkoutUrl: null, role: 'front', isFeatured: true, sortOrder: 0, isPublished: true }
 
 describe('isolamento visual da arquitetura', () => {
   it('ativa apenas o slug exato, sem inferir pelo nome ou substring', () => {

@@ -25,7 +25,7 @@ const product: Product = {
   description: '',
   coverUrl: null,
   bannerUrl: null,
-  checkoutUrl: null,
+  checkoutUrl: null, role: 'front',
   isFeatured: false,
   sortOrder: 1,
   isPublished: true,

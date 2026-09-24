@@ -1,7 +1,7 @@
 import { isValidSlug, isValidStoreSlug, slugify } from '@/lib/content/slug'
 import { isHttpUrl, isUuid } from '@/lib/content/url'
 import { toVideoEmbed } from '@/lib/content/video'
-import type { ItemKind } from '@/lib/domain/types'
+import type { ItemKind, ProductRole } from '@/lib/domain/types'
 import { normalizeWhatsapp } from '@/lib/support/whatsapp'
 
 export class FormError extends Error {}
@@ -75,6 +75,7 @@ export type ProductInput = {
   coverUrl: string | null
   bannerUrl: string | null
   checkoutUrl: string | null
+  role: ProductRole
   isFeatured: boolean
   sortOrder: number
   isPublished: boolean
@@ -86,6 +87,10 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
   const slug = text(form, 'slug') || slugify(title)
   if (!isValidSlug(slug)) throw new FormError('Endereço do produto inválido: use letras minúsculas, números e hífen.')
   const sortOrder = Number(text(form, 'sort_order') || 0)
+  const role = text(form, 'role') || 'front'
+  if (role !== 'front' && role !== 'orderbump' && role !== 'upsell') throw new FormError('Papel do produto inválido.')
+  const checkoutUrl = optionalUrl(form, 'checkout_url', 'Checkout')
+  if (role !== 'front' && !checkoutUrl) throw new FormError('Informe o link do checkout para produto complementar.')
   return {
     id: optionalId(form, 'id'),
     storeId,
@@ -95,7 +100,8 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
     description: text(form, 'description'),
     coverUrl: optionalUrl(form, 'cover_url', 'Capa'),
     bannerUrl: optionalUrl(form, 'banner_url', 'Banner'),
-    checkoutUrl: optionalUrl(form, 'checkout_url', 'Checkout'),
+    checkoutUrl,
+    role,
     isFeatured: checked(form, 'is_featured'),
     sortOrder: Number.isFinite(sortOrder) ? Math.trunc(sortOrder) : 0,
     isPublished: checked(form, 'is_published'),

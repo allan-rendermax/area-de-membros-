@@ -31,6 +31,14 @@ export function ProductForm({ product, tracks, storeId }: { product: Product | n
           Trilha
           <input name="track" list="product-tracks" defaultValue={product?.track ?? ''} className={ui.input} />
         </label>
+        <label className={ui.label}>
+          Papel
+          <select name="role" defaultValue={product?.role ?? 'front'} className={ui.input}>
+            <option value="front">Front</option>
+            <option value="orderbump">Orderbump</option>
+            <option value="upsell">Upsell</option>
+          </select>
+        </label>
         <datalist id="product-tracks">
           {tracks.map((track) => <option key={track} value={track} />)}
         </datalist>
