@@ -150,7 +150,9 @@ const rpcOrder = input => {
 }
 const server = http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://127.0.0.1:54341')
-  const send=(value,status=200)=>{res.writeHead(status,{'content-type':'application/json'});res.end(JSON.stringify(value))}
+  const cors={'access-control-allow-origin':'http://127.0.0.1:3191','access-control-allow-methods':'GET,POST,PUT,OPTIONS','access-control-allow-headers':'authorization,apikey,content-type,x-client-info,x-upsert'}
+  const send=(value,status=200)=>{res.writeHead(status,{'content-type':'application/json',...cors});res.end(JSON.stringify(value))}
+  if(req.method==='OPTIONS'){res.writeHead(204,cors);return res.end()}
   let body='';for await(const chunk of req)body+=chunk
   let input={}
   if(body && (req.headers['content-type']||'').includes('application/json')){
@@ -179,11 +181,11 @@ const server = http.createServer(async(req,res)=>{
     const parts=url.pathname.split('/');const bucket=parts[5],path=parts.slice(6).join('/')
     if(bucket!=='arquivos-restritos')return send({message:'bucket inválido'},400)
     storageEvents.push({kind:'createSignedUrl',bucket,path,expiresIn:input.expiresIn,at:Date.now()})
-    return send({signedURL:`/storage/v1/object/sign/${bucket}/${path}?token=qa-download`})
+    return send({signedURL:`/object/sign/${bucket}/${path}?token=qa-download`})
   }
   if(url.pathname.startsWith('/storage/v1/object/')){
     storageEvents.push({kind:'objectRequest',path:url.pathname,method:req.method,at:Date.now()})
-    res.writeHead(200,{'content-type':'application/pdf'});return res.end('%PDF-1.4\n% synthetic local QA\n')
+    res.writeHead(200,{'content-type':'application/pdf',...cors});return res.end('%PDF-1.4\n% synthetic local QA\n')
   }
   if(url.pathname==='/auth/v1/admin/generate_link'){generatedEmail=input.email;return send({action_link:'http://localhost',email_otp:'123456',hashed_token:'fixture-hash',verification_type:'magiclink',redirect_to:'http://localhost',...userFor(generatedEmail)})}
   if(url.pathname==='/auth/v1/verify')return input.token_hash==='fixture-hash'?send(sessionFor(generatedEmail)):input.token==='12345678'&&input.email===admin.email?send(sessionFor(admin.email)):send({msg:'Invalid OTP',code:'otp_expired'},403)
@@ -248,6 +250,6 @@ const systemEnv = Object.fromEntries(['PATH','Path','PATHEXT','SystemRoot','SYST
 // an access notice; the guard stops Resend or any other external fetch.
 const guardPath=join(tmpdir(),`niveis-qa-network-guard-${process.pid}.cjs`)
 writeFileSync(guardPath,`const original=globalThis.fetch;globalThis.fetch=function(input,...rest){const url=new URL(typeof input==='string'||input instanceof URL?input:input.url);if(!['localhost','127.0.0.1','::1','[::1]'].includes(url.hostname))return Promise.reject(new Error('Synthetic QA blocked external fetch: '+url.hostname));return original.call(this,input,...rest)};`)
-const app=spawn(process.execPath,['--require',guardPath,'node_modules/next/dist/bin/next',process.argv.includes('--production')?'start':'dev','--hostname','127.0.0.1','--port','3191'],{cwd:process.cwd(),env:{...systemEnv,NODE_OPTIONS:`--require="${guardPath}"`,SUPABASE_URL:'http://127.0.0.1:54341',NEXT_PUBLIC_SUPABASE_URL:'http://127.0.0.1:54341',SUPABASE_PUBLISHABLE_KEY:'qa-public',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'qa-public',SUPABASE_SECRET_KEY:'qa-service',SUPABASE_SERVICE_ROLE_KEY:'qa-service',DATABASE_URL:'',DEFAULT_STORE_SLUG:'arquitetura',ADMIN_EMAILS:admin.email,LOGIN_GUARD_SECRET:'qa-local-login-secret-32-characters',APP_URL:'http://127.0.0.1:3191',PAYT_INTEGRATION_KEY:'qa-webhook',EMAIL_FROM:'qa@example.test',EMAIL_REPLY_TO:'',RESEND_API_KEY:'qa-no-email',VERCEL_OIDC_TOKEN:'',TURNSTILE_SITE_KEY:'',TURNSTILE_SECRET_KEY:''},stdio:'inherit',windowsHide:true})
+const app=spawn(process.execPath,['--require',guardPath,'node_modules/next/dist/bin/next',process.argv.includes('--production')?'start':'dev','--hostname','127.0.0.1','--port','3191'],{cwd:process.cwd(),env:{...systemEnv,NODE_OPTIONS:`--require=${guardPath.replaceAll('\\','/')}`,SUPABASE_URL:'http://127.0.0.1:54341',NEXT_PUBLIC_SUPABASE_URL:'http://127.0.0.1:54341',SUPABASE_PUBLISHABLE_KEY:'qa-public',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'qa-public',SUPABASE_SECRET_KEY:'qa-service',SUPABASE_SERVICE_ROLE_KEY:'qa-service',DATABASE_URL:'',DEFAULT_STORE_SLUG:'arquitetura',ADMIN_EMAILS:admin.email,LOGIN_GUARD_SECRET:'qa-local-login-secret-32-characters',APP_URL:'http://127.0.0.1:3191',PAYT_INTEGRATION_KEY:'qa-webhook',EMAIL_FROM:'qa@example.test',EMAIL_REPLY_TO:'',RESEND_API_KEY:'qa-no-email',VERCEL_OIDC_TOKEN:'',TURNSTILE_SITE_KEY:'',TURNSTILE_SECRET_KEY:''},stdio:'inherit',windowsHide:true})
 function stop(){app.kill();server.close();try{unlinkSync(guardPath)}catch{}process.exit()}
 process.on('SIGINT',stop);process.on('SIGTERM',stop)

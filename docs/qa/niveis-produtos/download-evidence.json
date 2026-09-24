@@ -1,0 +1,39 @@
+{
+  "status": 307,
+  "destination": "http://127.0.0.1:54341/storage/v1/object/sign/arquivos-restritos/b16adfc7-eba8-49ef-a571-7025eb90fe04/niveis-qa-test.pdf?token=qa-download&download=",
+  "download": {
+    "status": 200,
+    "contentType": "application/pdf",
+    "bytes": 30
+  },
+  "storageSign": [
+    {
+      "kind": "uploadToSignedUrl",
+      "path": "/storage/v1/object/upload/sign/arquivos-restritos/b16adfc7-eba8-49ef-a571-7025eb90fe04/niveis-qa-test.pdf",
+      "bytes": 325,
+      "at": 1790250988141
+    },
+    {
+      "kind": "createSignedUrl",
+      "bucket": "arquivos-restritos",
+      "path": "b16adfc7-eba8-49ef-a571-7025eb90fe04/niveis-qa-test.pdf",
+      "expiresIn": 60,
+      "at": 1790251015223
+    },
+    {
+      "kind": "createSignedUrl",
+      "bucket": "arquivos-restritos",
+      "path": "b16adfc7-eba8-49ef-a571-7025eb90fe04/niveis-qa-test.pdf",
+      "expiresIn": 60,
+      "at": 1790251053515
+    },
+    {
+      "kind": "createSignedUrl",
+      "bucket": "arquivos-restritos",
+      "path": "b16adfc7-eba8-49ef-a571-7025eb90fe04/niveis-qa-test.pdf",
+      "expiresIn": 60,
+      "at": 1790251055898
+    }
+  ],
+  "accessRecorded": true
+}

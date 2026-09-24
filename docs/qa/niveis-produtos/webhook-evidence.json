@@ -1,0 +1,58 @@
+{
+  "before": {
+    "http": 200,
+    "url": "http://127.0.0.1:3191/arquitetura/produto/atlas",
+    "basic": true,
+    "complete": false,
+    "cta": true,
+    "extra": false,
+    "bytes": 34377
+  },
+  "paid": {
+    "http": 200,
+    "body": {
+      "ok": true,
+      "result": "liberado"
+    },
+    "page": {
+      "http": 200,
+      "url": "http://127.0.0.1:3191/arquitetura/produto/atlas",
+      "basic": false,
+      "complete": true,
+      "cta": false,
+      "extra": true,
+      "bytes": 39372
+    }
+  },
+  "refunded": {
+    "http": 200,
+    "body": {
+      "ok": true,
+      "result": "atualizado"
+    },
+    "page": {
+      "http": 200,
+      "url": "http://127.0.0.1:3191/arquitetura/produto/atlas",
+      "basic": true,
+      "complete": false,
+      "cta": true,
+      "extra": false,
+      "bytes": 34377
+    }
+  },
+  "persistedOrder": {
+    "id": "00000000-0000-4000-8000-000000001207",
+    "store_id": "00000000-0000-4000-8000-000000000001",
+    "customer_email": "reembolso@example.test",
+    "customer_name": "QA Reembolso",
+    "payt_product_code": "UPGRADE-QA",
+    "payt_product_name": "Upgrade QA",
+    "transaction_id": "QA-ROOT-UPGRADE-CYCLE",
+    "status": "reembolsado",
+    "status_rank": 2,
+    "is_test": false,
+    "source": "payt",
+    "created_at": "2026-09-24T11:57:12.946Z",
+    "amount_cents": null
+  }
+}
