@@ -38,7 +38,6 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
     <>
       <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} actions={<InstallAppButton />} active="home" legacyHome />
       <main className="pb-24">
-        <ScrollToMaterials />
         {architecture ? <ArchitectureHero /> : shelf.featured && <Hero product={shelf.featured} storeSlug={store.slug} preview={preview} />}
         {architecture && (
           <div id="materiais" className="arq-library-heading">
@@ -79,6 +78,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
             </Carousel>
           ))}
         </div>
+        <ScrollToMaterials />
       </main>
       <WhatsAppFloating href={support} />
     </>

@@ -4,10 +4,12 @@ import { useEffect } from 'react'
 
 export function ScrollToMaterials() {
   useEffect(() => {
-    // The anchor arrives after the loading boundary; retry once it is mounted.
-    if (window.location.hash === '#materiais') {
+    // Wait for the streamed DOM and Next's own scroll restoration to settle.
+    if (window.location.hash !== '#materiais') return
+    const frame = window.requestAnimationFrame(() => {
       document.getElementById('materiais')?.scrollIntoView({ block: 'start', behavior: 'instant' })
-    }
+    })
+    return () => window.cancelAnimationFrame(frame)
   }, [])
   return null
 }
