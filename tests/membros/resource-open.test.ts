@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { notFound, redirect } from 'next/navigation'
 import { GET } from '@/app/[loja]/item/[id]/abrir/route'
 import { loadGrantedProductLevels } from '@/lib/data/access'
-import { recordItemAccess } from '@/lib/data/item-access'
+import { after } from 'next/server'
 import { getItemWithContext } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 vi.mock('next/navigation', () => ({ notFound: vi.fn(), redirect: vi.fn() }))
 vi.mock('@/lib/data/access', () => ({ loadGrantedProductLevels: vi.fn() }))
-vi.mock('@/lib/data/item-access', () => ({ recordItemAccess: vi.fn() }))
+vi.mock('next/server', () => ({ after: vi.fn() }))
 vi.mock('@/lib/data/products', () => ({ getItemWithContext: vi.fn() }))
 vi.mock('@/lib/membros/session', () => ({ requireStoreSession: vi.fn() }))
 vi.mock('@/lib/env', () => ({ env: { supabaseUrl: 'https://project.supabase.co' } }))
@@ -33,7 +33,7 @@ describe('rota protegida para abrir recurso', () => {
     vi.mocked(requireStoreSession).mockResolvedValue({ store, customer })
     vi.mocked(getItemWithContext).mockResolvedValue(ctx)
     vi.mocked(loadGrantedProductLevels).mockResolvedValue(new Map([[product.id, 'complete']]))
-    vi.mocked(recordItemAccess).mockResolvedValue()
+
   })
 
   it('rejeita UUID inválido antes de consultar sessão', async () => {
@@ -44,7 +44,7 @@ describe('rota protegida para abrir recurso', () => {
   it('impede que Completo abra arquivo Básico diretamente no modo versões', async () => {
     vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...ctx, product: { ...product, contentMode: 'versions' } })
     await expect(GET(request, params())).rejects.toThrow('NEXT_REDIRECT:/loja-a/produto/produto-a?bloqueado=1')
-    expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(after).not.toHaveBeenCalled()
     expect(createAdminClient).not.toHaveBeenCalled()
   })
 
@@ -52,7 +52,7 @@ describe('rota protegida para abrir recurso', () => {
     vi.mocked(requireStoreSession).mockRejectedValueOnce(new Error('SESSION_REQUIRED'))
     await expect(GET(request, params())).rejects.toThrow('SESSION_REQUIRED')
     expect(getItemWithContext).not.toHaveBeenCalled()
-    expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(after).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -66,21 +66,21 @@ describe('rota protegida para abrir recurso', () => {
   ])('não expõe destino para contexto oculto, inválido ou vídeo', async (invalid) => {
     vi.mocked(getItemWithContext).mockResolvedValueOnce(invalid)
     await expect(GET(request, params())).rejects.toThrow('NEXT_NOT_FOUND')
-    expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(after).not.toHaveBeenCalled()
     expect(redirect).not.toHaveBeenCalled()
   })
 
   it('redireciona para compra antes de registrar quando produto não foi comprado', async () => {
     vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map())
     await expect(GET(request, params())).rejects.toThrow('NEXT_REDIRECT:/loja-a?comprar=produto-a')
-    expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(after).not.toHaveBeenCalled()
   })
 
   it('bloqueia download extra antes de registrar ou assinar', async () => {
     vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map([[product.id, 'basic']]))
     vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...ctx, module: { ...courseModule, requiredLevel: 'complete' }, item: { ...item, url: 'https://project.supabase.co/storage/v1/object/authenticated/arquivos-restritos/modelo.pdf' } })
     await expect(GET(request, params())).rejects.toThrow('NEXT_REDIRECT:/loja-a/produto/produto-a?bloqueado=1')
-    expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(after).not.toHaveBeenCalled()
     expect(createAdminClient).not.toHaveBeenCalled()
   })
 
@@ -91,7 +91,8 @@ describe('rota protegida para abrir recurso', () => {
     vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...ctx, module: { ...courseModule, requiredLevel: 'complete' }, item: { ...item, url: 'https://project.supabase.co/storage/v1/object/authenticated/arquivos-restritos/modelo.pdf' } })
     await expect(GET(request, params())).rejects.toThrow(`NEXT_REDIRECT:${signedUrl}`)
     expect(createSignedUrl).toHaveBeenCalledWith('modelo.pdf', 60, { download: true })
-    expect(recordItemAccess).toHaveBeenCalledOnce()
+    expect(after).toHaveBeenCalledOnce()
+    expect(createSignedUrl.mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(after).mock.invocationCallOrder[0])
   })
 
   it('não registra nem redireciona se assinatura falha', async () => {
@@ -99,27 +100,30 @@ describe('rota protegida para abrir recurso', () => {
     vi.mocked(createAdminClient).mockReturnValue({ storage: { from: vi.fn(() => ({ createSignedUrl })) } } as unknown as ReturnType<typeof createAdminClient>)
     vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...ctx, item: { ...item, url: 'https://project.supabase.co/storage/v1/object/authenticated/arquivos-restritos/modelo.pdf' } })
     await expect(GET(request, params())).rejects.toThrow('NEXT_NOT_FOUND')
-    expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(after).not.toHaveBeenCalled()
     expect(redirect).not.toHaveBeenCalled()
   })
 
-  it('aguarda o registro do clique autorizado antes de redirecionar, sem buscar bytes', async () => {
-    const originalFetch = globalThis.fetch
-    const fetchSpy = vi.fn()
-    globalThis.fetch = fetchSpy
-    let finishRecord!: () => void
-    const pendingRecord = new Promise<void>((resolve) => { finishRecord = resolve })
-    vi.mocked(recordItemAccess).mockReturnValueOnce(pendingRecord)
+  it('redireciona antes de iniciar histórico, mesmo com persistência pendente', async () => {
+    const insert = vi.fn(() => new Promise(() => {}))
+    vi.mocked(createAdminClient).mockReturnValue({ from: vi.fn(() => ({ insert })) } as never)
+    await expect(GET(request, params())).rejects.toThrow(`NEXT_REDIRECT:${item.url}?download=`)
+    expect(insert).not.toHaveBeenCalled()
+    expect(after).toHaveBeenCalledOnce()
+    const callback = vi.mocked(after).mock.calls[0][0] as () => Promise<void>
+    void callback()
+    expect(insert).toHaveBeenCalledWith({ customer_id: customer.id, store_id: store.id, product_id: product.id, item_id: item.id, kind: item.kind })
+  })
+
+  it('entrega o recurso e captura falha do histórico sem expor URL ou dados do cliente', async () => {
+    const insert = vi.fn().mockRejectedValue(new Error('https://signed.example.com/?token=secret aluna@example.com'))
+    vi.mocked(createAdminClient).mockReturnValue({ from: vi.fn(() => ({ insert })) } as never)
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
-      const opening = GET(request, params())
-      await vi.waitFor(() => expect(recordItemAccess).toHaveBeenCalledOnce())
-      expect(redirect).not.toHaveBeenCalled()
-      finishRecord()
-      await expect(opening).rejects.toThrow(`NEXT_REDIRECT:${item.url}?download=`)
-      expect(recordItemAccess).toHaveBeenCalledWith({ customerId: customer.id, storeId: store.id, productId: product.id, itemId: item.id, kind: item.kind })
-      expect(fetchSpy).not.toHaveBeenCalled()
-    } finally {
-      globalThis.fetch = originalFetch
-    }
+      await expect(GET(request, params())).rejects.toThrow(`NEXT_REDIRECT:${item.url}?download=`)
+      const callback = vi.mocked(after).mock.calls[0][0] as () => Promise<void>
+      await expect(callback()).resolves.toBeUndefined()
+      expect(error).toHaveBeenCalledWith('item_access_write_failed', { itemId: item.id })
+    } finally { error.mockRestore() }
   })
 })

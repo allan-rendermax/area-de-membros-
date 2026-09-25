@@ -44,3 +44,12 @@ it('não oferece upgrade a quem já tem Completo', () => {
   act(() => root.render(createElement(ProductUpgrade, { level: 'complete', lockedCount: 1, refreshHref: '/produto' })))
   expect(container.textContent).toBe('')
 })
+
+it('prévia mantém o CTA visual sem checkout ou atualização de acesso navegáveis', () => {
+  act(() => root.render(createElement(ProductUpgrade, { level: 'basic', lockedCount: 1, previewOnly: true, checkoutUrl: 'https://checkout.example.com/upgrade', refreshHref: '/produto', buttonText: 'Meu botão de teste' })))
+  act(() => container.querySelector('button')!.click())
+  const modal = document.querySelector('[role="dialog"]')!
+  expect(modal.textContent).toContain('Meu botão de teste')
+  expect(modal.querySelector('a[href]')).toBeNull()
+  expect(modal.textContent).not.toContain('Já paguei')
+})

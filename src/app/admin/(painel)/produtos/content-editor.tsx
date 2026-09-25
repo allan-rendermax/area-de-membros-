@@ -1,10 +1,10 @@
-import { sectionTitle } from '@/lib/access/product-content'
 import type { ContentMode } from '@/lib/domain/types'
 import { materialTitle } from '@/lib/content/material-title'
 import { ui } from '@/components/admin/ui'
 import type { ModuleWithItems } from '@/lib/domain/types'
-import { excluirItem, excluirModulo, moverItem, moverModulo, salvarModulo } from './actions'
+import { excluirItem, excluirModulo, moverItem, moverModulo } from './actions'
 import { ItemFields } from './item-fields'
+import { ModuleFields } from './module-fields'
 
 const KIND_LABEL = { arquivo: 'Arquivo', video: 'Vídeo', link: 'Link' } as const
 
@@ -66,18 +66,7 @@ export function ContentEditor({ productId, productTitle, modules, contentMode }:
       {modules.map((m, moduleIndex) => (
         <section key={m.id} className={`${ui.card} p-4`}>
           <div className="flex flex-wrap items-end gap-3">
-            <form action={salvarModulo} className="flex flex-1 flex-wrap items-end gap-3">
-              <Hidden values={{ id: m.id, product_id: productId }} />
-              <label className={`${ui.label} min-w-48 flex-1`}>Nome da seção<input name="title" required defaultValue={sectionTitle(m.title, m.requiredLevel, contentMode)} className={ui.input} /></label>
-              <label className={ui.label}>Acesso
-                <select name="required_level" defaultValue={m.requiredLevel ?? 'basic'} className={ui.input}>
-                  <option value="basic">{contentMode === 'versions' ? 'Versão Básico' : 'Incluído no Básico'}</option>
-                  <option value="complete">{contentMode === 'versions' ? 'Versão Completo' : 'Exclusivo do Completo'}</option>
-                </select>
-              </label>
-              <label className={ui.checkbox}><input name="is_published" type="checkbox" defaultChecked={m.isPublished} /> Publicado</label>
-              <button type="submit" className={ui.buttonGhost}>Salvar</button>
-            </form>
+            <ModuleFields productId={productId} module={m} contentMode={contentMode} />
             <MoveButtons action={moverModulo} hidden={{ id: m.id, product_id: productId }} first={moduleIndex === 0} last={moduleIndex === modules.length - 1} label={m.title} />
             <ConfirmDelete action={excluirModulo} hidden={{ id: m.id, product_id: productId }} question={`Excluir o módulo e os ${m.items.length} itens dele?`} />
           </div>
@@ -117,20 +106,7 @@ export function ContentEditor({ productId, productTitle, modules, contentMode }:
         </section>
       ))}
 
-      <form action={salvarModulo} className={`${ui.card} flex flex-wrap items-end gap-3 p-4`}>
-        <Hidden values={{ product_id: productId, is_published: 'on' }} />
-        <label className={`${ui.label} min-w-48 flex-1`}>
-          Nova seção
-          <input name="title" required key={nextTitle} defaultValue={nextTitle} placeholder="Ex.: Materiais do pack" className={ui.input} />
-        </label>
-        <label className={ui.label}>Acesso
-          <select name="required_level" key={nextLevel} defaultValue={nextLevel} className={ui.input}>
-            <option value="basic">{contentMode === 'versions' ? 'Versão Básico' : 'Incluído no Básico'}</option>
-            <option value="complete">{contentMode === 'versions' ? 'Versão Completo' : 'Exclusivo do Completo'}</option>
-          </select>
-        </label>
-        <button type="submit" className={ui.button}>Criar módulo</button>
-      </form>
+      <ModuleFields key={`${nextLevel}:${nextTitle}`} productId={productId} contentMode={contentMode} initialLevel={nextLevel} initialTitle={nextTitle} />
       <p className="text-sm text-texto-suave">Ao mudar um módulo para Completo, reenvie antes os arquivos públicos antigos. A alteração afeta também compras existentes.</p>
     </div>
   )

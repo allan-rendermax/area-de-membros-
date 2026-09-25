@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ContentEditor } from '@/app/admin/(painel)/produtos/content-editor'
 import type { ModuleWithItems } from '@/lib/domain/types'
+import { mockCancelableFormReset } from '../helpers/form-reset'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -31,6 +32,7 @@ async function choose(form: HTMLFormElement, file: File) {
 describe('ContentEditor item upload', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
+    mockCancelableFormReset()
     actions.prepararUploadArquivo.mockResolvedValue({ data: ticket })
     upload.mockResolvedValue({ data: { path: ticket.path }, error: null })
     container = document.createElement('div')
@@ -39,7 +41,7 @@ describe('ContentEditor item upload', () => {
     await act(async () => root.render(createElement(ContentEditor, { productId: 'product-1', productTitle: 'Atlas de teste', modules: [moduleFixture] })))
   })
 
-  afterEach(async () => { await act(async () => root.unmount()); container.remove() })
+  afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.restoreAllMocks() })
 
   it('sugere Básico e depois Completo com níveis correspondentes; packs mantêm nome livre', async () => {
     const props = { productId: 'product-1', productTitle: 'Atlas', contentMode: 'versions' as const }
@@ -59,6 +61,85 @@ describe('ContentEditor item upload', () => {
     expect(form.textContent).toContain('Link externo')
     expect(form.textContent).toContain('download')
     expect(container.textContent).toContain('mesmo módulo')
+  })
+
+  it('mantém título, arquivo enviado e publicação depois de falha ao salvar material', async () => {
+    actions.salvarItem.mockResolvedValueOnce({ status: 'error', fieldErrors: {}, message: 'Falha ao salvar material' })
+    const form = itemForm()
+    const title = form.querySelector<HTMLInputElement>('[name="title"]')!
+    await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(title, 'Título alterado'); title.dispatchEvent(new Event('input', { bubbles: true })) })
+    await choose(form, new File(['PDF'], 'novo.pdf', { type: 'application/pdf' }))
+    await act(async () => form.requestSubmit())
+    expect(form.textContent).toContain('Falha ao salvar material')
+    expect(new FormData(form).get('title')).toBe('Título alterado')
+    expect(new FormData(form).get('url')).toBe(ticket.publicUrl)
+  })
+
+  it('mantém a seção editada e seu nível após erro de persistência', async () => {
+    actions.salvarModulo.mockResolvedValueOnce({ status: 'error', fieldErrors: {}, message: 'Não foi possível salvar seção' })
+    const section = [...container.querySelectorAll('form')].find(form => form.textContent?.includes('Nome da seção'))!
+    const title = section.querySelector<HTMLInputElement>('[name="title"]')!
+    const level = section.querySelector<HTMLSelectElement>('[name="required_level"]')!
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(title, 'Seção editada')
+      title.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await act(async () => { level.value = 'complete'; level.dispatchEvent(new Event('change', { bubbles: true })) })
+    expect(new FormData(section).get('required_level')).toBe('complete')
+    await act(async () => section.requestSubmit())
+    expect(section.textContent).toContain('Não foi possível salvar seção')
+    expect(new FormData(section).get('title')).toBe('Seção editada')
+    expect(new FormData(section).get('required_level')).toBe('complete')
+  })
+
+  it('após erro e sucesso, limpa novo material e impede reenviar o mesmo item', async () => {
+    actions.salvarItem.mockResolvedValueOnce({ status: 'error', fieldErrors: {}, message: 'Falha temporária' })
+      .mockResolvedValueOnce({ status: 'saved', fieldErrors: {}, message: 'Item salvo.' })
+    const form = addForm()
+    await choose(form, new File(['PDF'], 'novo.pdf', { type: 'application/pdf' }))
+    await act(async () => form.requestSubmit())
+    expect(new FormData(form).get('url')).toBe(ticket.publicUrl)
+    expect(form.textContent).toContain('Falha temporária')
+    await act(async () => form.requestSubmit())
+    expect(form.textContent).toContain('Item salvo.')
+    expect(form.textContent).not.toContain('Falha temporária')
+    expect(form.textContent).not.toContain('Arquivo enviado')
+    expect(new FormData(form).get('url')).toBe('')
+    expect(new FormData(form).get('title')).toBe('Atlas de teste')
+    await act(async () => form.requestSubmit())
+    expect(actions.salvarItem).toHaveBeenCalledTimes(2)
+  })
+
+  it('sucesso na edição conserva material atualizado e remove erro anterior', async () => {
+    actions.salvarItem.mockResolvedValueOnce({ status: 'error', fieldErrors: {}, message: 'Erro anterior' })
+      .mockResolvedValueOnce({ status: 'saved', fieldErrors: {}, message: 'Item salvo.' })
+    const form = itemForm()
+    await choose(form, new File(['PDF'], 'atualizado.pdf', { type: 'application/pdf' }))
+    await act(async () => form.requestSubmit())
+    expect(form.textContent).toContain('Erro anterior')
+    await act(async () => form.requestSubmit())
+    expect(form.querySelector('[role="alert"]')).toBeNull()
+    expect(form.textContent).toContain('Item salvo.')
+    expect(new FormData(form).get('url')).toBe(ticket.publicUrl)
+    expect(new FormData(form).get('title')).toBe('Apostila')
+  })
+
+  it.each([false, true])('sucesso depois de erro em seção: edição=%s', async existing => {
+    actions.salvarModulo.mockResolvedValueOnce({ status: 'error', fieldErrors: {}, message: 'Erro anterior da seção' })
+      .mockResolvedValueOnce({ status: 'saved', fieldErrors: {}, message: 'Módulo salvo.' })
+    const form = existing ? [...container.querySelectorAll('form')].find(form => form.textContent?.includes('Nome da seção'))! : formWithButton('Criar módulo')
+    const input = form.querySelector<HTMLInputElement>('[name="title"]')!
+    await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Seção nova'); input.dispatchEvent(new Event('input', { bubbles: true })) })
+    await act(async () => form.requestSubmit())
+    expect(new FormData(form).get('title')).toBe('Seção nova')
+    await act(async () => form.requestSubmit())
+    expect(form.querySelector('[role="alert"]')).toBeNull()
+    expect(form.textContent).toContain('Módulo salvo.')
+    expect(new FormData(form).get('title')).toBe(existing ? 'Seção nova' : '')
+    if (!existing) {
+      await act(async () => form.requestSubmit())
+      expect(actions.salvarModulo).toHaveBeenCalledTimes(2)
+    }
   })
 
   it('preenche novos materiais com o produto e preserva nomes personalizados existentes', () => {

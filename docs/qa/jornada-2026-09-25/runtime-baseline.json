@@ -1,0 +1,122 @@
+{
+  "delayedResponse": {
+    "status": 307,
+    "ttfbMs": 1337.098,
+    "totalMs": 1337.4869999999999,
+    "bytes": 0,
+    "location": "http://127.0.0.1:3344/storage/v1/object/sign/arquivos-restritos/qa/basico.pdf?token=fixture-only&download=",
+    "hasPlayer": false,
+    "errorPage": false
+  },
+  "historyRows": {
+    "before": 102,
+    "atResponse": 103,
+    "settled": 103
+  },
+  "failedHistoryResponse": {
+    "status": 500,
+    "ttfbMs": 198.8144000000002,
+    "totalMs": 198.8991000000001,
+    "bytes": 0,
+    "location": null,
+    "hasPlayer": false,
+    "errorPage": false
+  },
+  "failedHistoryRequests": [
+    {
+      "method": "GET",
+      "path": "/auth/v1/user",
+      "status": 200,
+      "ms": 39.273500000010245
+    },
+    {
+      "method": "GET",
+      "path": "/auth/v1/user",
+      "status": 200,
+      "ms": 25.760200000018813
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/customers",
+      "status": 200,
+      "ms": 29.70360000000801
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/items",
+      "status": 200,
+      "ms": 29.17309999995632
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/offers",
+      "status": 200,
+      "ms": 29.05999999999767
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/orders",
+      "status": 200,
+      "ms": 28.942099999985658
+    },
+    {
+      "method": "POST",
+      "path": "/storage/v1/object/sign/arquivos-restritos/qa/basico.pdf",
+      "status": 200,
+      "ms": 28.92669999995269
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/item_access",
+      "status": 503,
+      "ms": 29.399199999985285
+    }
+  ],
+  "blockedResponse": {
+    "status": 307,
+    "ttfbMs": 123.52959999999985,
+    "totalMs": 123.63490000000002,
+    "bytes": 0,
+    "location": "/arquitetura/produto/atlas-qa?bloqueado=1",
+    "hasPlayer": false,
+    "errorPage": false
+  },
+  "blockedRequests": [
+    {
+      "method": "GET",
+      "path": "/auth/v1/user",
+      "status": 200,
+      "ms": 26.416499999992084
+    },
+    {
+      "method": "GET",
+      "path": "/auth/v1/user",
+      "status": 200,
+      "ms": 27.777999999991152
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/customers",
+      "status": 200,
+      "ms": 29.471900000004098
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/items",
+      "status": 200,
+      "ms": 29.767900000035297
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/offers",
+      "status": 200,
+      "ms": 29.693499999993946
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/orders",
+      "status": 200,
+      "ms": 29.62290000001667
+    }
+  ]
+}

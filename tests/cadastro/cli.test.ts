@@ -37,6 +37,18 @@ describe('CLI de cadastro', () => {
     expect(result.stdout).toContain('/loja/produto/kit')
     expect(result.stdout).toMatch(/Kit[\s\S]*Material[\s\S]*Guia[\s\S]*3 B/)
     expect(result.stdout).toMatch(/1 produto\(s\).*1 módulo\(s\).*1 item\(ns\)/)
+    expect(result.stdout).toMatch(/novo.*versions/i)
+    expect(result.stdout).toMatch(/reimporta.*preserva.*modo salvo/i)
+    expect(result.stdout).toMatch(/Completo.*sem material/i)
+  })
+  it('expõe na simulação offline organização explícita e prontidão de seções', async () => {
+    const dir = await root()
+    const folder = await product(dir, 'kit', 'nome: Kit\nid: P1\ntag: front\nloja: loja\norganizacao: sections\n')
+    const result = run(folder, '--simular')
+    expect(result.status).toBe(0)
+    expect(result.stdout).toMatch(/Organização: sections/)
+    expect(result.stdout).toMatch(/Básico 1, Completo 1/)
+    expect(result.stdout).not.toMatch(/Completo.*sem material/)
   })
   it('lote com segunda pasta inválida falha sem pedir credenciais', async () => {
     const dir = await root()

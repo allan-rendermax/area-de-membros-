@@ -1,3 +1,4 @@
+import { previewIncludesDrafts, type PreviewContext } from '@/lib/membros/preview-context'
 import Link from 'next/link'
 import type { AccessLevel, CustomerRow, Item, Module, ModuleWithItems, Product, Store } from '@/lib/domain/types'
 import { materialTitle } from '@/lib/content/material-title'
@@ -8,12 +9,12 @@ import { InstallAppButton } from './install-app-button'
 import { LessonSidebar } from './lesson-sidebar'
 import { LessonToolbar } from './lesson-toolbar'
 import { ProductUpgrade } from './product-upgrade'
+import { RecordItemVisit } from './record-item-visit'
 import { ResourceList } from './resource-list'
 import { StoreHeader } from './store-header'
 import { toVideoEmbed } from '@/lib/content/video'
 import { isHttpUrl } from '@/lib/content/url'
 import { canAccessProductModule, sectionTitle } from '@/lib/access/product-content'
-import { recordItemAccess } from '@/lib/data/item-access'
 import { listModulesWithItems } from '@/lib/data/products'
 import { withPreview } from '@/lib/membros/paths'
 
@@ -23,35 +24,33 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
   store: Store
   customer: CustomerRow | null
   level: AccessLevel
-  preview: boolean
+  preview: PreviewContext
   blocked: boolean
   productModules?: ModuleWithItems[]
 }) {
+  const editorial = previewIncludesDrafts(preview)
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
   const [completionResult, productModules] = await Promise.all([
     Promise.allSettled([customer ? listCompletedItemIds(customer.id, store.id, ctx.product.id) : Promise.resolve([])]),
-    suppliedModules ?? listModulesWithItems(ctx.product.id, { publishedOnly: !preview }),
-    customer && ctx.item.kind === 'video'
-      ? recordItemAccess({ customerId: customer.id, storeId: store.id, productId: ctx.product.id, itemId: ctx.item.id, kind: ctx.item.kind })
-      : Promise.resolve(),
+    suppliedModules ?? listModulesWithItems(ctx.product.id, { publishedOnly: !editorial }),
   ])
   const completedIds = completionResult[0].status === 'fulfilled' ? completionResult[0].value : []
   const progressAvailable = completionResult[0].status === 'fulfilled'
 
   const publishedModules = productModules
-    .filter((module) => preview || module.isPublished)
+    .filter((module) => editorial || module.isPublished)
     .map((module) => ({
       ...module,
       title: sectionTitle(module.title, module.requiredLevel, ctx.product.contentMode),
-      items: module.items.filter((item) => (preview || item.isPublished) &&
+      items: module.items.filter((item) => (editorial || item.isPublished) &&
         (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))).map((item) => ({
           ...item,
           title: materialTitle(item.title, ctx.product.title),
         })),
     }))
     .filter((module) => module.items.length > 0)
-  const modules = publishedModules.filter((module) => canAccessProductModule(level, module.requiredLevel, ctx.product.contentMode, preview))
-  const lockedModules = publishedModules.filter((module) => !preview && level === 'basic' && !canAccessProductModule(level, module.requiredLevel, ctx.product.contentMode, preview))
+  const modules = publishedModules.filter((module) => canAccessProductModule(level, module.requiredLevel, ctx.product.contentMode, editorial))
+  const lockedModules = publishedModules.filter((module) => !editorial && level === 'basic' && !canAccessProductModule(level, module.requiredLevel, ctx.product.contentMode, editorial))
   const sequence = modules.flatMap((module) => module.items)
   const itemTitle = sequence.find((item) => item.id === ctx.item.id)?.title ?? ctx.item.title
   const moduleTitle = modules.find((module) => module.id === ctx.module.id)?.title ?? ctx.module.title
@@ -66,7 +65,8 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
 
   return (
     <>
-      <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} active="materials" actions={<InstallAppButton />} />
+      {customer && !preview && embed && <RecordItemVisit key={customer.id} storeSlug={store.slug} itemId={ctx.item.id} />}
+      <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} simulationHref={ctx.product.isPublished ? `/${store.slug}/produto/${ctx.product.slug}` : `/${store.slug}`} active="materials" actions={<InstallAppButton />} />
       <main className="lesson-workspace member-item-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
         <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0 order-2 lg:order-1">
@@ -98,7 +98,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
             <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
             <LessonToolbar
               key={`${customer?.id ?? 'preview'}:${ctx.item.id}`}
-              preview={preview}
+              preview={Boolean(preview)}
               storeSlug={store.slug}
               initialCompleted={visibleCompletedIds.includes(ctx.item.id)}
               progressAvailable={progressAvailable}

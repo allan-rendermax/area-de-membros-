@@ -104,7 +104,7 @@ async function save() {
   form.set('id', '11111111-1111-4111-8111-111111111111')
   form.set('store_id', 'store-1')
   form.set('title', 'Produto de teste')
-  await expect(salvarProduto(form)).rejects.toThrow('redirect:/admin/produtos/11111111-1111-4111-8111-111111111111?aba=geral&msg=Produto%20salvo.')
+  await expect(salvarProduto(form)).resolves.toEqual({ status: 'saved', fieldErrors: {}, message: 'Produto salvo.' })
 }
 function applyResponseCookies(response: Awaited<ReturnType<typeof logout>>) {
   for (const { name, value, ...options } of response.cookies.getAll()) {

@@ -5,7 +5,10 @@ import { getAdminStore } from '@/lib/admin/current-store'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
 import { getProductById, listModulesWithItems } from '@/lib/data/products'
-import { listTracks } from '@/lib/data/products-admin'
+import { listTracks, listOffers } from '@/lib/data/products-admin'
+import { ProductReadinessNotice } from '@/components/admin/product-readiness-notice'
+import { sectionTitle } from '@/lib/access/product-content'
+import { supportHref } from '@/lib/support/whatsapp'
 import { ContentEditor } from '../content-editor'
 import { ProductForm } from '../product-form'
 import { DeleteProductSection } from '../delete-product-form'
@@ -18,7 +21,7 @@ export default async function ProdutoAdminPage({ params, searchParams }: PagePro
   if (id !== 'novo' && (!product || product.storeId !== store.id)) notFound()
 
   const showContent = Boolean(product) && aba === 'conteudo'
-  const modules = product && showContent ? await listModulesWithItems(product.id, { publishedOnly: false }) : []
+  const [modules, offers] = product ? await Promise.all([listModulesWithItems(product.id, { publishedOnly: false }), listOffers(store.id)]) : [[], []]
   const tracks = showContent ? [] : await listTracks(store.id)
 
   return (
@@ -35,8 +38,9 @@ export default async function ProdutoAdminPage({ params, searchParams }: PagePro
         </nav>
       )}
       {typeof msg === 'string' && <p role="status" className={ui.notice}>{msg}</p>}
+      {product && <ProductReadinessNotice product={product} modules={modules} offers={offers} />}
       {product && showContent ? <ContentEditor productId={product.id} productTitle={product.title} contentMode={product.contentMode} modules={modules} /> : <>
-        <ProductForm product={product} tracks={tracks} storeId={store.id} storeSlug={store.slug} />
+        <ProductForm product={product} tracks={tracks} storeId={store.id} storeSlug={store.slug} supportUrl={supportHref(store, 'geral', null)} upgradeSectionName={sectionTitle(modules.find((module) => module.requiredLevel === 'complete')?.title ?? '', 'complete', product?.contentMode)} />
         {product && <DeleteProductSection key={product.id} product={{ id: product.id, title: product.title }} storeId={store.id} />}
       </>}
     </div>

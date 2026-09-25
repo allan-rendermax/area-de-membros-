@@ -1,10 +1,11 @@
+import type { PreviewContext } from '@/lib/membros/preview-context'
 import Link from 'next/link'
 import type { ShelfProduct } from '@/lib/access/access'
 import { AutoCover } from './auto-cover'
 import { LockIcon, PlayIcon } from './icons'
 import { withPreview } from '@/lib/membros/paths'
 
-export function Hero({ product, storeSlug, preview = false }: { product: ShelfProduct; storeSlug: string; preview?: boolean }) {
+export function Hero({ product, storeSlug, preview = false }: { product: ShelfProduct; storeSlug: string; preview?: PreviewContext }) {
   const href = withPreview(product.unlocked ? `/${storeSlug}/produto/${product.slug}` : `/${storeSlug}?comprar=${product.slug}`, preview)
   return (
     <section className="relative">

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { errorText, withMessage } from '@/lib/admin/action-helpers'
 import { assertAdminStoreContext, getAdminStore } from '@/lib/admin/current-store'
 import { parseOfferForm } from '@/lib/admin/forms'
+import { assertOfferProductsReady } from '@/lib/admin/product-publication'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
 import { deleteOffer } from '@/lib/data/offer-deletion'
@@ -40,7 +41,9 @@ export async function salvarOferta(formData: FormData) {
     redirect(withMessage(currentId === 'novo' ? '/admin/ofertas/novo' : '/admin/ofertas', errorText(e)))
   }
   try {
-    await saveOffer(parseOfferForm(formData, store.id))
+    const input = parseOfferForm(formData, store.id)
+    await assertOfferProductsReady(input)
+    await saveOffer(input)
   } catch (e) {
     redirect(withMessage(`/admin/ofertas/${currentId}`, errorText(e)))
   }

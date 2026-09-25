@@ -1,3 +1,4 @@
+import { previewContext, previewIncludesDrafts, previewAccessLevel } from '@/lib/membros/preview-context'
 import { renderItemContent } from '@/components/membros/item-content'
 import { InstallAppButton } from '@/components/membros/install-app-button'
 import Link from 'next/link'
@@ -21,24 +22,25 @@ export const dynamic = 'force-dynamic'
 export default async function ProdutoPage({ params, searchParams }: PageProps<'/[loja]/produto/[slug]'>) {
   const { loja, slug } = await params
   const query = await searchParams
-  const preview = query.previa === '1'
+  const preview = previewContext(query)
+  const editorial = previewIncludesDrafts(preview)
   const { store, customer } = await (preview ? requireStorePreview(loja) : requireStoreSession(loja))
   const [product, levels] = await Promise.all([
     getProductBySlug(store.id, slug),
     customer ? loadGrantedProductLevels(store.id, customer) : Promise.resolve(null),
   ])
-  if (!product || (!preview && !product.isPublished)) notFound()
-  const level = preview ? 'complete' : levels?.get(product.id)
-  if (!level) redirect(`/${store.slug}?comprar=${product.slug}`)
+  if (!product || (!editorial && !product.isPublished)) notFound()
+  const level = preview ? previewAccessLevel(preview) : levels?.get(product.id)
+  if (!level) redirect(withPreview(`/${store.slug}?comprar=${product.slug}`, preview))
 
-  const publishedModules = (await listModulesWithItems(product.id, { publishedOnly: !preview }))
-    .filter((module) => preview || module.isPublished)
-    .map((module) => ({ ...module, items: module.items.filter((item) => (preview || item.isPublished) && (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))) }))
+  const publishedModules = (await listModulesWithItems(product.id, { publishedOnly: !editorial }))
+    .filter((module) => editorial || module.isPublished)
+    .map((module) => ({ ...module, items: module.items.filter((item) => (editorial || item.isPublished) && (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))) }))
     .filter((module) => module.items.length > 0)
-  const modules = publishedModules.filter((module) => canAccessProductModule(level, module.requiredLevel, product.contentMode, preview))
-  const lockedModules = publishedModules.filter((module) => !preview && level === 'basic' && !canAccessProductModule(level, module.requiredLevel, product.contentMode, preview))
+  const modules = publishedModules.filter((module) => canAccessProductModule(level, module.requiredLevel, product.contentMode, editorial))
+  const lockedModules = publishedModules.filter((module) => !editorial && level === 'basic' && !canAccessProductModule(level, module.requiredLevel, product.contentMode, editorial))
   const productHref = withPreview(`/${store.slug}/produto/${product.slug}`, preview)
-  const blocked = !preview && query.bloqueado === '1'
+  const blocked = !editorial && query.bloqueado === '1'
   const firstItem = modules[0]?.items[0]
   if (firstItem) {
     return renderItemContent({
@@ -50,7 +52,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
 
   return (
     <>
-      <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} actions={<InstallAppButton />} legacyHome />
+      <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} simulationHref={product.isPublished ? undefined : `/${store.slug}`} actions={<InstallAppButton />} legacyHome />
       <main className="lesson-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
         <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0">

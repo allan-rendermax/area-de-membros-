@@ -1,3 +1,4 @@
+import { previewContext, previewIncludesDrafts } from '@/lib/membros/preview-context'
 import { InstallAppButton } from '@/components/membros/install-app-button'
 import { ScrollToMaterials } from '@/components/membros/scroll-to-materials'
 import { Carousel } from '@/components/membros/carousel'
@@ -8,7 +9,9 @@ import { StoreHeader } from '@/components/membros/store-header'
 import { WhatsAppFloating } from '@/components/membros/whatsapp-button'
 import { buildShelf, buildTracks } from '@/lib/access/access'
 import { loadStoreAccess } from '@/lib/data/access'
-import { listRecentProductIds } from '@/lib/data/item-access'
+import { canAccessProductModule } from '@/lib/access/product-content'
+import { resolveResumeItem } from '@/lib/membros/resume-material'
+import { listRecentProductVisits } from '@/lib/data/item-access'
 import { requireStoreSession } from '@/lib/membros/session'
 import { supportHref } from '@/lib/support/whatsapp'
 import { getMemberTheme, withMemberArtwork } from '@/lib/membros/theme'
@@ -20,17 +23,28 @@ import { listProducts } from '@/lib/data/products'
 export const dynamic = 'force-dynamic'
 
 export default async function VitrinePage({ params, searchParams }: PageProps<'/[loja]'>) {
-  const [{ loja }, { comprar, previa }] = await Promise.all([params, searchParams])
-  const preview = previa === '1'
+  const [{ loja }, query] = await Promise.all([params, searchParams])
+  const { comprar } = query
+  const preview = previewContext(query)
   const { store, customer } = await (preview ? requireStorePreview(loja) : requireStoreSession(loja))
-  const [{ products, granted }, recentIds] = await Promise.all([
-    customer ? loadStoreAccess(store.id, customer) : listProducts(store.id).then((products) => ({ products, granted: new Set(products.map((p) => p.id)) })),
-    customer ? listRecentProductIds(customer.id, store.id).catch(() => []) : Promise.resolve([]),
+  const [{ products, granted, levels }, recentVisits] = await Promise.all([
+    customer ? loadStoreAccess(store.id, customer) : listProducts(store.id).then((products) => ({ products, levels: new Map<string, 'basic' | 'complete'>(), granted: new Set(preview === 'locked' ? [] : products.map((p) => p.id)) })),
+    customer ? listRecentProductVisits(customer.id, store.id).catch(() => []) : Promise.resolve([]),
   ])
   const architecture = getMemberTheme(store.slug) === 'arquitetura'
-  const shelf = buildShelf(products.map((product) => withMemberArtwork(product, store.slug)), granted, { includeDrafts: preview })
+  const shelf = buildShelf(products.map((product) => withMemberArtwork(product, store.slug)), granted, { includeDrafts: previewIncludesDrafts(preview) })
   const tracks = buildTracks(shelf)
-  const continuing = recentIds.flatMap((id) => shelf.unlocked.filter((p) => p.id === id))
+  const unlockedById = new Map(shelf.unlocked.map((product) => [product.id, product]))
+  const productModes = new Map(products.map((product) => [product.id, product.contentMode]))
+  const continuing = [...new Set(recentVisits.map((visit) => visit.productId))].flatMap((id) => {
+    const product = unlockedById.get(id)
+    if (!product) return []
+    const productVisits = recentVisits.filter((visit) => visit.productId === id)
+    const accessibleItemIds = new Set(productVisits.filter((visit) => visit.availableItem &&
+      canAccessProductModule(levels.get(id), visit.availableItem.requiredLevel, productModes.get(id))).map((visit) => visit.itemId))
+    const itemId = resolveResumeItem(productVisits, accessibleItemIds)
+    return [{ product, itemId }]
+  })
   const openSlug = typeof comprar === 'string' ? comprar : null
   const support = supportHref(store, 'geral', customer?.email ?? null)
 
@@ -48,8 +62,8 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
         <div id={architecture ? undefined : 'materiais'} className={`relative flex scroll-mt-28 flex-col gap-8 ${architecture ? '' : shelf.featured ? '-mt-2 sm:-mt-8' : 'pt-6'}`}>
           {continuing.length > 0 && (
             <Carousel title="Continuar">
-              {continuing.map((p) => (
-                <PosterLink key={p.id} product={p} href={withPreview(`/${store.slug}/produto/${p.slug}`, preview)} />
+              {continuing.map(({ product: p, itemId }) => (
+                <PosterLink key={p.id} product={p} href={withPreview(itemId ? `/${store.slug}/item/${itemId}` : `/${store.slug}/produto/${p.slug}`, preview)} />
               ))}
             </Carousel>
           )}

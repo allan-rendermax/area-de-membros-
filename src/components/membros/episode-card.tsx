@@ -1,3 +1,4 @@
+import type { PreviewContext } from '@/lib/membros/preview-context'
 import Link from 'next/link'
 import type { Item } from '@/lib/domain/types'
 import { AutoCover } from './auto-cover'
@@ -22,7 +23,7 @@ export function ItemAnchor({
   className: string
   children: React.ReactNode
   current?: boolean
-  preview?: boolean
+  preview?: PreviewContext
 }) {
   const href = withPreview(`/${storeSlug}/item/${item.id}`, preview)
   return (
@@ -32,7 +33,7 @@ export function ItemAnchor({
   )
 }
 
-export function EpisodeCard({ item, storeSlug, className = '', preview = false }: { item: Item; storeSlug: string; className?: string; preview?: boolean }) {
+export function EpisodeCard({ item, storeSlug, className = '', preview = false }: { item: Item; storeSlug: string; className?: string; preview?: PreviewContext }) {
   const Icon = ICON[item.kind]
   return (
     <ItemAnchor item={item} storeSlug={storeSlug} preview={preview} className={`group block transition-transform duration-200 hover:scale-[1.03] ${className}`}>

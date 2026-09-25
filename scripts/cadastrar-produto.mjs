@@ -3,7 +3,7 @@ import { resolve, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { parseEnv } from 'node:util'
 import { lerPastaProduto } from './lib/cadastro-pasta.mjs'
-import { executarPlanos, validarLote } from './lib/cadastro-executor.mjs'
+import { avaliarPlanoLocal, executarPlanos, validarLote } from './lib/cadastro-executor.mjs'
 
 function usage() { return 'Uso: node scripts/cadastrar-produto.mjs "<pasta>" [--todos] [--simular]' }
 
@@ -32,6 +32,12 @@ async function env() {
 function printPlan(plano) {
   const { ficha } = plano
   console.log(`${ficha.nome} — ${ficha.loja}/${ficha.slug} (${ficha.tag})`)
+  const readiness = avaliarPlanoLocal(plano)
+  if (!ficha.organizacao || ficha.organizacao === 'auto') {
+    console.log(`  Organização para produto novo: ${readiness.mode}; reimportação preserva o modo salvo.`)
+  } else console.log(`  Organização: ${readiness.mode}`)
+  console.log(`  Materiais utilizáveis na pasta: Básico ${readiness.itemCounts.basic}, Completo ${readiness.itemCounts.complete} (avaliação local como produto novo).`)
+  for (const level of readiness.emptyLevels) console.log(`  Atenção: ${level === 'basic' ? 'Básico' : 'Completo'} sem material utilizável para o nível vendido. O preflight real confere também conteúdo e ofertas já salvos antes de publicar.`)
   const ofertas = plano.ofertas ?? [{ codigo: ficha.id, nivel: 'complete', nome: ficha.nome }]
   for (const oferta of ofertas) console.log(`  Payt: ${oferta.codigo} (${oferta.nivel}, ${oferta.nome}); link: /${ficha.loja}/produto/${ficha.slug}`)
   if (ficha.checkoutUpgrade) console.log(`  Checkout upgrade: ${ficha.checkoutUpgrade}`)

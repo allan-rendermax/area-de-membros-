@@ -9,7 +9,7 @@ import { requireAdmin } from '@/lib/auth/require-admin'
 import { getStore, requireStoreSession } from '@/lib/membros/session'
 import { listProducts, getProductBySlug, getItemWithContext, listModulesWithItems } from '@/lib/data/products'
 import { loadStoreAccess, loadGrantedProductLevels } from '@/lib/data/access'
-import { listRecentProductIds, recordItemAccess } from '@/lib/data/item-access'
+import { listRecentProductVisits, recordItemAccess } from '@/lib/data/item-access'
 import { listCompletedItemIds } from '@/lib/data/member-progress'
 import { StoreHeader } from '@/components/membros/store-header'
 import type { Product, Item, Store, ModuleWithItems } from '@/lib/domain/types'
@@ -17,14 +17,16 @@ import type { Product, Item, Store, ModuleWithItems } from '@/lib/domain/types'
 vi.mock('next/navigation', () => ({
   redirect: (path: string) => { throw new Error(`redirect:${path}`) },
   notFound: () => { throw new Error('notFound') },
-  useRouter: () => ({ refresh: vi.fn() }),
+  useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/arquitetura',
+  useSearchParams: () => new URLSearchParams(),
 }))
 vi.mock('@/app/[loja]/progresso/actions', () => ({ saveCompletion: vi.fn() }))
 vi.mock('@/lib/auth/require-admin', () => ({ requireAdmin: vi.fn() }))
 vi.mock('@/lib/membros/session', () => ({ requireStoreSession: vi.fn(), getStore: vi.fn() }))
 vi.mock('@/lib/data/products', () => ({ listProducts: vi.fn(), getProductBySlug: vi.fn(), getItemWithContext: vi.fn(), listModulesWithItems: vi.fn() }))
 vi.mock('@/lib/data/access', () => ({ loadStoreAccess: vi.fn(), loadGrantedProductLevels: vi.fn() }))
-vi.mock('@/lib/data/item-access', () => ({ listRecentProductIds: vi.fn(), recordItemAccess: vi.fn() }))
+vi.mock('@/lib/data/item-access', () => ({ listRecentProductVisits: vi.fn(), recordItemAccess: vi.fn() }))
 vi.mock('@/lib/data/member-progress', () => ({ listCompletedItemIds: vi.fn() }))
 vi.mock('@/lib/env', () => ({ env: { supabaseUrl: 'https://project.supabase.co' } }))
 
@@ -63,11 +65,11 @@ describe('prévia administrativa sem conta de aluno', () => {
   })
   it('abre a vitrine e produtos em rascunho sem consultar compras de aluno', async () => {
     const html = renderToStaticMarkup(await Home(props))
-    expect(html).toContain('Modo de prévia')
+    expect(html).toContain('Prévia editorial')
     expect(html).toContain('Produto em criação')
     expect(html).toContain('/arquitetura/produto/rascunho?previa=1')
     expect(loadStoreAccess).not.toHaveBeenCalled()
-    expect(listRecentProductIds).not.toHaveBeenCalled()
+    expect(listRecentProductVisits).not.toHaveBeenCalled()
     expect(requireStoreSession).not.toHaveBeenCalled()
   })
 
@@ -139,5 +141,59 @@ describe('prévia administrativa sem conta de aluno', () => {
     expect(html).toContain('Voltar ao painel')
     expect(html).not.toContain('/sair')
     expect(html).toContain('/arquitetura?previa=1#materiais')
+  })
+})
+
+
+describe('simulação realista de acesso', () => {
+  function published(mode: 'versions' | 'sections' = 'versions') {
+    const ready = { ...product, isPublished: true, contentMode: mode }
+    const basic = { ...moduleRow, id: 'basic', title: 'Básico', isPublished: true, requiredLevel: 'basic' as const, items: [{ ...item, isPublished: true, moduleId: 'basic', title: 'Arquivo básico', kind: 'arquivo' as const, url: 'https://example.com/basic.pdf' }] }
+    const complete = { ...moduleRow, title: 'Completo', isPublished: true, items: [{ ...item, isPublished: true, id: '22222222-2222-4222-8222-222222222222', title: 'Arquivo completo', kind: 'arquivo' as const, url: 'https://example.com/complete.pdf' }] }
+    const draft = { ...moduleRow, id: 'draft', title: 'Seção secreta rascunho' }
+    vi.mocked(getProductBySlug).mockResolvedValue(ready)
+    vi.mocked(getItemWithContext).mockResolvedValue({ item: complete.items[0], module: complete, product: ready })
+    vi.mocked(listProducts).mockResolvedValue([ready])
+    vi.mocked(listModulesWithItems).mockResolvedValue([basic, complete, draft])
+  }
+  it.each(['versions', 'sections'] as const)('Básico tem somente materiais básicos e upgrade no modo %s', async (mode) => {
+    published(mode)
+    const html = renderToStaticMarkup(await ProductPage({ params, searchParams: Promise.resolve({ previa: '1', simular: 'basic' }) }))
+    expect(html).toContain('Arquivo básico')
+    expect(html).not.toContain('Arquivo completo')
+    expect(html).not.toContain('Seção secreta rascunho')
+    expect(html).toContain('Conheça a versão completa')
+    expect(html).toContain('previa=1&amp;simular=basic')
+    expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(listCompletedItemIds).not.toHaveBeenCalled()
+  })
+  it.each(['versions', 'sections'] as const)('Completo respeita a composição %s', async (mode) => {
+    published(mode)
+    const html = renderToStaticMarkup(await ProductPage({ params, searchParams: Promise.resolve({ previa: '1', simular: 'complete' }) }))
+    expect(html).toContain('Arquivo completo')
+    expect(html.includes('Arquivo básico')).toBe(mode === 'sections')
+    expect(html).not.toContain('Conheça a versão completa')
+    expect(html).not.toContain('Seção secreta rascunho')
+  })
+  it('sem compra redireciona ao modal mantendo a simulação', async () => {
+    published()
+    await expect(ProductPage({ params, searchParams: Promise.resolve({ previa: '1', simular: 'locked' }) })).rejects.toThrow('redirect:/arquitetura?comprar=rascunho&previa=1&simular=locked')
+    const html = renderToStaticMarkup(await Home({ params, searchParams: Promise.resolve({ previa: '1', simular: 'locked' }) }))
+    expect(html).not.toContain('href="/arquitetura/produto/rascunho')
+    expect(html).toContain('Nenhum produto liberado ainda')
+  })
+  it('impede abrir arquivo Completo na simulação Básico', async () => {
+    published()
+    await expect(openResource(new Request(`https://app.example/arquitetura/item/${item.id}/abrir?previa=1&simular=basic`), { params })).rejects.toThrow('redirect:/arquitetura/produto/rascunho?bloqueado=1&previa=1&simular=basic')
+    expect(recordItemAccess).not.toHaveBeenCalled()
+  })
+  it('simulação não concede acesso a aluno e exige admin para previa=1', async () => {
+    await expect(ProductPage({ params, searchParams: Promise.resolve({ simular: 'complete' }) })).rejects.toThrow('student login required')
+    vi.mocked(requireAdmin).mockRejectedValue(new Error('admin required'))
+    await expect(ProductPage({ params, searchParams: Promise.resolve({ previa: '1', simular: 'complete' }) })).rejects.toThrow('admin required')
+    expect(getProductBySlug).not.toHaveBeenCalled()
+  })
+  it('rascunhos continuam indisponíveis fora da prévia editorial', async () => {
+    await expect(ProductPage({ params, searchParams: Promise.resolve({ previa: '1', simular: 'complete' }) })).rejects.toThrow('notFound')
   })
 })

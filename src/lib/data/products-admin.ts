@@ -125,15 +125,22 @@ export async function saveItem(input: ItemInput, productId?: string): Promise<vo
   if (error) throw error
 }
 
-export async function deleteItem(id: string): Promise<void> {
-  const { error } = await createAdminClient().from('items').delete().eq('id', id)
+export async function deleteItem(id: string, productId: string): Promise<void> {
+  const { error } = await createAdminClient().rpc('delete_item_scoped_atomic', {
+    p_item_id: id,
+    p_product_id: productId,
+  })
   if (error) throw error
 }
 
-export async function moveItem(id: string, moduleId: string, direction: 'up' | 'down'): Promise<void> {
-  const { data, error } = await createAdminClient().from('items').select('id').eq('module_id', moduleId).order('sort_order').order('created_at')
+export async function moveItem(id: string, moduleId: string, productId: string, direction: 'up' | 'down'): Promise<void> {
+  const { error } = await createAdminClient().rpc('move_item_scoped_atomic', {
+    p_item_id: id,
+    p_module_id: moduleId,
+    p_product_id: productId,
+    p_direction: direction,
+  })
   if (error) throw error
-  await renumber('items', moveInList(data.map((r) => r.id as string), id, direction))
 }
 
 export async function uploadImage(file: File): Promise<string> {

@@ -1,4 +1,6 @@
+import type { PreviewContext } from '@/lib/membros/preview-context'
 import Link from 'next/link'
+import { PreviewControls } from './preview-controls'
 import type { Store } from '@/lib/domain/types'
 import { getMemberTheme } from '@/lib/membros/theme'
 import { withPreview } from '@/lib/membros/paths'
@@ -10,19 +12,21 @@ export function StoreHeader({
   active,
   legacyHome = false,
   preview = false,
+  simulationHref,
 }: {
   store: Pick<Store, 'slug' | 'name' | 'logoUrl'>
   email: string
   actions?: React.ReactNode
   active?: 'home' | 'materials'
   legacyHome?: boolean
-  preview?: boolean
+  preview?: PreviewContext
+  simulationHref?: string
 }) {
   const architecture = getMemberTheme(store.slug) === 'arquitetura'
   return (
     <header className="member-header sticky top-0 z-40 bg-gradient-to-b from-fundo to-fundo/85 backdrop-blur">
       {preview && <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-borda bg-superficie px-4 py-2 text-xs sm:px-8">
-        <p><strong>Modo de prévia</strong> · Inclui rascunhos · Nenhum progresso é registrado</p>
+        <PreviewControls preview={preview} simulationHref={simulationHref} />
         <Link href="/admin/produtos" className="inline-flex min-h-9 items-center font-semibold text-destaque underline underline-offset-4">Voltar ao painel</Link>
       </div>}
       <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-8">

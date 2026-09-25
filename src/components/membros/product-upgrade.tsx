@@ -5,8 +5,9 @@ import { isHttpUrl } from '@/lib/content/url'
 import type { AccessLevel } from '@/lib/domain/types'
 import { Modal } from './modal'
 import { ContentImage } from './content-image'
+import { useMemberTheme } from './member-theme'
 
-export function ProductUpgrade({ level, lockedCount, checkoutUrl, refreshHref, productTitle = 'Versão completa', imageUrl, buttonText, sectionName = 'Completo', supportUrl }: {
+export function ProductUpgrade({ level, lockedCount, checkoutUrl, refreshHref, productTitle = 'Versão completa', imageUrl, buttonText, sectionName = 'Completo', supportUrl, previewOnly = false }: {
   level: AccessLevel
   lockedCount: number
   checkoutUrl?: string | null
@@ -16,9 +17,11 @@ export function ProductUpgrade({ level, lockedCount, checkoutUrl, refreshHref, p
   buttonText?: string | null
   sectionName?: string
   supportUrl?: string | null
+  previewOnly?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const headingId = useId()
+  const theme = useMemberTheme()
   if (level !== 'basic' || lockedCount === 0) return null
   const checkout = checkoutUrl && isHttpUrl(checkoutUrl) ? checkoutUrl : null
   const image = imageUrl && isHttpUrl(imageUrl) ? imageUrl : null
@@ -36,10 +39,10 @@ export function ProductUpgrade({ level, lockedCount, checkoutUrl, refreshHref, p
       <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-fundo p-4">
         {image ? <ContentImage src={image} sizes="(max-width: 480px) 90vw, 400px" className="h-full w-full object-contain" /> : <div className="p-6 text-center"><span className="text-xs font-bold uppercase tracking-widest text-destaque">Completo</span><p className="mt-4 text-2xl font-bold">{productTitle}</p></div>}
       </div>
-      {checkout ? <a href={checkout} target="_blank" rel="noopener noreferrer" className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-destaque px-5 py-3 text-center text-sm font-bold text-fundo focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-destaque motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:scale-[1.03]">
+      {checkout ? <a href={previewOnly ? undefined : checkout} role={previewOnly ? 'button' : undefined} tabIndex={previewOnly ? 0 : undefined} aria-disabled={previewOnly || undefined} onClick={previewOnly ? event => event.preventDefault() : undefined} target={previewOnly ? undefined : '_blank'} rel="noopener noreferrer" className={`mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-destaque px-5 py-3 text-center text-sm font-bold ${theme === 'arquitetura' ? 'text-fundo' : 'text-white'} focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-destaque motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:scale-[1.03]`}>
         {buttonText?.trim() || 'Quero a versão completa'} <span aria-hidden="true">↗</span>
-      </a> : <p className="mt-5 text-center text-sm text-texto-suave">Para liberar a versão completa, {supportUrl && isHttpUrl(supportUrl) ? <a href={supportUrl} className="font-semibold text-destaque underline">fale com o suporte</a> : 'entre em contato com o suporte'}.</p>}
-      <p className="mt-4 text-center"><a href={refreshHref} className="text-xs text-texto-suave underline underline-offset-4">Já paguei, atualizar acesso</a></p>
+      </a> : <p className="mt-5 text-center text-sm text-texto-suave">Para liberar a versão completa, {supportUrl && isHttpUrl(supportUrl) && !previewOnly ? <a href={supportUrl} className="font-semibold text-destaque underline">fale com o suporte</a> : 'entre em contato com o suporte'}.</p>}
+      {!previewOnly && <p className="mt-4 text-center"><a href={refreshHref} className="text-xs text-texto-suave underline underline-offset-4">Já paguei, atualizar acesso</a></p>}
     </Modal>
   </>
 }

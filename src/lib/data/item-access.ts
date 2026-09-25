@@ -1,4 +1,4 @@
-import type { ItemKind } from '@/lib/domain/types'
+import type { AccessLevel, ItemKind } from '@/lib/domain/types'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { isHttpUrl } from '@/lib/content/url'
 import { toVideoEmbed } from '@/lib/content/video'
@@ -55,6 +55,16 @@ export async function recordItemAccess(entry: {
   if (error) throw error
 }
 
+// History is best effort: authorization and destination resolution stay with callers.
+export async function recordItemAccessSafely(entry: Parameters<typeof recordItemAccess>[0]): Promise<void> {
+  try {
+    await recordItemAccess(entry)
+  } catch {
+    // Do not log database errors: they may contain URLs, tokens or customer data.
+    console.error('item_access_write_failed', { itemId: entry.itemId })
+  }
+}
+
 export async function listRecentProductIds(customerId: string, storeId: string, days = 30): Promise<string[]> {
   const since = new Date(Date.now() - days * 86_400_000).toISOString()
   const { data, error } = await createAdminClient()
@@ -67,4 +77,40 @@ export async function listRecentProductIds(customerId: string, storeId: string, 
     .limit(200)
   if (error) throw error
   return [...new Set(data.map((row) => row.product_id as string))]
+}
+
+export type RecentProductVisit = { productId: string; itemId: string; accessedAt: string }
+export type RecentProductVisitWithAccess = RecentProductVisit & { availableItem: { requiredLevel: AccessLevel } | null }
+
+export async function listRecentProductVisits(customerId: string, storeId: string, days = 30): Promise<RecentProductVisitWithAccess[]> {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString()
+  const { data, error } = await createAdminClient()
+    .from('item_access')
+    // Left joins retain the product fallback when a visited item is unavailable.
+    .select('product_id, item_id, created_at, items(id, kind, url, is_published, modules(required_level, is_published, products(id, store_id, is_published)))')
+    .eq('customer_id', customerId)
+    .eq('store_id', storeId)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(200)
+  if (error) throw error
+  type Row = {
+    product_id: string; item_id: string; created_at: string
+    items: {
+      id: string; kind: ItemKind; url: string; is_published: boolean
+      modules: { required_level: AccessLevel; is_published: boolean; products: { id: string; store_id: string; is_published: boolean } | null } | null
+    } | null
+  }
+  return ((data ?? []) as unknown as Row[]).map((row) => {
+    const item = row.items
+    const moduleRow = item?.modules
+    const product = moduleRow?.products
+    const usable = item && item.id === row.item_id && item.is_published && moduleRow?.is_published && product?.is_published &&
+      product.id === row.product_id && product.store_id === storeId &&
+      (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : ['arquivo', 'link'].includes(item.kind) && isHttpUrl(item.url))
+    return {
+      productId: row.product_id, itemId: row.item_id, accessedAt: row.created_at,
+      availableItem: usable ? { requiredLevel: moduleRow.required_level ?? 'basic' } : null,
+    }
+  })
 }

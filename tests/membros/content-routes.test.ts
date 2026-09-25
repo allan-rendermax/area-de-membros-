@@ -4,21 +4,24 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { Window } from 'happy-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { notFound, redirect } from 'next/navigation'
+import { RecordItemVisit } from '@/components/membros/record-item-visit'
+import { renderItemContent } from '@/components/membros/item-content'
 import { LessonSidebar } from '@/components/membros/lesson-sidebar'
 import ItemPage from '@/app/[loja]/item/[id]/page'
 import ProdutoPage from '@/app/[loja]/produto/[slug]/page'
 import VitrinePage from '@/app/[loja]/page'
 import { loadGrantedProductLevels, loadStoreAccess } from '@/lib/data/access'
-import { listRecentProductIds, listRecentMaterials, recordItemAccess } from '@/lib/data/item-access'
+import { listRecentProductIds, listRecentProductVisits, listRecentMaterials, recordItemAccess } from '@/lib/data/item-access'
 import { getItemWithContext, getProductBySlug, listModulesWithItems } from '@/lib/data/products'
 import type { CustomerRow, Item, Module, ModuleWithItems, Product, Store } from '@/lib/domain/types'
 import { requireStoreSession } from '@/lib/membros/session'
 
+vi.mock('@/app/[loja]/historico/actions', () => ({ recordVisit: vi.fn() }))
 vi.mock('@/app/[loja]/progresso/actions', () => ({ saveCompletion: vi.fn() }))
 vi.mock('@/lib/data/member-progress', () => ({ listCompletedItemIds: vi.fn().mockResolvedValue([]) }))
 vi.mock('next/navigation', () => ({ usePathname: () => '/loja-a', useSearchParams: () => new URLSearchParams(), useRouter: () => ({ refresh: vi.fn() }), notFound: vi.fn(), redirect: vi.fn() }))
 vi.mock('@/lib/data/access', () => ({ loadGrantedProductLevels: vi.fn(), loadStoreAccess: vi.fn() }))
-vi.mock('@/lib/data/item-access', () => ({ listRecentProductIds: vi.fn().mockResolvedValue([]), listRecentMaterials: vi.fn(), recordItemAccess: vi.fn() }))
+vi.mock('@/lib/data/item-access', () => ({ listRecentProductIds: vi.fn().mockResolvedValue([]), listRecentProductVisits: vi.fn().mockResolvedValue([]), listRecentMaterials: vi.fn(), recordItemAccess: vi.fn() }))
 vi.mock('@/lib/data/products', () => ({
   getItemWithContext: vi.fn(),
   getProductBySlug: vi.fn(),
@@ -116,6 +119,7 @@ describe('vitrine do aluno', () => {
     vi.resetAllMocks()
     vi.mocked(listCompletedItemIds).mockResolvedValue([])
     vi.mocked(listRecentProductIds).mockResolvedValue([])
+    vi.mocked(listRecentProductVisits).mockResolvedValue([])
     vi.mocked(listRecentMaterials).mockResolvedValue([])
     vi.mocked(requireStoreSession).mockResolvedValue({ store, customer })
     vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product], granted: new Set([product.id]), levels: new Map([[product.id, 'complete']]) })
@@ -123,7 +127,7 @@ describe('vitrine do aluno', () => {
 
   it('restaura carrosséis de compras, ofertas e produtos recentes', async () => {
     vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product, { ...product, id: 'locked', slug: 'locked', title: 'Oferta bloqueada' }], granted: new Set([product.id]), levels: new Map([[product.id, 'complete']]) })
-    vi.mocked(listRecentProductIds).mockResolvedValue([product.id])
+    vi.mocked(listRecentProductVisits).mockResolvedValue([{ productId: product.id, itemId: item.id, accessedAt: '2026-09-25T10:00:00Z', availableItem: { requiredLevel: 'basic' } }])
     const html = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({}) }))
     expect(html).toContain('Continuar')
     expect(html).toContain(`href="/${store.slug}/produto/${product.slug}"`)
@@ -131,8 +135,41 @@ describe('vitrine do aluno', () => {
     expect(html).not.toContain('Seu acervo, pronto para usar')
   })
 
+  it.each([
+    ['sections', 'complete', [{ itemId: 'item-2', level: 'basic' }], 'item-2'],
+    ['versions', 'basic', [{ itemId: 'revoked', level: 'complete' }, { itemId: 'basic-1', level: 'basic' }], 'basic-1'],
+    ['versions', 'complete', [{ itemId: 'basic-1', level: 'basic' }], null],
+    ['sections', 'complete', [{ itemId: 'removed', level: null }], null],
+  ] as const)('Continuar usa último item permitido em %s / %s e mantém capas normais', async (mode, level, visits, expectedItem) => {
+    vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [{ ...product, contentMode: mode }], granted: new Set([product.id]), levels: new Map([[product.id, level]]) })
+    vi.mocked(listRecentProductVisits).mockResolvedValue(visits.map((visit) => ({ productId: product.id, itemId: visit.itemId, accessedAt: '2026-09-25T10:00:00Z', availableItem: visit.level ? { requiredLevel: visit.level } : null })))
+    const window = new Window()
+    try {
+      window.document.body.innerHTML = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({}) }))
+      expect(window.document.querySelector('section[aria-label="Continuar"] a')?.getAttribute('href')).toBe(expectedItem ? `/loja-a/item/${expectedItem}` : '/loja-a/produto/produto-a')
+      expect(window.document.querySelector('section:not([aria-label="Continuar"]) a[href="/loja-a/produto/produto-a"]')).not.toBeNull()
+      expect(listRecentProductVisits).toHaveBeenCalledExactlyOnceWith(customer.id, store.id)
+      expect(listModulesWithItems).not.toHaveBeenCalled()
+    } finally { await window.happyDOM.close() }
+  })
+
+  it('não retoma item movido para outro produto, mesmo quando os dois estão liberados', async () => {
+    const second = { ...product, id: 'product-b', slug: 'produto-b', title: 'Produto B' }
+    vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [product, second], granted: new Set([product.id, second.id]), levels: new Map([[product.id, 'complete'], [second.id, 'complete']]) })
+    vi.mocked(listRecentProductVisits).mockResolvedValue([
+      { productId: product.id, itemId: 'moved-item', accessedAt: '2026-09-25T10:00:00Z', availableItem: null },
+      { productId: second.id, itemId: 'moved-item', accessedAt: '2026-09-25T09:00:00Z', availableItem: { requiredLevel: 'basic' } },
+      { productId: second.id, itemId: 'older-item', accessedAt: '2026-09-25T08:00:00Z', availableItem: { requiredLevel: 'basic' } },
+    ])
+    const window = new Window()
+    try {
+      window.document.body.innerHTML = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({}) }))
+      expect([...window.document.querySelectorAll('section[aria-label="Continuar"] a')].map((a) => a.getAttribute('href'))).toEqual(['/loja-a/produto/produto-a', '/loja-a/item/moved-item'])
+    } finally { await window.happyDOM.close() }
+  })
+
   it('mantém acervo quando o histórico falha e oferece destino de retorno à prateleira', async () => {
-    vi.mocked(listRecentProductIds).mockRejectedValueOnce(new Error('histórico indisponível'))
+    vi.mocked(listRecentProductVisits).mockRejectedValueOnce(new Error('histórico indisponível'))
     const html = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({}) }))
     expect(html).toContain(product.title)
     expect(html).toContain('id="materiais"')
@@ -171,6 +208,7 @@ describe('rota de produto', () => {
     vi.resetAllMocks()
     vi.mocked(listCompletedItemIds).mockResolvedValue([])
     vi.mocked(listRecentProductIds).mockResolvedValue([])
+    vi.mocked(listRecentProductVisits).mockResolvedValue([])
     vi.mocked(listRecentMaterials).mockResolvedValue([])
     vi.mocked(notFound).mockImplementation(() => { throw new Error('NEXT_NOT_FOUND') })
     vi.mocked(redirect).mockImplementation((path) => { throw new Error(`NEXT_REDIRECT:${path}`) })
@@ -225,7 +263,7 @@ describe('rota de produto', () => {
     vi.mocked(listModulesWithItems).mockResolvedValue([{ ...courseModule, items: [first] }])
     expect(renderToStaticMarkup(await ProdutoPage(productProps()))).toContain(item.title)
     expect(loadStoreAccess).not.toHaveBeenCalled()
-    expect(recordItemAccess).toHaveBeenCalledTimes(kind === 'video' ? 1 : 0)
+    expect(recordItemAccess).not.toHaveBeenCalled()
     expect(getItemWithContext).not.toHaveBeenCalled()
     expect(redirect).not.toHaveBeenCalled()
     expect(requireStoreSession).toHaveBeenCalledTimes(1)
@@ -325,6 +363,7 @@ describe('rota de item', () => {
     vi.resetAllMocks()
     vi.mocked(listCompletedItemIds).mockResolvedValue([])
     vi.mocked(listRecentProductIds).mockResolvedValue([])
+    vi.mocked(listRecentProductVisits).mockResolvedValue([])
     vi.mocked(listRecentMaterials).mockResolvedValue([])
     vi.mocked(notFound).mockImplementation(() => { throw new Error('NEXT_NOT_FOUND') })
     vi.mocked(redirect).mockImplementation((path) => { throw new Error(`NEXT_REDIRECT:${path}`) })
@@ -474,7 +513,7 @@ describe('rota de item', () => {
     expect(listModulesWithItems).not.toHaveBeenCalled()
   })
 
-  it('inicia módulos e registro sem esperar a consulta de progresso', async () => {
+  it('inicia módulos sem registrar visita enquanto aguarda progresso', async () => {
     const progress = deferred<string[]>()
     const started = deferred<void>()
     vi.mocked(listCompletedItemIds).mockImplementationOnce(() => { started.resolve(); return progress.promise })
@@ -484,43 +523,21 @@ describe('rota de item', () => {
     const callsBeforeProgress = [listModulesWithItems, recordItemAccess].map((mock) => vi.mocked(mock).mock.calls.length)
     progress.resolve([])
     await rendering
-    expect(callsBeforeProgress).toEqual([1, 1])
+    expect(callsBeforeProgress).toEqual([1, 0])
   })
 
-  it('inicia módulos enquanto o registro do vídeo está pendente e aguarda ambos antes de renderizar', async () => {
-    const pendingRecord = deferred<void>()
-    const pendingModules = deferred<ModuleWithItems[]>()
-    const recordStarted = deferred<void>()
-    vi.mocked(recordItemAccess).mockImplementationOnce(() => {
-      recordStarted.resolve()
-      return pendingRecord.promise
-    })
-    vi.mocked(listModulesWithItems).mockReturnValueOnce(pendingModules.promise)
-    let pageResolved = false
-
-    const rendering = ItemPage(itemProps()).then((page) => {
-      pageResolved = true
-      return page
-    })
-    await recordStarted.promise
-    const modulesStartedWhileRecording = vi.mocked(listModulesWithItems).mock.calls.length
-    const recordCalls = vi.mocked(recordItemAccess).mock.calls.length
-    const resolvedWhilePending = pageResolved
-    pendingRecord.resolve()
-    pendingModules.resolve([{ ...courseModule, items: [item] }])
-    const html = renderToStaticMarkup(await rendering)
-
-    expect(recordCalls).toBe(1)
-    expect(modulesStartedWhileRecording).toBe(1)
-    expect(resolvedWhilePending).toBe(false)
-    expect(html).toContain(item.title)
+  it('renderiza e permite prefetch do vídeo sem executar escrita de histórico', async () => {
+    vi.mocked(recordItemAccess).mockImplementation(() => new Promise(() => {}))
+    const html = renderToStaticMarkup(await ItemPage(itemProps()))
+    expect(html).toContain('youtube-nocookie.com/embed/dQw4w9WgXcQ')
+    expect(recordItemAccess).not.toHaveBeenCalled()
   })
 
-  it('propaga falha do registro do vídeo mesmo com módulos carregados', async () => {
-    vi.mocked(recordItemAccess).mockRejectedValueOnce(new Error('registro indisponível'))
-
-    await expect(ItemPage(itemProps())).rejects.toThrow('registro indisponível')
-    expect(listModulesWithItems).toHaveBeenCalledWith(product.id, { publishedOnly: true })
+  it('renderiza vídeo mesmo com histórico indisponível', async () => {
+    vi.mocked(recordItemAccess).mockRejectedValue(new Error('registro indisponível'))
+    const html = renderToStaticMarkup(await ItemPage(itemProps()))
+    expect(html).toContain('youtube-nocookie.com/embed/dQw4w9WgXcQ')
+    expect(recordItemAccess).not.toHaveBeenCalled()
   })
 
   it('mostra a página interna de arquivo sem abrir ou registrar download antes do clique', async () => {
@@ -577,12 +594,23 @@ describe('rota de item', () => {
     expect(doc.body.textContent).not.toContain('Arquivo privado')
   })
 
-  it('renderiza vídeo autorizado depois de registrar o acesso', async () => {
+  it('inclui registro client apenas para vídeo de aluno, nunca na prévia com sessão de aluno', async () => {
+    function hasVisit(node: ReactNode): boolean {
+      if (!isValidElement(node)) return false
+      return node.type === RecordItemVisit || Children.toArray((node.props as { children?: ReactNode }).children).some(hasVisit)
+    }
+    expect(hasVisit(await ItemPage(itemProps()))).toBe(true)
+    expect(hasVisit(await renderItemContent({ ctx: context, store, customer, level: 'complete', preview: true, blocked: false }))).toBe(false)
+    const file = { ...item, kind: 'arquivo' as const, url: 'https://example.com/file.pdf' }
+    expect(hasVisit(await renderItemContent({ ctx: { ...context, item: file }, store, customer, level: 'complete', preview: false, blocked: false }))).toBe(false)
+  })
+
+  it('renderiza vídeo autorizado sem registrar no servidor', async () => {
     const result = await ItemPage(itemProps())
     const html = renderToStaticMarkup(result)
 
     expect(loadStoreAccess).not.toHaveBeenCalled()
-    expect(recordItemAccess).toHaveBeenCalledOnce()
+    expect(recordItemAccess).not.toHaveBeenCalled()
     expect(html).toContain(item.title)
     expect(html).toContain('youtube-nocookie.com/embed/dQw4w9WgXcQ')
   })

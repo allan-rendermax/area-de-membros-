@@ -6,6 +6,13 @@ const tiered = 'nome: Kit\nid_basico: BASIC01\nid_completo: FULL01\nid_upgrade: 
 const file = (relativePath: string) => ({ relativePath, absolutePath: `C:/produto/${relativePath}`, size: 3 })
 
 describe('cadastro por níveis', () => {
+  it.each(['versions', 'sections', 'auto'])('aceita organização explícita %s sem confundir com ofertas', organizacao => {
+    expect(lerFicha(`${tiered}\norganizacao: ${organizacao}`)).toMatchObject({ organizacao })
+  })
+  it('preserva ausência de organização para resolver com dados salvos e rejeita valor desconhecido', () => {
+    expect(lerFicha(tiered)).not.toHaveProperty('organizacao')
+    expect(() => lerFicha(`${tiered}\norganizacao: livre`)).toThrow(/organiza/i)
+  })
   it('lê três ofertas distintas e checkout de upgrade', () => {
     const ficha = lerFicha(tiered)
     expect(ficha).toMatchObject({ checkoutUpgrade: 'https://example.com/upgrade' })

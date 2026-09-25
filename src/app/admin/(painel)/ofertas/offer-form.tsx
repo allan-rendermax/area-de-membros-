@@ -31,6 +31,7 @@ export function OfferForm({ offer, products, initialCode, storeId }: { offer: Ad
         {products.length === 0 && <p className="text-sm text-texto-suave">Cadastre produtos nesta loja primeiro.</p>}
       </fieldset>
       <p className="text-sm text-texto-suave">Alterar o nível de uma oferta também muda o acesso de quem já comprou essa oferta.</p>
+      <p className="text-sm text-texto-suave">Novos vínculos precisam de material publicado no nível escolhido. Em produtos com versões, Completo deve conter toda a entrega prometida.</p>
       <button type="submit" className={`${ui.button} self-start`}>Salvar</button>
     </form>
   )

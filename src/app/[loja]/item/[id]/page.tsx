@@ -1,3 +1,5 @@
+import { withPreview } from '@/lib/membros/paths'
+import { previewContext, previewIncludesDrafts, previewAccessLevel } from '@/lib/membros/preview-context'
 import { notFound, redirect } from 'next/navigation'
 import { renderItemContent } from '@/components/membros/item-content'
 import { toVideoEmbed } from '@/lib/content/video'
@@ -14,18 +16,19 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
   const { loja, id } = await params
   if (!isUuid(id)) notFound()
   const query = await searchParams
-  const preview = query.previa === '1'
-  const blocked = !preview && query.bloqueado === '1'
+  const preview = previewContext(query)
+  const editorial = previewIncludesDrafts(preview)
+  const blocked = !editorial && query.bloqueado === '1'
   const { store, customer } = await (preview ? requireStorePreview(loja) : requireStoreSession(loja))
 
   const [ctx, levels] = await Promise.all([
     getItemWithContext(id),
     customer ? loadGrantedProductLevels(store.id, customer) : Promise.resolve(null),
   ])
-  if (!ctx || ctx.product.storeId !== store.id || (!preview && (!ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished))) notFound()
-  const level = preview ? 'complete' : levels?.get(ctx.product.id)
-  if (!level) redirect(`/${store.slug}?comprar=${ctx.product.slug}`)
-  if (!canAccessProductModule(level, ctx.module.requiredLevel, ctx.product.contentMode, preview)) redirect(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`)
+  if (!ctx || ctx.product.storeId !== store.id || (!editorial && (!ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished))) notFound()
+  const level = preview ? previewAccessLevel(preview) : levels?.get(ctx.product.id)
+  if (!level) redirect(withPreview(`/${store.slug}?comprar=${ctx.product.slug}`, preview))
+  if (!canAccessProductModule(level, ctx.module.requiredLevel, ctx.product.contentMode, editorial)) redirect(withPreview(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`, preview))
 
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
   if (ctx.item.kind === 'video' && !embed) notFound()

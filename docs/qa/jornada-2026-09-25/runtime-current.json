@@ -1,0 +1,122 @@
+{
+  "delayedResponse": {
+    "status": 307,
+    "ttfbMs": 503.6229,
+    "totalMs": 503.9971,
+    "bytes": 0,
+    "location": "http://127.0.0.1:3344/storage/v1/object/sign/arquivos-restritos/qa/basico.pdf?token=fixture-only&download=",
+    "hasPlayer": false,
+    "errorPage": false
+  },
+  "historyRows": {
+    "before": 101,
+    "atResponse": 101,
+    "settled": 102
+  },
+  "failedHistoryResponse": {
+    "status": 307,
+    "ttfbMs": 168.0231000000001,
+    "totalMs": 168.12200000000007,
+    "bytes": 0,
+    "location": "http://127.0.0.1:3344/storage/v1/object/sign/arquivos-restritos/qa/basico.pdf?token=fixture-only&download=",
+    "hasPlayer": false,
+    "errorPage": false
+  },
+  "failedHistoryRequests": [
+    {
+      "method": "GET",
+      "path": "/auth/v1/user",
+      "status": 200,
+      "ms": 40.19560000003548
+    },
+    {
+      "method": "GET",
+      "path": "/auth/v1/user",
+      "status": 200,
+      "ms": 26.23509999999078
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/customers",
+      "status": 200,
+      "ms": 28.695900000049733
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/items",
+      "status": 200,
+      "ms": 29.49890000000596
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/offers",
+      "status": 200,
+      "ms": 29.45519999996759
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/orders",
+      "status": 200,
+      "ms": 29.35480000003008
+    },
+    {
+      "method": "POST",
+      "path": "/storage/v1/object/sign/arquivos-restritos/qa/basico.pdf",
+      "status": 200,
+      "ms": 28.286499999987427
+    },
+    {
+      "method": "POST",
+      "path": "/rest/v1/item_access",
+      "status": 503,
+      "ms": 29.29910000000382
+    }
+  ],
+  "blockedResponse": {
+    "status": 307,
+    "ttfbMs": 123.92200000000003,
+    "totalMs": 124.05780000000004,
+    "bytes": 0,
+    "location": "/arquitetura/produto/atlas-qa?bloqueado=1",
+    "hasPlayer": false,
+    "errorPage": false
+  },
+  "blockedRequests": [
+    {
+      "method": "GET",
+      "path": "/auth/v1/user",
+      "status": 200,
+      "ms": 25.633700000005774
+    },
+    {
+      "method": "GET",
+      "path": "/auth/v1/user",
+      "status": 200,
+      "ms": 28.237100000027567
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/customers",
+      "status": 200,
+      "ms": 30.11139999999432
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/items",
+      "status": 200,
+      "ms": 29.401899999997113
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/offers",
+      "status": 200,
+      "ms": 29.333099999988917
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/orders",
+      "status": 200,
+      "ms": 29.176100000040606
+    }
+  ]
+}

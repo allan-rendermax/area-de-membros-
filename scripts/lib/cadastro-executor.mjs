@@ -1,8 +1,63 @@
 import { readFile } from 'node:fs/promises'
+import { assessProductReadiness } from '../../src/lib/access/product-readiness-core.mjs'
 
 const BUCKET = 'arquivos'
 const PRIVATE_BUCKET = 'arquivos-restritos'
 const effectiveOffers = plano => plano.ofertas ?? [{ codigo: plano.ficha.id, nivel: 'complete', nome: plano.ficha.nome }]
+
+function resolveMode(ficha, product) {
+  return !ficha.organizacao || ficha.organizacao === 'auto'
+    ? product?.content_mode ?? (ficha.tag === 'front' ? 'versions' : 'sections')
+    : ficha.organizacao
+}
+
+function storedModules(modules, items) {
+  return modules.map(module => ({
+    requiredLevel: module.required_level ?? 'basic', isPublished: module.is_published === true,
+    items: items.filter(item => item.module_id === module.id).map(item => ({ kind: item.kind, url: item.url, isPublished: item.is_published === true })),
+  }))
+}
+
+function projectedModules(plano, modules = [], items = []) {
+  const retained = modules.filter(module => !plano.modulos.some(incoming => incoming.title === module.title))
+  return [...storedModules(retained, items), ...plano.modulos.map(module => {
+    const current = modules.find(row => row.title === module.title)
+    const extras = items.filter(item => item.module_id === current?.id && !module.itens.some(incoming => incoming.title === item.title))
+    return {
+      requiredLevel: module.requiredLevel ?? 'basic', isPublished: true,
+      items: [
+        ...extras.map(item => ({ kind: item.kind, url: item.url, isPublished: item.is_published === true })),
+        // File readability and complete-level privacy are checked before any upload.
+        ...module.itens.map(item => ({ kind: item.kind, isPublished: true, url: item.arquivo ? 'https://pending.invalid/material' : item.url })),
+      ],
+    }
+  })]
+}
+
+export function avaliarPlanoLocal(plano) {
+  const mode = resolveMode(plano.ficha, null)
+  return { mode, ...assessProductReadiness({ mode, modules: projectedModules(plano), offeredLevels: effectiveOffers(plano).map(offer => offer.nivel) }) }
+}
+
+function readinessPreflight(plano, product, offers, links, modules, items) {
+  const mode = resolveMode(plano.ficha, product)
+  const storedLinks = links.filter(link => link.product_id === product?.id)
+  const retainedLinks = storedLinks.filter(link => !offers.some(offer => offer.existing?.id === link.offer_id))
+  const offeredLevels = [...new Set([...offers.map(offer => offer.spec.nivel), ...retainedLinks.map(link => link.grant_level ?? 'complete')])]
+  const readiness = assessProductReadiness({ mode, modules: projectedModules(plano, modules, items), offeredLevels })
+  const before = assessProductReadiness({ mode: product?.content_mode ?? 'sections', modules: storedModules(modules, items), offeredLevels })
+  const blockedLevels = readiness.emptyLevels.filter(level => {
+    const newGrant = offers.some(({ spec, existing }) => spec.nivel === level && !storedLinks.some(link => link.offer_id === existing?.id && (link.grant_level ?? 'complete') === level))
+    return !product?.is_published || mode !== product.content_mode || newGrant || before.itemCounts[level] > 0
+  })
+  const levelNames = levels => levels.map(level => level === 'basic' ? 'Básico' : 'Completo').join(', ')
+  const warnings = readiness.emptyLevels.filter(level => !blockedLevels.includes(level)).map(level => `Aviso: ${levelNames([level])} sem material publicado utilizável em configuração legada. Confira o conteúdo; os acessos existentes serão preservados.`)
+  return {
+    mode, readiness, warnings,
+    preservedMode: Boolean(product && (!plano.ficha.organizacao || plano.ficha.organizacao === 'auto')),
+    error: blockedLevels.length ? `${plano.ficha.nome}: ${levelNames(blockedLevels)} precisa de material publicado utilizável antes de publicar ou vincular a oferta.` : null,
+  }
+}
 
 function ownPublicFile(url, supabaseUrl) {
   if (typeof url !== 'string') return false
@@ -63,6 +118,7 @@ export function validarLote(planos) {
   for (const plano of planos) {
     const ficha = plano?.ficha
     if (!ficha?.loja || !ficha.slug || !Array.isArray(plano.arquivos) || !Array.isArray(plano.modulos)) throw new Error('Plano de produto inválido.')
+    if (ficha.organizacao !== undefined && !['auto', 'versions', 'sections'].includes(ficha.organizacao)) throw new Error('Organização do produto inválida.')
     const offers = effectiveOffers(plano)
     if (!Array.isArray(offers) || !offers.length || offers.some(offer => !offer?.codigo || !['basic', 'complete'].includes(offer.nivel) || !offer.nome)) throw new Error('Ofertas do plano inválidas.')
     if (plano.modulos.some(modulo => modulo.requiredLevel && !['basic', 'complete'].includes(modulo.requiredLevel))) throw new Error('Nível de módulo inválido.')
@@ -82,7 +138,7 @@ export function validarLote(planos) {
   }
 }
 
-async function preflight(db, planos) {
+async function preflight(db, planos, { allowIncomplete = false } = {}) {
   validarLote(planos)
   const prepared = []
   for (const plano of planos) {
@@ -91,7 +147,7 @@ async function preflight(db, planos) {
     // Consultar role detecta migration ausente mesmo quando o slug não existe.
     const [stores, sameSlug, ...offerRows] = await Promise.all([
       rows(db, 'stores', 'id,slug', { slug: ficha.loja }),
-      rows(db, 'products', 'id,store_id,slug,role,upgrade_checkout_url', { slug: ficha.slug }),
+      rows(db, 'products', 'id,store_id,slug,role,upgrade_checkout_url,content_mode,is_published', { slug: ficha.slug }),
       ...effectiveOffers(plano).map(offer => rows(db, 'offers', 'id,store_id,payt_product_code', { payt_product_code: offer.codigo })),
     ])
     const store = stores.find(row => row.slug === ficha.loja)
@@ -100,6 +156,10 @@ async function preflight(db, planos) {
     const product = sameSlug.find(row => row.store_id === store.id) ?? null
     const offers = effectiveOffers(plano).map((spec, index) => ({ spec, existing: offerRows[index].find(row => row.payt_product_code === spec.codigo) ?? null }))
     const links = (await Promise.all(offers.map(({ existing }) => rows(db, 'offer_products', 'offer_id,product_id,grant_level', { offer_id: existing?.id ?? '00000000-0000-0000-0000-000000000000' })))).flat()
+    if (product) {
+      const otherLinks = await rows(db, 'offer_products', 'offer_id,product_id,grant_level', { product_id: product.id })
+      for (const link of otherLinks) if (!links.some(existing => existing.offer_id === link.offer_id && existing.product_id === link.product_id)) links.push(link)
+    }
     const modules = await rows(db, 'modules', 'id,product_id,title,sort_order,is_published,required_level', { product_id: product?.id ?? '00000000-0000-0000-0000-000000000000' })
     const items = []
     for (const entry of modules.length ? modules : [{ id: '00000000-0000-0000-0000-000000000000' }]) {
@@ -123,7 +183,9 @@ async function preflight(db, planos) {
         throw new Error(`Oferta Payt ${spec.codigo} já libera outro produto; vínculo preservado.`)
       }
     }
-    prepared.push({ plano, store, product, offers, modules, items, links, bytes: new Map() })
+    const readiness = readinessPreflight(plano, product, offers, links, modules, items)
+    if (readiness.error && !allowIncomplete) throw new Error(readiness.error)
+    prepared.push({ plano, store, product, offers, modules, items, links, ...readiness, bytes: new Map() })
   }
   // Ler todo o lote antes da primeira mutação: uma falha na segunda pasta não envia a primeira.
   for (const entry of prepared) {
@@ -193,11 +255,13 @@ export async function executarPlanos(db, planos, { log = console.log } = {}) {
   const results = []
   for (const entry of entries) {
     const { plano, store, product, offers } = entry
+    log(`Organização: ${entry.mode}${entry.preservedMode ? ' (modo salvo preservado)' : ''}; materiais utilizáveis: Básico ${entry.readiness.itemCounts.basic}, Completo ${entry.readiness.itemCounts.complete}.`)
+    for (const warning of entry.warnings) log(warning)
     const urls = await upload(db, entry)
     const { ficha } = plano
     const data = {
       store_id: store.id, slug: ficha.slug, title: ficha.nome, description: ficha.descricao,
-      track: ficha.trilha, checkout_url: ficha.checkout, upgrade_checkout_url: ficha.checkoutUpgrade ?? null, role: ficha.tag,
+      track: ficha.trilha, checkout_url: ficha.checkout, upgrade_checkout_url: ficha.checkoutUpgrade ?? null, role: ficha.tag, content_mode: entry.mode,
       is_featured: ficha.destaque, sort_order: ficha.ordem, is_published: true,
       cover_url: plano.imagens.capa ? urls.get(plano.imagens.capa) : null,
       banner_url: plano.imagens.banner ? urls.get(plano.imagens.banner) : null,
@@ -221,4 +285,11 @@ export async function executarPlanos(db, planos, { log = console.log } = {}) {
     results.push({ productId, offerId: offerIds[0], offerIds, status: product ? 'atualizado' : 'criado' })
   }
   return results
+}
+
+export async function simularPlanos(db, planos) {
+  const entries = await preflight(db, planos, { allowIncomplete: true })
+  return entries.map(({ plano, mode, readiness, preservedMode, warnings, error }) => ({
+    slug: plano.ficha.slug, mode, preservedMode, ...readiness, warnings, error,
+  }))
 }

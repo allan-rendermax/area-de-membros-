@@ -2,15 +2,19 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { errorText, uploadIfPresent, withMessage } from '@/lib/admin/action-helpers'
+import { errorText, withMessage } from '@/lib/admin/action-helpers'
 import { assertAdminStoreContext, getAdminStore } from '@/lib/admin/current-store'
-import { parseItemForm, parseModuleForm, parseProductForm } from '@/lib/admin/forms'
+import { FormError, parseItemForm, parseModuleForm, parseProductForm } from '@/lib/admin/forms'
+import { productFormError, type ProductFormState } from '@/lib/admin/product-form-state'
+import { IMAGE_FIELDS, PRODUCT_IMAGE_SLOTS, type ProductImageSlot, type ProductImageTicket } from '@/lib/admin/product-image-upload'
+import { createProductImageUpload, validateProductImageReference } from '@/lib/data/product-image-uploads'
+import { assertProductPublicationReady } from '@/lib/admin/product-publication'
 import { validateItemUpload, type ItemUploadTicket } from '@/lib/admin/item-upload'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
 import { getProductById } from '@/lib/data/products'
 import { deleteProduct } from '@/lib/data/product-deletion'
-import { createItemUpload, deleteItem, deleteModule, moveItem, moveModule, saveItem, saveModule, saveProduct, uploadImage } from '@/lib/data/products-admin'
+import { createItemUpload, deleteItem, deleteModule, moveItem, moveModule, saveItem, saveModule, saveProduct } from '@/lib/data/products-admin'
 
 function field(form: FormData, name: string): string {
   return String(form.get(name) ?? '')
@@ -78,36 +82,68 @@ async function attempt(action: () => Promise<unknown>, success: string): Promise
   }
 }
 
-export async function salvarProduto(formData: FormData) {
+export async function prepararUploadImagem(storeId: string, productId: string | null, slot: ProductImageSlot, size: number, mime: string): Promise<{ data: ProductImageTicket; error?: never } | { error: string; data?: never }> {
   await requireAdmin()
   const store = await getAdminStore()
-  const currentId = field(formData, 'id') || 'novo'
   try {
-    assertAdminStoreContext(formData, store.id)
-  } catch (e) {
-    redirect(withMessage(currentId === 'novo' ? '/admin/produtos/novo' : '/admin/produtos', errorText(e)))
-  }
-  if (currentId !== 'novo') await requireOwnProduct(currentId)
+    if (storeId !== store.id) throw new Error('A loja foi alterada. Recarregue a página antes de enviar imagens.')
+    if (productId) {
+      const product = isUuid(productId) ? await getProductById(productId) : null
+      if (!product || product.storeId !== store.id) throw new Error('Produto inválido nesta loja.')
+    }
+    return { data: await createProductImageUpload({ storeId: store.id, productId, slot }, size, mime) }
+  } catch (error) { return { error: errorText(error) } }
+}
 
+export async function salvarProdutoComEstado(_previous: ProductFormState, formData: FormData): Promise<ProductFormState> {
+  return salvarProduto(formData)
+}
+
+export async function salvarProduto(formData: FormData): Promise<ProductFormState> {
+  await requireAdmin()
+  const store = await getAdminStore()
   let productId: string
   try {
+    assertAdminStoreContext(formData, store.id)
+    for (const value of formData.values()) {
+      if (value instanceof File && value.size > 0) throw new Error('Aguarde o envio individual de cada imagem antes de salvar.')
+    }
+    const currentId = field(formData, 'id')
+    const existing = currentId && isUuid(currentId) ? await getProductById(currentId) : null
+    if (currentId && (!existing || existing.storeId !== store.id)) throw new Error('Produto inválido nesta loja. Recarregue a página.')
+    // An uploaded replacement wins over a simultaneously checked removal.
+    for (const slot of PRODUCT_IMAGE_SLOTS) {
+      if (field(formData, `${slot}_image_receipt`) && field(formData, IMAGE_FIELDS[slot])) formData.delete(`remove_${slot}_image`)
+    }
     const input = parseProductForm(formData, store.id)
-    input.coverUrl = await uploadIfPresent(formData.get('cover'), input.coverUrl, uploadImage)
-    input.purchaseImageUrl = await uploadIfPresent(formData.get('purchase_image'), input.purchaseImageUrl ?? null, uploadImage)
-    input.upgradeImageUrl = await uploadIfPresent(formData.get('upgrade_image'), input.upgradeImageUrl ?? null, uploadImage)
-    input.bannerUrl = await uploadIfPresent(formData.get('banner'), input.bannerUrl, uploadImage)
+    const properties = { cover: 'coverUrl', banner: 'bannerUrl', purchase: 'purchaseImageUrl', upgrade: 'upgradeImageUrl' } as const
+    for (const slot of PRODUCT_IMAGE_SLOTS) {
+      const value = input[properties[slot]]
+      if (!value || value === existing?.[properties[slot]]) continue
+      try {
+        await validateProductImageReference({ storeId: store.id, productId: existing?.id ?? null, slot }, value, field(formData, `${slot}_image_receipt`))
+      } catch (error) { throw new FormError(errorText(error), IMAGE_FIELDS[slot]) }
+    }
+    await assertProductPublicationReady({ productId: existing?.id, storeId: store.id, isPublished: input.isPublished, mode: input.contentMode })
     productId = await saveProduct(input)
-  } catch (e) {
-    redirect(withMessage(`/admin/produtos/${currentId}`, errorText(e)))
+  } catch (error) {
+    return productFormError(error)
   }
   revalidatePath('/admin/produtos')
+  if (field(formData, 'id')) {
+    revalidatePath(`/admin/produtos/${productId}`)
+    revalidatePath(`/${store.slug}`, 'layout')
+    return { status: 'saved', fieldErrors: {}, message: 'Produto salvo.' }
+  }
   done(store.slug, productId, 'geral', 'Produto salvo.')
 }
 
-export async function salvarModulo(formData: FormData) {
+export async function salvarModulo(formData: FormData): Promise<ProductFormState> {
   const { store, product } = await requireOwnProduct(field(formData, 'product_id'))
-  const message = await attempt(() => saveModule(parseModuleForm(formData)), 'Módulo salvo.')
-  done(store.slug, product.id, 'conteudo', message)
+  try { await saveModule(parseModuleForm(formData)) } catch (error) { return productFormError(error) }
+  revalidatePath(`/admin/produtos/${product.id}`)
+  revalidatePath(`/${store.slug}`, 'layout')
+  return { status: 'saved', fieldErrors: {}, message: 'Módulo salvo.' }
 }
 
 export async function excluirModulo(formData: FormData) {
@@ -122,20 +158,22 @@ export async function moverModulo(formData: FormData) {
   done(store.slug, product.id, 'conteudo', message)
 }
 
-export async function salvarItem(formData: FormData) {
+export async function salvarItem(formData: FormData): Promise<ProductFormState> {
   const { store, product } = await requireOwnProduct(field(formData, 'product_id'))
-  const message = await attempt(() => saveItem(parseItemForm(formData), product.id), 'Item salvo.')
-  done(store.slug, product.id, 'conteudo', message)
+  try { await saveItem(parseItemForm(formData), product.id) } catch (error) { return productFormError(error) }
+  revalidatePath(`/admin/produtos/${product.id}`)
+  revalidatePath(`/${store.slug}`, 'layout')
+  return { status: 'saved', fieldErrors: {}, message: 'Item salvo.' }
 }
 
 export async function excluirItem(formData: FormData) {
   const { store, product } = await requireOwnProduct(field(formData, 'product_id'))
-  const message = await attempt(() => deleteItem(field(formData, 'id')), 'Item excluído.')
+  const message = await attempt(() => deleteItem(field(formData, 'id'), product.id), 'Item excluído.')
   done(store.slug, product.id, 'conteudo', message)
 }
 
 export async function moverItem(formData: FormData) {
   const { store, product } = await requireOwnProduct(field(formData, 'product_id'))
-  const message = await attempt(() => moveItem(field(formData, 'id'), field(formData, 'module_id'), direction(formData)), 'Ordem atualizada.')
+  const message = await attempt(() => moveItem(field(formData, 'id'), field(formData, 'module_id'), product.id, direction(formData)), 'Ordem atualizada.')
   done(store.slug, product.id, 'conteudo', message)
 }

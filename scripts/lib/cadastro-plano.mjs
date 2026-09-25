@@ -38,7 +38,7 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
   if (typeof text !== 'string') throw new Error('A ficha produto.txt deve ser texto.')
   const fields = {}
   const lines = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n')
-  const allowed = new Set(['nome', 'id', 'id_basico', 'id_completo', 'id_upgrade', 'tag', 'loja', 'slug', 'trilha', 'checkout', 'checkout_upgrade', 'destaque', 'ordem', 'descricao'])
+  const allowed = new Set(['nome', 'id', 'id_basico', 'id_completo', 'id_upgrade', 'tag', 'loja', 'slug', 'trilha', 'checkout', 'checkout_upgrade', 'destaque', 'ordem', 'descricao', 'organizacao'])
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index].trim()
     if (!line || line.startsWith('#')) continue
@@ -64,6 +64,7 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
   if (codes.some(code => /\s/.test(code))) throw new Error('produto.txt: id/código Payt não pode conter espaços.')
   if (new Set(codes).size !== codes.length) throw new Error('produto.txt: códigos Payt repetidos.')
   if (!['front', 'orderbump', 'upsell'].includes(fields.tag)) throw new Error('produto.txt: tag deve ser front, orderbump ou upsell.')
+  if (fields.organizacao !== undefined && !['versions', 'sections', 'auto'].includes(fields.organizacao)) throw new Error('produto.txt: organizacao deve ser versions, sections ou auto.')
   const loja = fields.loja || defaultStoreSlug
   if (!loja) throw new Error('produto.txt: loja obrigatória ou configure DEFAULT_STORE_SLUG.')
   if (!SLUG.test(loja) || STORE_RESERVED.has(loja)) throw new Error('produto.txt: slug da loja inválido ou reservado.')
@@ -78,6 +79,7 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
     throw new Error('produto.txt: ordem deve ser inteiro PostgreSQL válido.')
   }
   const base = { nome: fields.nome, tag: fields.tag, loja, slug, trilha: fields.trilha || '', checkout, destaque, ordem, descricao: fields.descricao || '' }
+  if (fields.organizacao !== undefined) base.organizacao = fields.organizacao
   if (!modoNiveis) return { ...base, id: fields.id }
   const ofertas = [
     { codigo: fields.id_basico, nivel: 'basic', nome: `${fields.nome} — Básico` },

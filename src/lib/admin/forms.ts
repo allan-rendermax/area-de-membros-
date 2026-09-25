@@ -4,7 +4,9 @@ import { toVideoEmbed } from '@/lib/content/video'
 import type { AccessLevel, ContentMode, ItemKind, ProductRole } from '@/lib/domain/types'
 import { normalizeWhatsapp } from '@/lib/support/whatsapp'
 
-export class FormError extends Error {}
+export class FormError extends Error {
+  constructor(message: string, public field?: string) { super(message) }
+}
 
 function text(form: FormData, name: string): string {
   return String(form.get(name) ?? '').trim()
@@ -17,7 +19,7 @@ function checked(form: FormData, name: string): boolean {
 function optionalUrl(form: FormData, name: string, label: string): string | null {
   const value = text(form, name)
   if (!value) return null
-  if (!isHttpUrl(value)) throw new FormError(`Link inválido em "${label}". Use um endereço começando com https://.`)
+  if (!isHttpUrl(value)) throw new FormError(`Link inválido em "${label}". Use um endereço começando com https://.`, name)
   return value
 }
 
@@ -127,7 +129,7 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
     purchaseDescription,
     purchaseButtonText,
     purchaseImageUrl: checked(form, 'remove_purchase_image') ? null : optionalUrl(form, 'purchase_image_url', 'Imagem do modal'),
-    upgradeImageUrl: optionalUrl(form, 'upgrade_image_url', 'Imagem de upgrade'),
+    upgradeImageUrl: checked(form, 'remove_upgrade_image') ? null : optionalUrl(form, 'upgrade_image_url', 'Imagem de upgrade'),
     upgradeButtonText,
     role,
     studentCheckoutUrl: optionalUrl(form, 'student_checkout_url', 'Checkout de aluno'),

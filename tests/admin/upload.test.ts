@@ -36,8 +36,8 @@ describe('limites de upload', () => {
   })
 
   it.each([
-    ['produtos/product-form.tsx', 'Capa (vertical 2:3)'],
-    ['produtos/product-form.tsx', 'Banner (horizontal 16:9)'],
+    ['produtos/product-form-editor.tsx', 'Capa (vertical 2:3)'],
+    ['produtos/product-form-editor.tsx', 'Banner (horizontal 16:9)'],
     ['lojas/store-form.tsx', 'Logo'],
     ['lojas/store-form.tsx', 'Imagem do login'],
   ])('informa o limite no rótulo %s: %s', (file, label) => {

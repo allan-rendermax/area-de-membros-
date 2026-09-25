@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createClient } from '@supabase/supabase-js'
 import { lerFicha, montarPlano } from '../../scripts/lib/cadastro-plano.mjs'
-import { executarPlanos } from '../../scripts/lib/cadastro-executor.mjs'
+import { executarPlanos, simularPlanos } from '../../scripts/lib/cadastro-executor.mjs'
 import { privateFilePath } from '../../src/lib/content/private-files'
 
 type Row = Record<string, any>
@@ -65,7 +65,7 @@ async function plan(overrides: Row = {}) {
   await writeFile(absolutePath, 'pdf')
   const file = { absolutePath, relativePath: 'entregaveis/Guia.pdf', size: 3, storagePath: `${overrides.slug ?? 'kit'}/entregaveis/Guia.pdf`, contentType: 'application/pdf', downloadName: 'Guia.pdf', bucket: 'arquivos' }
   return {
-    ficha: { nome: 'Kit', id: 'PAYT1', tag: 'front', loja: 'loja', slug: 'kit', trilha: 'Técnica', checkout: null, destaque: true, ordem: 2, descricao: 'Descrição', ...overrides },
+    ficha: { nome: 'Kit', id: 'PAYT1', tag: 'front', organizacao: 'sections', loja: 'loja', slug: 'kit', trilha: 'Técnica', checkout: null, destaque: true, ordem: 2, descricao: 'Descrição', ...overrides },
     arquivos: [file], imagens: { capa: null, banner: null },
     ofertas: undefined as undefined | { codigo: string; nivel: string; nome: string }[],
     modulos: [{ title: 'Material', sortOrder: 1, requiredLevel: 'basic', itens: [{ title: 'Guia', kind: 'arquivo', sortOrder: 1, url: null, arquivo: file }] }],
@@ -73,6 +73,107 @@ async function plan(overrides: Row = {}) {
 }
 
 describe('executor do cadastro', () => {
+  it('preflight de leitura informa modo preservado e bloqueio sem mutações', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit', content_mode: 'versions', is_published: true })
+    const result = await simularPlanos(db, [await plan({ organizacao: undefined })])
+    expect(result[0]).toMatchObject({ mode: 'versions', preservedMode: true, emptyLevels: ['complete'], itemCounts: { basic: 1, complete: 0 } })
+    expect(result[0].error).toMatch(/Completo/i)
+    expect(db.writes).toBe(0)
+    expect(db.uploads).toHaveLength(0)
+  })
+  it.each(['auto', undefined])('novo front usa versions com organização %s e bloqueia Completo vazio antes de upload', async organizacao => {
+    const db = new FakeDb()
+    await expect(executarPlanos(db, [await plan({ organizacao })], { log: () => {} })).rejects.toThrow(/Completo.*material|material.*Completo/i)
+    expect(db.writes).toBe(0)
+  })
+  it('grava versions explicitamente quando novo front possui o nível vendido', async () => {
+    const db = new FakeDb()
+    const p = await plan({ organizacao: undefined })
+    p.modulos[0].requiredLevel = 'complete'
+    p.arquivos[0].bucket = 'arquivos-restritos'
+    await executarPlanos(db, [p], { log: () => {} })
+    expect(db.rows.products[0].content_mode).toBe('versions')
+  })
+  it.each(['orderbump', 'upsell'])('novo %s automático usa sections e entrega Básico ao Completo', async tag => {
+    const db = new FakeDb()
+    await executarPlanos(db, [await plan({ tag, organizacao: undefined, checkout: 'https://example.com/checkout' })], { log: () => {} })
+    expect(db.rows.products[0].content_mode).toBe('sections')
+  })
+  it('preserva sections salvo na reimportação sem campo e informa escolha', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit', content_mode: 'sections', is_published: true })
+    const logs: string[] = []
+    await executarPlanos(db, [await plan({ organizacao: undefined })], { log: value => logs.push(value) })
+    expect(db.rows.products[0].content_mode).toBe('sections')
+    expect(logs.join(' ')).toMatch(/sections.*preservad|preservad.*sections/i)
+  })
+  it('bloqueia mudar sections para versions quando oferta existente perderia seus materiais', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit', content_mode: 'sections', is_published: true })
+    db.rows.offers.push({ id: 'offer-1', store_id: 'store-1', payt_product_code: 'PAYT1' })
+    db.rows.offer_products.push({ offer_id: 'offer-1', product_id: 'product-1', grant_level: 'complete' })
+    await expect(executarPlanos(db, [await plan({ organizacao: 'versions' })], { log: () => {} })).rejects.toThrow(/Completo/i)
+    expect(db.writes).toBe(0)
+  })
+  it('avisa legado publicado vazio sem alterar concessão existente ou modo', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit', content_mode: 'versions', is_published: true })
+    db.rows.offers.push({ id: 'offer-1', store_id: 'store-1', payt_product_code: 'PAYT1' })
+    db.rows.offer_products.push({ offer_id: 'offer-1', product_id: 'product-1', grant_level: 'complete' })
+    const logs: string[] = []
+    await executarPlanos(db, [await plan({ organizacao: undefined })], { log: value => logs.push(value) })
+    expect(logs.join(' ')).toMatch(/aviso.*Completo.*material/i)
+    expect(db.rows.products[0].content_mode).toBe('versions')
+    expect(db.rows.offer_products[0].grant_level).toBe('complete')
+  })
+  it('considera materiais extras preservados e publicados no preflight', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit', content_mode: 'versions', is_published: true })
+    db.rows.modules.push({ id: 'extra', product_id: 'product-1', title: 'Completo', required_level: 'complete', is_published: true })
+    db.rows.items.push({ id: 'video', module_id: 'extra', title: 'Aula', kind: 'video', url: 'https://youtu.be/dQw4w9WgXcQ', is_published: true })
+    await executarPlanos(db, [await plan({ organizacao: undefined })], { log: () => {} })
+    expect(db.rows.offer_products[0].grant_level).toBe('complete')
+  })
+  it('recusa nova venda quando só há vídeo inválido ou material rascunho no nível', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit', content_mode: 'versions', is_published: true })
+    db.rows.modules.push({ id: 'extra', product_id: 'product-1', title: 'Completo', required_level: 'complete', is_published: true })
+    db.rows.items.push({ id: 'video', module_id: 'extra', title: 'Aula', kind: 'video', url: 'https://youtube.com/watch?v=x', is_published: true },
+      { id: 'draft', module_id: 'extra', title: 'Rascunho', kind: 'link', url: 'https://example.com/guide', is_published: false })
+    await expect(executarPlanos(db, [await plan({ organizacao: undefined })], { log: () => {} })).rejects.toThrow(/Completo/i)
+    expect(db.writes).toBe(0)
+  })
+  it('recusa republicar versão vazia mesmo com oferta legada', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit', content_mode: 'versions', is_published: false })
+    db.rows.offers.push({ id: 'offer-1', store_id: 'store-1', payt_product_code: 'PAYT1' })
+    db.rows.offer_products.push({ offer_id: 'offer-1', product_id: 'product-1', grant_level: 'complete' })
+    await expect(executarPlanos(db, [await plan({ organizacao: undefined })], { log: () => {} })).rejects.toThrow(/Completo/i)
+    expect(db.writes).toBe(0)
+  })
+  it('não exige o nível antigo ao alterar a única oferta para Básico', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit', content_mode: 'versions', is_published: true })
+    db.rows.offers.push({ id: 'offer-1', store_id: 'store-1', payt_product_code: 'PAYT1' })
+    db.rows.offer_products.push({ offer_id: 'offer-1', product_id: 'product-1', grant_level: 'complete' })
+    const p = await plan({ organizacao: undefined })
+    p.ofertas = [{ codigo: 'PAYT1', nivel: 'basic', nome: 'Básico' }]
+    const logs: string[] = []
+    await executarPlanos(db, [p], { log: value => logs.push(value) })
+    expect(db.rows.offer_products[0].grant_level).toBe('basic')
+    expect(logs.some(value => /aviso.*Completo/i.test(value))).toBe(false)
+  })
+  it('considera também ofertas já salvas que não estão no arquivo importado', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit', content_mode: 'sections', is_published: true })
+    db.rows.offers.push({ id: 'extra-offer', store_id: 'store-1', payt_product_code: 'EXTRA' })
+    db.rows.offer_products.push({ offer_id: 'extra-offer', product_id: 'product-1', grant_level: 'complete' })
+    const p = await plan({ organizacao: 'versions' })
+    p.ofertas = [{ codigo: 'PAYT1', nivel: 'basic', nome: 'Básico' }]
+    await expect(executarPlanos(db, [p], { log: () => {} })).rejects.toThrow(/Completo/i)
+    expect(db.writes).toBe(0)
+  })
   it('recusa promoção a Completo quando item público extra seria preservado', async () => {
     const db = new FakeDb()
     db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit' })
@@ -129,6 +230,7 @@ describe('executor do cadastro', () => {
     p.arquivos[0].bucket = 'arquivos-restritos'
     p.arquivos[0].storagePath = 'kit/entregaveis/completo/01 Extras/Meu Guia.pdf'
     p.arquivos[0].downloadName = 'Meu Guia.pdf'
+    p.modulos.push({ title: 'Básico', sortOrder: 2, requiredLevel: 'basic', itens: [{ title: 'Guia básico', kind: 'link', sortOrder: 1, url: 'https://example.com/basic', arquivo: null }] } as any)
     await executarPlanos(db, [p], { log: () => {} })
     await executarPlanos(db, [p], { log: () => {} })
     expect(db.rows.products).toHaveLength(1)

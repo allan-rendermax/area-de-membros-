@@ -1,5 +1,6 @@
 'use client'
 
+import { previewIncludesDrafts, type PreviewContext } from '@/lib/membros/preview-context'
 import { useSyncExternalStore, type ReactNode } from 'react'
 import type { ModuleWithItems } from '@/lib/domain/types'
 import { isHttpUrl } from '@/lib/content/url'
@@ -7,8 +8,8 @@ import { toVideoEmbed } from '@/lib/content/video'
 import { ItemAnchor } from './episode-card'
 import { FileIcon, LinkIcon, PlayIcon } from './icons'
 
-function usable(item: ModuleWithItems['items'][number], preview: boolean) {
-  return (preview || item.isPublished) && (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))
+function usable(item: ModuleWithItems['items'][number], preview: PreviewContext) {
+  return (previewIncludesDrafts(preview) || item.isPublished) && (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))
 }
 
 const desktopQuery = '(min-width: 1024px)'
@@ -27,10 +28,10 @@ export function LessonSidebar({ modules, storeSlug, currentItemId, completedItem
   currentItemId?: string
   completedItemIds?: string[]
   legacyPresentation?: boolean
-  preview?: boolean
+  preview?: PreviewContext
 }) {
   const desktop = useSyncExternalStore(subscribeToViewport, isDesktop, serverViewport)
-  const visible = modules.filter((module) => preview || module.isPublished).map((module) => ({ ...module, items: module.items.filter((item) => usable(item, preview)) })).filter((module) => module.items.length > 0)
+  const visible = modules.filter((module) => previewIncludesDrafts(preview) || module.isPublished).map((module) => ({ ...module, items: module.items.filter((item) => usable(item, preview)) })).filter((module) => module.items.length > 0)
   if (visible.length === 0) return null
 
   const content = (
@@ -67,7 +68,7 @@ export function LessonSidebar({ modules, storeSlug, currentItemId, completedItem
           {content}
         </div>
       ) : (
-        <details open={desktop || undefined} className="lesson-contents lesson-sidebar-panel rounded-2xl border border-borda bg-superficie p-5 sm:p-6">
+        <details open={desktop || undefined} className="lesson-contents lesson-sidebar-panel rounded-2xl border border-borda bg-superficie px-4 py-2 sm:p-6">
           <summary tabIndex={desktop ? -1 : undefined} onClick={(event) => { if (desktop) event.preventDefault() }} className="lesson-sidebar-heading min-h-11 cursor-pointer break-words text-2xl font-bold">Conteúdos</summary>
           {content}
         </details>
