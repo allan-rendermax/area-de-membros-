@@ -36,7 +36,7 @@ describe('ContentEditor item upload', () => {
     container = document.createElement('div')
     document.body.append(container)
     root = createRoot(container)
-    await act(async () => root.render(createElement(ContentEditor, { productId: 'product-1', modules: [moduleFixture] })))
+    await act(async () => root.render(createElement(ContentEditor, { productId: 'product-1', productTitle: 'Atlas de teste', modules: [moduleFixture] })))
   })
 
   afterEach(async () => { await act(async () => root.unmount()); container.remove() })
@@ -47,6 +47,23 @@ describe('ContentEditor item upload', () => {
     expect(form.textContent).toContain('Link externo')
     expect(form.textContent).toContain('download')
     expect(container.textContent).toContain('mesmo módulo')
+  })
+
+  it('preenche novos materiais com o produto e preserva nomes personalizados existentes', () => {
+    expect(addForm().querySelector<HTMLInputElement>('[name="title"]')?.value).toBe('Atlas de teste')
+    expect(itemForm().querySelector<HTMLInputElement>('[name="title"]')?.value).toBe('Apostila')
+    expect(addForm().textContent).toContain('Nome do material')
+    expect(addForm().textContent).toContain('Por padrão, usamos o nome do produto')
+  })
+
+  it('mostra o produto como padrão de item genérico e permite gravar outro nome pelo campo existente', async () => {
+    const genericModule = { ...moduleFixture, items: [{ ...moduleFixture.items[0], id: 'generic-item', title: 'Clique Aqui' }] }
+    await act(async () => root.render(createElement(ContentEditor, { productId: 'product-1', productTitle: 'Atlas de teste', modules: [genericModule] })))
+    const input = itemForm().querySelector<HTMLInputElement>('[name="title"]')!
+    expect(input.value).toBe('Atlas de teste')
+    expect(container.textContent).not.toContain('Clique Aqui')
+    input.value = 'Plantas editáveis'
+    expect(new FormData(itemForm()).get('title')).toBe('Plantas editáveis')
   })
 
   it('uploads a selected file to its ticket bucket and leaves its reference URL editable', async () => {
@@ -62,7 +79,7 @@ describe('ContentEditor item upload', () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(url, 'https://manual.example/arquivo.pdf')
       url.dispatchEvent(new Event('input', { bubbles: true }))
     })
-    await act(async () => root.render(createElement(ContentEditor, { productId: 'product-1', modules: [moduleFixture] })))
+    await act(async () => root.render(createElement(ContentEditor, { productId: 'product-1', productTitle: 'Atlas de teste', modules: [moduleFixture] })))
     expect(url.value).toBe('https://manual.example/arquivo.pdf')
   })
 

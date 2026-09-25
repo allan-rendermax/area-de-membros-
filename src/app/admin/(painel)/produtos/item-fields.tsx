@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { startTransition, useRef, useState } from 'react'
+import { materialTitle } from '@/lib/content/material-title'
 import { ui } from '@/components/admin/ui'
 import type { Item } from '@/lib/domain/types'
 import { validateItemUpload } from '@/lib/admin/item-upload'
@@ -9,7 +10,7 @@ import { prepararUploadArquivo, salvarItem } from './actions'
 
 type UploadStage = 'idle' | 'preparing' | 'sending' | 'done'
 
-export function ItemFields({ moduleId, productId, item }: { moduleId: string; productId: string; item?: Item }) {
+export function ItemFields({ moduleId, productId, productTitle, item }: { moduleId: string; productId: string; productTitle: string; item?: Item }) {
   const [url, setUrl] = useState(item?.url ?? '')
   const [stage, setStage] = useState<UploadStage>('idle')
   const [error, setError] = useState('')
@@ -68,7 +69,10 @@ export function ItemFields({ moduleId, productId, item }: { moduleId: string; pr
       <input type="hidden" name="id" value={item?.id ?? ''} />
       <input type="hidden" name="module_id" value={moduleId} />
       <input type="hidden" name="product_id" value={productId} />
-      <label className={ui.label}>Título (nome visível do material)<input name="title" required defaultValue={item?.title} className={ui.input} /></label>
+      <label className={ui.label}>Nome do material
+        <input name="title" required defaultValue={materialTitle(item?.title, productTitle)} className={ui.input} />
+        <span className="text-xs font-normal text-texto-suave">Por padrão, usamos o nome do produto. Você pode editar o nome visível no cartão e na lista de conteúdos.</span>
+      </label>
       <label className={ui.label}>
         Tipo
         <select name="kind" defaultValue={item?.kind ?? 'arquivo'} className={ui.input}>

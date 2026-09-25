@@ -1,3 +1,4 @@
+import { materialTitle } from '@/lib/content/material-title'
 import { ui } from '@/components/admin/ui'
 import type { ModuleWithItems } from '@/lib/domain/types'
 import { excluirItem, excluirModulo, moverItem, moverModulo, salvarModulo } from './actions'
@@ -50,7 +51,7 @@ function ConfirmDelete({ action, hidden, question }: { action: (form: FormData) 
   )
 }
 
-export function ContentEditor({ productId, modules }: { productId: string; modules: ModuleWithItems[] }) {
+export function ContentEditor({ productId, productTitle, modules }: { productId: string; productTitle: string; modules: ModuleWithItems[] }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-texto-suave">Cadastre aulas, arquivos e links como itens. Use itens do mesmo módulo para reunir os recursos de uma aula ou produto.</p>
@@ -82,20 +83,20 @@ export function ContentEditor({ productId, modules }: { productId: string; modul
               <li key={item.id} className="flex flex-col gap-2 p-3">
                 <div className="flex flex-wrap items-center gap-3">
                   <span className={`${ui.pill} bg-superficie-2 text-texto-suave`}>{KIND_LABEL[item.kind]}</span>
-                  <span className={`flex-1 ${item.isPublished ? '' : 'text-texto-suave line-through'}`}>{item.title}</span>
+                  <span className={`flex-1 ${item.isPublished ? '' : 'text-texto-suave line-through'}`}>{materialTitle(item.title, productTitle)}</span>
                   <MoveButtons
                     action={moverItem}
                     hidden={{ id: item.id, module_id: m.id, product_id: productId }}
                     first={itemIndex === 0}
                     last={itemIndex === m.items.length - 1}
-                    label={item.title}
+                    label={materialTitle(item.title, productTitle)}
                   />
-                  <ConfirmDelete action={excluirItem} hidden={{ id: item.id, product_id: productId }} question={`Excluir "${item.title}"?`} />
+                  <ConfirmDelete action={excluirItem} hidden={{ id: item.id, product_id: productId }} question={`Excluir "${materialTitle(item.title, productTitle)}"?`} />
                 </div>
                 <details>
                   <summary className="cursor-pointer text-sm text-texto-suave hover:text-texto">Editar</summary>
                   <div className="mt-3">
-                    <ItemFields moduleId={m.id} productId={productId} item={item} />
+                    <ItemFields moduleId={m.id} productId={productId} productTitle={productTitle} item={item} />
                   </div>
                 </details>
               </li>
@@ -106,7 +107,7 @@ export function ContentEditor({ productId, modules }: { productId: string; modul
           <details className="mt-3">
             <summary className="cursor-pointer text-sm font-medium text-destaque">+ Novo item</summary>
             <div className="mt-3">
-              <ItemFields moduleId={m.id} productId={productId} />
+              <ItemFields moduleId={m.id} productId={productId} productTitle={productTitle} />
             </div>
           </details>
         </section>

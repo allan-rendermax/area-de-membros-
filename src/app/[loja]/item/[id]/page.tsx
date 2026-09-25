@@ -1,3 +1,4 @@
+import { materialTitle } from '@/lib/content/material-title'
 import { MaterialHelp } from '@/components/membros/material-help'
 import { supportHref } from '@/lib/support/whatsapp'
 import { listCompletedItemIds } from '@/lib/data/member-progress'
@@ -62,9 +63,9 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
       ...module,
       title: isGenericTitle(module.title) ? 'Materiais' : module.title,
       items: module.items.filter((item) => (preview || item.isPublished) &&
-        (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))).map((item, index, items) => ({
+        (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))).map((item) => ({
           ...item,
-          title: isGenericTitle(item.title) ? (items.length === 1 ? 'Material principal' : `Conteúdo ${index + 1}`) : item.title,
+          title: materialTitle(item.title, ctx.product.title),
         })),
     }))
     .filter((module) => module.items.length > 0)
@@ -91,9 +92,7 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
             <header className="lesson-heading flex min-w-0 items-start gap-4">
               <Link href={libraryHref} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
-                <h1 className="lesson-title mt-1 text-balance break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{isGenericTitle(ctx.item.title) ? 'Seu conteúdo' : itemTitle}</h1>
-                <p className="mt-2 break-words text-sm text-texto-suave">{ctx.product.title}</p>
-                <p className="mt-2 text-sm font-semibold text-destaque">Seu acesso: {level === 'complete' ? 'Completo' : 'Básico'}</p>
+                <h1 className="lesson-title mt-1 text-balance break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{ctx.product.title}</h1>
                 {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo faz parte da versão completa.</p>}
               </div>
             </header>
