@@ -63,6 +63,7 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
   const modules = publishedModules.filter((module) => canAccessLevel(level, module.requiredLevel ?? 'basic'))
   const lockedModules = publishedModules.filter((module) => !canAccessLevel(level, module.requiredLevel ?? 'basic'))
   const sequence = modules.flatMap((module) => module.items)
+  const singleResource = sequence.length === 1 && ctx.item.kind !== 'video'
   const accessibleItemIds = new Set(sequence.map((item) => item.id))
   const visibleCompletedIds = completedIds.filter((id) => accessibleItemIds.has(id))
   const siblings = modules.find((module) => module.id === ctx.module.id)?.items ?? []
@@ -75,19 +76,23 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
   return (
     <>
       <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} active="materials" actions={<InstallAppButton />} />
-      <main className="lesson-workspace member-item-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
-        <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
+      <main className={`lesson-workspace member-item-workspace mx-auto w-full px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10 ${singleResource ? 'max-w-[880px]' : 'max-w-[1440px]'}`}>
+        <div className={`lesson-workspace-grid grid min-w-0 gap-8 ${singleResource ? '' : 'lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10'}`}>
           <div className="min-w-0 order-2 lg:order-1">
             <header className="lesson-heading flex min-w-0 items-start gap-4">
               <Link href={libraryHref} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
-                <p className="lesson-eyebrow break-words text-xs font-bold uppercase tracking-[.16em] text-texto-suave">{ctx.module.title}</p>
-                <h1 className="lesson-title mt-1 break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{ctx.item.title}</h1>
-                <p className="mt-2 break-words text-sm text-texto-suave">{ctx.product.title}</p>
+                <h1 className="lesson-title mt-1 text-balance break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{singleResource ? ctx.product.title : ctx.item.title}</h1>
+                {!singleResource && <p className="mt-2 break-words text-sm text-texto-suave">{ctx.product.title}</p>}
                 <p className="mt-2 text-sm font-semibold text-destaque">Seu acesso: {level === 'complete' ? 'Completo' : 'Básico'}</p>
                 {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo faz parte da versão completa.</p>}
               </div>
             </header>
+
+            {singleResource && <div className="mt-8 sm:pl-[60px]">
+              {ctx.product.description && <p className="mb-6 max-w-prose whitespace-pre-line break-words text-sm leading-relaxed text-texto-suave">{ctx.product.description}</p>}
+              <ResourceList items={[ctx.item]} storeSlug={store.slug} preview={preview} standalone />
+            </div>}
 
             {embed && <div className="mt-7 aspect-video overflow-hidden rounded-xl border border-borda bg-fundo">
               <iframe
@@ -100,16 +105,16 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
               />
             </div>}
 
-            {siblings.some((item) => item.kind !== 'video') && <section className="mt-9" aria-label="Downloads e links">
-              <h2 className="lesson-section-heading mb-5 text-2xl font-bold">Downloads e links</h2>
+            {!singleResource && siblings.some((item) => item.kind !== 'video') && <section className="mt-9" aria-label="Materiais disponíveis">
+              <h2 className="lesson-section-heading mb-5 text-2xl font-bold">Materiais disponíveis</h2>
               <ResourceList items={siblings} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} />
             </section>}
 
-            {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
+            {!singleResource && !progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
             <LockedModules modules={lockedModules} />
             <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} />
-            <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
-            <LessonToolbar
+            <div className={singleResource ? 'mt-10 sm:ml-[60px]' : 'mt-8'}><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
+            {!singleResource && <LessonToolbar
               key={`${customer?.id ?? 'preview'}:${ctx.item.id}`}
               preview={preview}
               storeSlug={store.slug}
@@ -122,9 +127,9 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
               description={ctx.product.description}
               previous={previous ? { href: withPreview(`/${store.slug}/item/${previous.id}`, preview), title: previous.title } : null}
               next={next ? { href: withPreview(`/${store.slug}/item/${next.id}`, preview), title: next.title } : null}
-            />
+            />}
           </div>
-          <LessonSidebar modules={modules} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
+          {!singleResource && <LessonSidebar modules={modules} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />}
         </div>
       </main>
     </>

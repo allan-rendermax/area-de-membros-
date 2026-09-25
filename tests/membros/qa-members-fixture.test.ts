@@ -22,7 +22,7 @@ test('seeded file is recognized by actual recent-material query and format label
   expect(recent).toEqual([expect.objectContaining({ itemId: id(31), kind: 'arquivo' })])
   for (const item of tables.items.filter((item) => /\.(pdf|zip)$/.test(String(item.url)))) {
     expect(item.kind).toBe('arquivo')
-    expect(resourceLabel({ kind: 'arquivo', url: String(item.url) })).toEqual(expect.objectContaining({ actionLabel: expect.stringMatching(/^Baixar (PDF|ZIP)$/) }))
+    expect(resourceLabel({ kind: 'arquivo', url: String(item.url) })).toEqual({ typeLabel: expect.stringMatching(/^(PDF|ZIP)$/), actionLabel: 'Acesse seu conteúdo' })
   }
   expect(tables.item_access[0].kind).toBe('arquivo')
   expect(await listRecentMaterials(id(2), id(3), new Set())).toEqual([])
