@@ -1,3 +1,4 @@
+import { renderItemContent } from '@/components/membros/item-content'
 import { InstallAppButton } from '@/components/membros/install-app-button'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
@@ -40,8 +41,10 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
   const blocked = !preview && query.bloqueado === '1'
   const firstItem = modules[0]?.items[0]
   if (firstItem) {
-    const itemHref = `/${store.slug}/item/${firstItem.id}${blocked ? '?bloqueado=1' : ''}`
-    redirect(withPreview(itemHref, preview))
+    return renderItemContent({
+      ctx: { item: firstItem, module: modules[0], product },
+      store, customer, level, preview, blocked, productModules: publishedModules,
+    })
   }
   const support = supportHref(store, 'geral', customer?.email ?? null)
 
@@ -52,7 +55,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
         <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0">
             <header className="lesson-heading flex min-w-0 items-start gap-4">
-              <Link href={withPreview(`/${store.slug}`, preview)} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
+              <Link href={withPreview(`/${store.slug}#materiais`, preview)} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
                 <p className="lesson-eyebrow text-xs font-bold uppercase tracking-[.16em] text-texto-suave">Seu material</p>
                 <h1 className="lesson-title mt-1 break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{product.title}</h1>

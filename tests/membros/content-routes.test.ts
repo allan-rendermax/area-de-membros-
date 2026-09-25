@@ -131,6 +131,14 @@ describe('vitrine do aluno', () => {
     expect(html).not.toContain('Seu acervo, pronto para usar')
   })
 
+  it('mantém acervo quando o histórico falha e oferece destino de retorno à prateleira', async () => {
+    vi.mocked(listRecentProductIds).mockRejectedValueOnce(new Error('histórico indisponível'))
+    const html = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({}) }))
+    expect(html).toContain(product.title)
+    expect(html).toContain('id="materiais"')
+    expect(html).not.toContain('Continuar')
+  })
+
   it('reutiliza o cliente validado ao carregar catálogo e permissões', async () => {
     const result = await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({}) })
     renderToStaticMarkup(result)
@@ -185,7 +193,7 @@ describe('rota de produto', () => {
 
     pendingProduct.resolve(product)
     pendingGranted.resolve(new Map([[product.id, 'complete']]))
-    await expect(rendering).rejects.toThrow(`NEXT_REDIRECT:/${store.slug}/item/${item.id}`)
+    expect(renderToStaticMarkup(await rendering)).toContain(product.title)
 
     expect(callsBeforeResolution).toEqual([1, 1])
   })
@@ -215,9 +223,14 @@ describe('rota de produto', () => {
   it.each(['video', 'arquivo', 'link'] as const)('abre diretamente o primeiro conteúdo do tipo %s depois da autorização', async (kind) => {
     const first = { ...item, kind, url: kind === 'video' ? item.url : 'https://example.com/material.pdf' }
     vi.mocked(listModulesWithItems).mockResolvedValue([{ ...courseModule, items: [first] }])
-    await expect(ProdutoPage(productProps())).rejects.toThrow(`NEXT_REDIRECT:/${store.slug}/item/${item.id}`)
+    expect(renderToStaticMarkup(await ProdutoPage(productProps()))).toContain(item.title)
     expect(loadStoreAccess).not.toHaveBeenCalled()
-    expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(recordItemAccess).toHaveBeenCalledTimes(kind === 'video' ? 1 : 0)
+    expect(getItemWithContext).not.toHaveBeenCalled()
+    expect(redirect).not.toHaveBeenCalled()
+    expect(requireStoreSession).toHaveBeenCalledTimes(1)
+    expect(loadGrantedProductLevels).toHaveBeenCalledTimes(1)
+    expect(listModulesWithItems).toHaveBeenCalledTimes(1)
     expect(listModulesWithItems).toHaveBeenCalledWith(product.id, { publishedOnly: true })
   })
 
@@ -233,12 +246,13 @@ describe('rota de produto', () => {
         { ...item, id: 'bad-file', kind: 'arquivo', url: 'javascript:alert(1)' }, item,
       ] },
     ])
-    await expect(ProdutoPage(productProps())).rejects.toThrow(`NEXT_REDIRECT:/${store.slug}/item/${item.id}`)
+    expect(renderToStaticMarkup(await ProdutoPage(productProps()))).toContain(item.title)
   })
 
   it('leva o aviso de conteúdo bloqueado à tela de conteúdo sem criar uma etapa extra', async () => {
-    await expect(ProdutoPage({ ...productProps(), searchParams: Promise.resolve({ bloqueado: '1' }) }))
-      .rejects.toThrow(`NEXT_REDIRECT:/${store.slug}/item/${item.id}?bloqueado=1`)
+    const html = renderToStaticMarkup(await ProdutoPage({ ...productProps(), searchParams: Promise.resolve({ bloqueado: '1' }) }))
+    expect(html).toContain('Este conteúdo faz parte da versão completa.')
+    expect(redirect).not.toHaveBeenCalled()
   })
 
   it('mostra estado vazio quando nenhum item publicado pode ser aberto', async () => {
@@ -320,7 +334,7 @@ describe('rota de item', () => {
 
   it('volta diretamente ao acervo sem reabrir a página intermediária', async () => {
     const doc = await renderedItem()
-    expect(doc.querySelector('a[aria-label="Voltar ao acervo"]')?.getAttribute('href')).toBe('/loja-a')
+    expect(doc.querySelector('a[aria-label="Voltar ao acervo"]')?.getAttribute('href')).toBe('/loja-a#materiais')
     expect(doc.querySelector('header a[href="/loja-a/produto/produto-a"]')).toBeNull()
   })
 
@@ -442,6 +456,19 @@ describe('rota de item', () => {
       .rejects.toThrow(`NEXT_REDIRECT:/${store.slug}?comprar=${product.slug}`)
     expect(recordItemAccess).not.toHaveBeenCalled()
     expect(listModulesWithItems).not.toHaveBeenCalled()
+  })
+
+  it('inicia módulos e registro sem esperar a consulta de progresso', async () => {
+    const progress = deferred<string[]>()
+    const started = deferred<void>()
+    vi.mocked(listCompletedItemIds).mockImplementationOnce(() => { started.resolve(); return progress.promise })
+    const rendering = ItemPage(itemProps())
+    await started.promise
+    await settle()
+    const callsBeforeProgress = [listModulesWithItems, recordItemAccess].map((mock) => vi.mocked(mock).mock.calls.length)
+    progress.resolve([])
+    await rendering
+    expect(callsBeforeProgress).toEqual([1, 1])
   })
 
   it('inicia módulos enquanto o registro do vídeo está pendente e aguarda ambos antes de renderizar', async () => {

@@ -24,7 +24,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
   const { store, customer } = await (preview ? requireStorePreview(loja) : requireStoreSession(loja))
   const [{ products, granted }, recentIds] = await Promise.all([
     customer ? loadStoreAccess(store.id, customer) : listProducts(store.id).then((products) => ({ products, granted: new Set(products.map((p) => p.id)) })),
-    customer ? listRecentProductIds(customer.id, store.id) : Promise.resolve([]),
+    customer ? listRecentProductIds(customer.id, store.id).catch(() => []) : Promise.resolve([]),
   ])
   const architecture = getMemberTheme(store.slug) === 'arquitetura'
   const shelf = buildShelf(products.map((product) => withMemberArtwork(product, store.slug)), granted, { includeDrafts: preview })
@@ -35,7 +35,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
 
   return (
     <>
-      <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} actions={<InstallAppButton />} legacyHome />
+      <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} actions={<InstallAppButton />} active="home" legacyHome />
       <main className="pb-24">
         {architecture ? <ArchitectureHero /> : shelf.featured && <Hero product={shelf.featured} storeSlug={store.slug} preview={preview} />}
         {architecture && (
@@ -44,7 +44,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
             <p>Seu acervo de arquitetura, em um só lugar.</p>
           </div>
         )}
-        <div className={`relative flex flex-col gap-8 ${architecture ? '' : shelf.featured ? '-mt-2 sm:-mt-8' : 'pt-6'}`}>
+        <div id={architecture ? undefined : 'materiais'} className={`relative flex scroll-mt-28 flex-col gap-8 ${architecture ? '' : shelf.featured ? '-mt-2 sm:-mt-8' : 'pt-6'}`}>
           {continuing.length > 0 && (
             <Carousel title="Continuar">
               {continuing.map((p) => (
