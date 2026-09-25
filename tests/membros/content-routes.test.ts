@@ -185,7 +185,7 @@ describe('rota de produto', () => {
 
     pendingProduct.resolve(product)
     pendingGranted.resolve(new Map([[product.id, 'complete']]))
-    await rendering
+    await expect(rendering).rejects.toThrow(`NEXT_REDIRECT:/${store.slug}/item/${item.id}`)
 
     expect(callsBeforeResolution).toEqual([1, 1])
   })
@@ -212,47 +212,33 @@ describe('rota de produto', () => {
     expect(listModulesWithItems).not.toHaveBeenCalled()
   })
 
-  it('mantém a apresentação original do produto sem retomada', async () => {
-    vi.mocked(listRecentMaterials).mockResolvedValue([{ itemId: item.id, title: item.title, kind: item.kind, productId: product.id, productTitle: product.title, productSlug: product.slug }])
-    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
-    expect(html).not.toContain('Retomar material')
-    expect(listRecentMaterials).not.toHaveBeenCalled()
-    expect(html.match(/<aside/g)).toHaveLength(1)
-    expect(html).toContain('Abrir primeiro conteúdo')
-    expect(html).toContain('Seu material')
-    expect(html).toContain('lesson-workspace-grid')
-    expect(html).not.toContain('lesson-contents')
-    expect(html).toContain('<h2 class="lesson-sidebar-heading')
-  })
-
-  it('renderiza conteúdo somente depois da autorização', async () => {
-    const result = await ProdutoPage(productProps())
-    const html = renderToStaticMarkup(result)
-
+  it.each(['video', 'arquivo', 'link'] as const)('abre diretamente o primeiro conteúdo do tipo %s depois da autorização', async (kind) => {
+    const first = { ...item, kind, url: kind === 'video' ? item.url : 'https://example.com/material.pdf' }
+    vi.mocked(listModulesWithItems).mockResolvedValue([{ ...courseModule, items: [first] }])
+    await expect(ProdutoPage(productProps())).rejects.toThrow(`NEXT_REDIRECT:/${store.slug}/item/${item.id}`)
     expect(loadStoreAccess).not.toHaveBeenCalled()
-    expect(html).toContain(product.title)
-    expect(html).toContain(item.title)
+    expect(recordItemAccess).not.toHaveBeenCalled()
     expect(listModulesWithItems).toHaveBeenCalledWith(product.id, { publishedOnly: true })
   })
 
-  it('separa aulas e downloads por módulo sem expor URLs externas na capa', async () => {
-    const file = { ...item, id: '22222222-2222-4222-8222-222222222222', kind: 'arquivo' as const, title: 'Apostila da aula', url: 'https://files.example.com/a.pdf' }
-    const link = { ...item, id: '33333333-3333-4333-8333-333333333333', kind: 'link' as const, title: 'Versão editável', url: 'https://drive.example.com/doc' }
-    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [item, file, link] }])
-    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
-    expect(html).toContain('Aulas em vídeo')
-    expect(html).toContain('Downloads e links')
-    expect(html).toContain(`href="/${store.slug}/item/${file.id}/abrir"`)
-    expect(html).toContain(`href="/${store.slug}/item/${link.id}/abrir"`)
-    expect(html).not.toContain(file.url)
-    expect(html).not.toContain(link.url)
+  it('pula módulos bloqueados, rascunhos, vazios e itens inválidos ao abrir pela capa', async () => {
+    vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map([[product.id, 'basic']]))
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([
+      { ...courseModule, id: 'locked', requiredLevel: 'complete', items: [{ ...item, id: 'locked-item' }] },
+      { ...courseModule, id: 'draft', isPublished: false, items: [{ ...item, id: 'draft-module-item' }] },
+      { ...courseModule, id: 'empty', items: [] },
+      { ...courseModule, items: [
+        { ...item, id: 'draft-item', isPublished: false },
+        { ...item, id: 'bad-video', url: 'https://example.com/video' },
+        { ...item, id: 'bad-file', kind: 'arquivo', url: 'javascript:alert(1)' }, item,
+      ] },
+    ])
+    await expect(ProdutoPage(productProps())).rejects.toThrow(`NEXT_REDIRECT:/${store.slug}/item/${item.id}`)
   })
 
-  it('não cria seção vazia para recursos com destino inválido', async () => {
-    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [item, { ...item, id: '22222222-2222-4222-8222-222222222222', kind: 'arquivo', url: 'javascript:alert(1)' }] }])
-    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
-    expect(html).toContain('Aulas em vídeo')
-    expect(html).not.toContain('Downloads e links')
+  it('leva o aviso de conteúdo bloqueado à tela de conteúdo sem criar uma etapa extra', async () => {
+    await expect(ProdutoPage({ ...productProps(), searchParams: Promise.resolve({ bloqueado: '1' }) }))
+      .rejects.toThrow(`NEXT_REDIRECT:/${store.slug}/item/${item.id}?bloqueado=1`)
   })
 
   it('mostra estado vazio quando nenhum item publicado pode ser aberto', async () => {
@@ -266,10 +252,10 @@ describe('rota de produto', () => {
     const extra = { ...courseModule, id: 'extra', title: 'Modelos exclusivos', requiredLevel: 'complete' as const }
     const privateItem = { ...item, id: '44444444-4444-4444-8444-444444444444', moduleId: extra.id, kind: 'arquivo' as const, title: 'Modelo secreto', url: 'https://project.supabase.co/storage/v1/object/authenticated/arquivos-restritos/modelo.pdf' }
     vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map([[product.id, 'basic']]))
-    vi.mocked(getProductBySlug).mockResolvedValueOnce({ ...product, upgradeCheckoutUrl: 'https://checkout.example.com/upgrade' })
+    vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...context, product: { ...product, upgradeCheckoutUrl: 'https://checkout.example.com/upgrade' } })
     vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [item] }, { ...extra, items: [privateItem] }])
 
-    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
+    const html = renderToStaticMarkup(await ItemPage(itemProps()))
     expect(html).toContain('Seu acesso: Básico')
     expect(html).toContain('Modelos exclusivos')
     expect(html).toContain('1 conteúdo bloqueado</span>')
@@ -284,10 +270,10 @@ describe('rota de produto', () => {
   it('exibe extras e evita CTA quando acesso é Completo', async () => {
     const extra = { ...courseModule, id: 'extra', title: 'Modelos exclusivos', requiredLevel: 'complete' as const }
     const privateItem = { ...item, id: '44444444-4444-4444-8444-444444444444', moduleId: extra.id, kind: 'arquivo' as const, title: 'Modelo secreto', url: 'https://project.supabase.co/storage/v1/object/authenticated/arquivos-restritos/modelo.pdf' }
-    vi.mocked(getProductBySlug).mockResolvedValueOnce({ ...product, upgradeCheckoutUrl: 'https://checkout.example.com/upgrade' })
+    vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...context, product: { ...product, upgradeCheckoutUrl: 'https://checkout.example.com/upgrade' } })
     vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [item] }, { ...extra, items: [privateItem] }])
 
-    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
+    const html = renderToStaticMarkup(await ItemPage(itemProps()))
     expect(html).toContain('Seu acesso: Completo')
     expect(html).toContain(privateItem.title)
     expect(html).not.toContain('Desbloquear versão completa')
@@ -331,6 +317,12 @@ describe('rota de item', () => {
     window.document.body.innerHTML = renderToStaticMarkup(await ItemPage(itemProps(id)))
     return window.document
   }
+
+  it('volta diretamente ao acervo sem reabrir a página intermediária', async () => {
+    const doc = await renderedItem()
+    expect(doc.querySelector('a[aria-label="Voltar ao acervo"]')?.getAttribute('href')).toBe('/loja-a')
+    expect(doc.querySelector('header a[href="/loja-a/produto/produto-a"]')).toBeNull()
+  })
 
   it('mantém downloads acessíveis com aviso quando a leitura de progresso falha', async () => {
     vi.mocked(listCompletedItemIds).mockRejectedValueOnce(new Error('migration unavailable'))
@@ -522,14 +514,14 @@ describe('rota de item', () => {
 
   it('omite extras da barra lateral e da próxima aula para Básico', async () => {
     const extra = { ...courseModule, id: 'extra', title: 'Modelos exclusivos', requiredLevel: 'complete' as const }
-    const extraItem = { ...item, id: '44444444-4444-4444-8444-444444444444', moduleId: extra.id, title: 'Aula secreta', url: 'https://www.youtube.com/watch?v=secret' }
+    const extraItem = { ...item, id: '44444444-4444-4444-8444-444444444444', moduleId: extra.id, title: 'Aula secreta', url: 'https://www.youtube.com/watch?v=SecretVid01' }
     vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map([[product.id, 'basic']]))
     vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [item] }, { ...extra, items: [extraItem] }])
     const html = renderToStaticMarkup(await ItemPage(itemProps()))
     expect(html).not.toContain(extraItem.id)
     expect(html).not.toContain(extraItem.title)
     expect(html).not.toContain(extraItem.url)
-    expect(html).not.toContain('Modelos exclusivos')
+    expect(html).toContain('Modelos exclusivos')
   })
 
   it('remove IDs de progresso de extras antigos antes de enviar dados ao sidebar de Básico', async () => {

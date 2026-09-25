@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { LessonSidebar } from '@/components/membros/lesson-sidebar'
 import { LessonToolbar } from '@/components/membros/lesson-toolbar'
+import { LockedModules } from '@/components/membros/locked-modules'
+import { ProductUpgrade } from '@/components/membros/product-upgrade'
 import { ResourceList } from '@/components/membros/resource-list'
 import { StoreHeader } from '@/components/membros/store-header'
 import { toVideoEmbed } from '@/lib/content/video'
@@ -23,7 +25,9 @@ export const dynamic = 'force-dynamic'
 export default async function ItemPage({ params, searchParams }: PageProps<'/[loja]/item/[id]'>) {
   const { loja, id } = await params
   if (!isUuid(id)) notFound()
-  const preview = (await searchParams).previa === '1'
+  const query = await searchParams
+  const preview = query.previa === '1'
+  const blocked = !preview && query.bloqueado === '1'
   const { store, customer } = await (preview ? requireStorePreview(loja) : requireStoreSession(loja))
 
   const [ctx, levels] = await Promise.all([
@@ -48,14 +52,16 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
       : Promise.resolve(),
   ])
 
-  const modules = productModules
-    .filter((module) => (preview || module.isPublished) && canAccessLevel(level, module.requiredLevel ?? 'basic'))
+  const publishedModules = productModules
+    .filter((module) => preview || module.isPublished)
     .map((module) => ({
       ...module,
       items: module.items.filter((item) => (preview || item.isPublished) &&
         (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))),
     }))
     .filter((module) => module.items.length > 0)
+  const modules = publishedModules.filter((module) => canAccessLevel(level, module.requiredLevel ?? 'basic'))
+  const lockedModules = publishedModules.filter((module) => !canAccessLevel(level, module.requiredLevel ?? 'basic'))
   const sequence = modules.flatMap((module) => module.items)
   const accessibleItemIds = new Set(sequence.map((item) => item.id))
   const visibleCompletedIds = completedIds.filter((id) => accessibleItemIds.has(id))
@@ -63,7 +69,8 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
   const index = sequence.findIndex((item) => item.id === ctx.item.id)
   const previous = index > 0 ? sequence[index - 1] : null
   const next = index >= 0 && index < sequence.length - 1 ? sequence[index + 1] : null
-  const productHref = withPreview(`/${store.slug}/produto/${ctx.product.slug}`, preview)
+  const libraryHref = withPreview(`/${store.slug}`, preview)
+  const itemHref = withPreview(`/${store.slug}/item/${ctx.item.id}`, preview)
 
   return (
     <>
@@ -72,11 +79,13 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
         <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0 order-2 lg:order-1">
             <header className="lesson-heading flex min-w-0 items-start gap-4">
-              <Link href={productHref} aria-label="Voltar ao produto" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
+              <Link href={libraryHref} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
                 <p className="lesson-eyebrow break-words text-xs font-bold uppercase tracking-[.16em] text-texto-suave">{ctx.module.title}</p>
                 <h1 className="lesson-title mt-1 break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{ctx.item.title}</h1>
-                <Link href={productHref} className="mt-2 inline-block break-words text-sm text-texto-suave hover:text-texto">{ctx.product.title}</Link>
+                <p className="mt-2 break-words text-sm text-texto-suave">{ctx.product.title}</p>
+                <p className="mt-2 text-sm font-semibold text-destaque">Seu acesso: {level === 'complete' ? 'Completo' : 'Básico'}</p>
+                {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo faz parte da versão completa.</p>}
               </div>
             </header>
 
@@ -97,6 +106,8 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
             </section>}
 
             {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
+            <LockedModules modules={lockedModules} />
+            <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} />
             <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
             <LessonToolbar
               key={`${customer?.id ?? 'preview'}:${ctx.item.id}`}

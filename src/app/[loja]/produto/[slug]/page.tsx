@@ -1,10 +1,8 @@
 import { InstallAppButton } from '@/components/membros/install-app-button'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { EpisodeCard, ItemAnchor } from '@/components/membros/episode-card'
-import { LessonSidebar } from '@/components/membros/lesson-sidebar'
 import { ProductUpgrade } from '@/components/membros/product-upgrade'
-import { ResourceList } from '@/components/membros/resource-list'
+import { LockedModules } from '@/components/membros/locked-modules'
 import { StoreHeader } from '@/components/membros/store-header'
 import { WhatsAppFloating } from '@/components/membros/whatsapp-button'
 import { canAccessLevel } from '@/lib/access/access'
@@ -40,6 +38,11 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
   const lockedModules = publishedModules.filter((module) => !canAccessLevel(level, module.requiredLevel ?? 'basic'))
   const productHref = withPreview(`/${store.slug}/produto/${product.slug}`, preview)
   const blocked = !preview && query.bloqueado === '1'
+  const firstItem = modules[0]?.items[0]
+  if (firstItem) {
+    const itemHref = `/${store.slug}/item/${firstItem.id}${blocked ? '?bloqueado=1' : ''}`
+    redirect(withPreview(itemHref, preview))
+  }
   const support = supportHref(store, 'geral', customer?.email ?? null)
 
   return (
@@ -56,46 +59,13 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
                 <p className="mt-2 text-sm font-semibold text-destaque">Seu acesso: {level === 'complete' ? 'Completo' : 'Básico'}</p>
                 {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo faz parte da versão completa.</p>}
                 {product.description && <p className="mt-3 max-w-2xl break-words text-sm leading-relaxed text-texto-suave sm:text-base">{product.description}</p>}
-                {modules[0]?.items[0] && <ItemAnchor item={modules[0].items[0]} storeSlug={store.slug} preview={preview} className="mt-5 inline-flex min-h-11 items-center gap-3 rounded-full bg-destaque px-5 py-2.5 text-sm font-bold text-white hover:bg-destaque/80">
-                  Abrir primeiro conteúdo <span aria-hidden>→</span>
-                </ItemAnchor>}
               </div>
             </header>
 
-            {modules.length === 0 ? <p className="mt-10 text-texto-suave">Nenhum conteúdo publicado ainda.</p> : (
-              <div className="mt-9 space-y-11">
-                {modules.map((module) => {
-                  const videos = module.items.filter((item) => item.kind === 'video')
-                  const hasResources = module.items.some((item) => item.kind !== 'video')
-                  return <section key={module.id} aria-label={module.title} className="min-w-0">
-                    <div className="lesson-section-heading mb-5 flex min-w-0 items-center gap-3">
-                      <span aria-hidden className="h-1.5 w-7 shrink-0 rounded-full bg-destaque" />
-                      <h2 className="min-w-0 break-words [overflow-wrap:anywhere] text-xl font-bold sm:text-2xl">{module.title}</h2>
-                    </div>
-                    {videos.length > 0 && <div>
-                      <h3 className="mb-4 text-lg font-bold">Aulas em vídeo</h3>
-                      <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2">
-                        {videos.map((item) => <EpisodeCard key={item.id} item={item} storeSlug={store.slug} preview={preview} />)}
-                      </div>
-                    </div>}
-                    {hasResources && <div className={videos.length ? 'mt-8' : ''}>
-                      {videos.length > 0 && <h3 className="mb-4 text-lg font-bold">Downloads e links</h3>}
-                      <ResourceList items={module.items} storeSlug={store.slug} preview={preview} legacyPresentation />
-                    </div>}
-                  </section>
-                })}
-              </div>
-            )}
-            {lockedModules.length > 0 && <section className="mt-9" aria-label="Módulos bloqueados">
-              <h2 className="mb-4 text-xl font-bold">Módulos da versão completa</h2>
-              <ul className="space-y-3">{lockedModules.map((module) => <li key={module.id} className="rounded-xl border border-borda bg-superficie p-4">
-                <span className="font-semibold">{module.title}</span>
-                <span className="ml-3 text-sm text-texto-suave">{module.items.length} {module.items.length === 1 ? 'conteúdo bloqueado' : 'conteúdos bloqueados'}</span>
-              </li>)}</ul>
-            </section>}
+            <p className="mt-10 text-texto-suave">{lockedModules.length ? 'Nenhum conteúdo disponível no seu acesso atual.' : 'Nenhum conteúdo publicado ainda.'}</p>
+            <LockedModules modules={lockedModules} />
             <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={productHref} />
           </div>
-          <LessonSidebar modules={modules} storeSlug={store.slug} preview={preview} legacyPresentation />
         </div>
       </main>
       <WhatsAppFloating href={support} />

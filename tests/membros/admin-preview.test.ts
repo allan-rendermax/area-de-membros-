@@ -60,7 +60,8 @@ describe('prévia administrativa sem conta de aluno', () => {
   })
 
   it('inclui módulos e aulas em rascunho mantendo a navegação na prévia', async () => {
-    const html = renderToStaticMarkup(await ProductPage(props))
+    await expect(ProductPage(props)).rejects.toThrow(`redirect:/arquitetura/item/${item.id}?previa=1`)
+    const html = renderToStaticMarkup(await ItemPage(props))
     expect(html).toContain('Módulo em criação')
     expect(html).toContain('Aula em criação')
     expect(html).toContain(`/arquitetura/item/${item.id}?previa=1`)
