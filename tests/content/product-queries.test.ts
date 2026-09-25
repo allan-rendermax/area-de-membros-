@@ -85,7 +85,7 @@ const product = {
   isFeatured: false,
   sortOrder: 1,
   isPublished: true,
-  upgradeCheckoutUrl: null, contentMode: 'sections', upgradeImageUrl: null, upgradeButtonText: null,
+  upgradeCheckoutUrl: null, contentMode: 'sections', upgradeImageUrl: null, upgradeButtonText: null, purchaseTitle: null, purchaseDescription: null, purchaseImageUrl: null, purchaseButtonText: null,
 }
 
 function json(body: unknown, status = 200) {

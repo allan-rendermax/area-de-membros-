@@ -86,6 +86,16 @@ describe('contexto da loja no envio', () => {
     expect(io.saveProduct).toHaveBeenCalledWith(expect.objectContaining({ role: 'upsell', checkoutUrl: 'https://payt.example/extra' }))
   })
 
+  it('envia a imagem do modal e preserva sua configuração na action autorizada', async () => {
+    io.uploadImage.mockResolvedValueOnce('https://example.com/saved-modal.png')
+    const input = form({ store_id: storeB.id, title: 'Produto', purchase_title: 'Libere seu pack', purchase_description: 'Texto do modal', purchase_button_text: 'Quero comprar' })
+    const image = new File(['image'], 'mockup.png', { type: 'image/png' })
+    input.set('purchase_image', image)
+    await expect(salvarProduto(input)).rejects.toThrow(/NEXT_REDIRECT/)
+    expect(io.uploadImage).toHaveBeenCalledOnce()
+    expect(io.saveProduct).toHaveBeenCalledWith(expect.objectContaining({ purchaseTitle: 'Libere seu pack', purchaseDescription: 'Texto do modal', purchaseButtonText: 'Quero comprar', purchaseImageUrl: 'https://example.com/saved-modal.png' }))
+  })
+
   it('expõe a escolha de papel no formulário de criação', () => {
     const html = renderToStaticMarkup(ProductForm({ product: null, tracks: [], storeId: storeA.id }))
     expect(html).toContain('name="role"')

@@ -2,9 +2,10 @@ import { ui } from '@/components/admin/ui'
 import { AutoCover } from '@/components/membros/auto-cover'
 import type { Product } from '@/lib/domain/types'
 import { salvarProduto } from './actions'
+import { LockedProductFields } from './locked-product-fields'
 import { ProductUpgrade } from '@/components/membros/product-upgrade'
 
-export function ProductForm({ product, tracks, storeId }: { product: Product | null; tracks: string[]; storeId: string }) {
+export function ProductForm({ product, tracks, storeId, storeSlug = '' }: { product: Product | null; tracks: string[]; storeId: string; storeSlug?: string }) {
   const seed = product?.id ?? 'novo-produto'
   return (
     <form action={salvarProduto} className={`${ui.card} grid gap-6 p-5 lg:grid-cols-[240px_1fr]`}>
@@ -57,10 +58,7 @@ export function ProductForm({ product, tracks, storeId }: { product: Product | n
           <input name="slug" defaultValue={product?.slug} pattern="[a-z0-9]+(-[a-z0-9]+)*" className={ui.input} />
         </label>
         <label className={ui.label}>Descrição<textarea name="description" rows={5} defaultValue={product?.description} className={ui.input} /></label>
-        <label className={ui.label}>
-          Link do checkout (botão &quot;Quero acessar&quot;)
-          <input name="checkout_url" type="url" defaultValue={product?.checkoutUrl ?? ''} className={ui.input} />
-        </label>
+        <LockedProductFields product={product} storeSlug={storeSlug} />
         <label className={ui.label}>
           Link do checkout para upgrade ao Completo
           <input name="upgrade_checkout_url" type="url" defaultValue={product?.upgradeCheckoutUrl ?? ''} className={ui.input} />
@@ -77,11 +75,6 @@ export function ProductForm({ product, tracks, storeId }: { product: Product | n
           <p className="text-sm text-texto-suave">Prévia do modal com as configurações salvas. Salve para visualizar suas alterações.</p>
           <ProductUpgrade level="basic" lockedCount={1} productTitle={product.title} imageUrl={product.upgradeImageUrl || product.coverUrl} buttonText={product.upgradeButtonText} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={`/admin/produtos/${product.id}`} />
         </div>}
-        <label className={ui.label}>
-          Checkout de aluno com 10% de desconto
-          <input name="student_checkout_url" type="url" defaultValue={product?.studentCheckoutUrl ?? ''} className={ui.input} />
-          <span className="text-sm text-texto-suave">Cole o link completo do checkout com o cupom de aluno de 10% já aplicado. Deixe vazio para não oferecer o desconto.</span>
-        </label>
         <label className={ui.label}>Ordem<input name="sort_order" type="number" defaultValue={product?.sortOrder ?? 0} className={ui.input} /></label>
         <label className={ui.checkbox}>
           <input name="is_featured" type="checkbox" defaultChecked={product?.isFeatured ?? false} /> Destaque no topo da vitrine

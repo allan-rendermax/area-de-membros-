@@ -47,6 +47,18 @@ afterEach(() => {
 })
 
 describe('LockedPoster', () => {
+  it('mostra título, texto e imagem opcionais personalizados com CTA direto', () => {
+    render(true, { ...product, purchaseTitle: 'Libere seus projetos', purchaseDescription: 'Primeiro parágrafo.\n\nSegundo parágrafo.', purchaseImageUrl: 'https://example.com/mockup.png', purchaseButtonText: 'Quero meu pack' })
+    expect(dialog()?.querySelector('h2')?.textContent).toBe('Libere seus projetos')
+    expect(dialog()?.textContent).toContain('Segundo parágrafo.')
+    expect(dialog()?.querySelector('img')?.getAttribute('src')).toBe('https://example.com/mockup.png')
+    expect(dialog()?.querySelector('a')?.textContent).toContain('Quero meu pack')
+    expect(dialog()?.querySelector('a')?.getAttribute('href')).toBe(product.checkoutUrl)
+  })
+  it('não reserva espaço de imagem quando não foi configurada', () => {
+    render()
+    expect(dialog()?.querySelector('img')).toBeNull()
+  })
   it('reabre o mesmo produto quando comprar volta à URL após o fechamento', () => {
     render()
     expect(dialog()).not.toBeNull()
@@ -140,38 +152,21 @@ describe('LockedPoster', () => {
     } finally { other.remove() }
   })
 
-  it('resgata desconto em estágio sequencial, move foco, volta e reabre nos detalhes', () => {
+  it('leva direto ao checkout promocional com o texto configurado, sem etapa extra', () => {
     controls.search = ''
     const promotional = 'https://checkout.example.test/item?coupon=ALUNO10&utm_source=members#payment'
-    const offer = { ...product, studentCheckoutUrl: promotional }
-    render(false, offer)
+    render(false, { ...product, studentCheckoutUrl: promotional, purchaseButtonText: 'Quero meu desconto' })
     const trigger = container.querySelector('button')!
     click(trigger)
-    const redeem = button('Resgatar meu cupom de 10%')
-    expect(document.activeElement).toBe(redeem)
-    click(redeem)
-    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1)
-    expect(dialog()?.textContent).toContain('Seu desconto de aluno')
-    expect(dialog()?.textContent).toContain('Você tem 10% de desconto neste material.')
     const checkout = dialog()!.querySelector<HTMLAnchorElement>('a[href]')!
-    expect(checkout.textContent).toContain('Ir para o checkout com 10% de desconto')
+    expect(checkout.textContent).toContain('Quero meu desconto')
     expect(checkout.getAttribute('href')).toBe(promotional)
     expect(checkout.target).toBe('_blank')
     expect(checkout.rel).toBe('noopener noreferrer')
     expect(document.activeElement).toBe(checkout)
-    button('Fechar').focus()
-    act(() => button('Fechar').dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })))
-    expect(document.activeElement).toBe(checkout)
-    act(() => checkout.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true })))
-    expect(document.activeElement).toBe(button('Fechar'))
-    click(button('Voltar'))
-    expect(document.activeElement).toBe(button('Resgatar meu cupom de 10%'))
-    click(button('Resgatar meu cupom de 10%'))
-    act(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
-    expect(dialog()).toBeNull()
+    expect(dialog()?.textContent).not.toContain('Resgatar meu cupom')
+    close()
     expect(document.activeElement).toBe(trigger)
-    click(trigger)
-    expect(dialog()?.textContent).toContain('Resgatar meu cupom de 10%')
   })
 
   it('não promete desconto sem checkout promocional válido e conserva o fallback seguro', () => {
@@ -187,14 +182,14 @@ describe('LockedPoster', () => {
     expect(dialog()?.textContent).toContain('Este material ainda não está disponível para compra.')
   })
 
-  it('reinicia os detalhes quando comprar muda durante o cupom', () => {
-    render(true, { ...product, studentCheckoutUrl: 'https://checkout.example.test/coupon' })
-    click(button('Resgatar meu cupom de 10%'))
+  it('acompanha comprar ao trocar de produto com checkout promocional', () => {
+    const offer = { ...product, studentCheckoutUrl: 'https://checkout.example.test/coupon' }
+    render(true, offer)
     controls.search = 'comprar=outro'
-    render(true, { ...product, studentCheckoutUrl: 'https://checkout.example.test/coupon' })
+    render(true, offer)
     expect(dialog()).toBeNull()
     controls.search = 'comprar=atlas'
-    render(true, { ...product, studentCheckoutUrl: 'https://checkout.example.test/coupon' })
-    expect(dialog()?.textContent).toContain('Resgatar meu cupom de 10%')
+    render(true, offer)
+    expect(dialog()?.querySelector('a')?.getAttribute('href')).toBe(offer.studentCheckoutUrl)
   })
 })

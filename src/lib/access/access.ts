@@ -37,6 +37,10 @@ export type ShelfProduct = {
   checkoutUrl: string | null
   role?: ProductRole
   studentCheckoutUrl?: string | null
+  purchaseTitle?: string | null
+  purchaseDescription?: string | null
+  purchaseImageUrl?: string | null
+  purchaseButtonText?: string | null
 }
 
 export type Shelf = { featured: ShelfProduct | null; unlocked: ShelfProduct[]; locked: ShelfProduct[] }
@@ -57,6 +61,10 @@ export function buildShelf(products: Product[], granted: Set<string>, { includeD
       unlocked,
       checkoutUrl: unlocked ? null : p.checkoutUrl,
       role: p.role,
+      purchaseTitle: p.purchaseTitle ?? null,
+      purchaseDescription: p.purchaseDescription ?? null,
+      purchaseImageUrl: p.purchaseImageUrl ?? null,
+      purchaseButtonText: p.purchaseButtonText ?? null,
       studentCheckoutUrl: unlocked ? null : (p.studentCheckoutUrl ?? null),
     }
   })

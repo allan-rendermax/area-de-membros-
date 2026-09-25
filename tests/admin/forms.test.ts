@@ -28,6 +28,14 @@ describe('parseStoreForm', () => {
 })
 
 describe('parseProductForm', () => {
+  it('valida personalização do modal e permite remover a imagem', () => {
+    const fields = { title: 'Atlas', purchase_title: '  Tenha seu Atlas  ', purchase_description: 'Linha 1\n\nLinha 2', purchase_button_text: 'Quero comprar', purchase_image_url: 'https://example.com/mockup.png' }
+    expect(parseProductForm(fd(fields), 's1')).toMatchObject({ purchaseTitle: 'Tenha seu Atlas', purchaseDescription: 'Linha 1\n\nLinha 2', purchaseButtonText: 'Quero comprar', purchaseImageUrl: 'https://example.com/mockup.png' })
+    expect(parseProductForm(fd({ ...fields, remove_purchase_image: 'on' }), 's1').purchaseImageUrl).toBeNull()
+    for (const [key, value] of Object.entries({ purchase_title: 'x'.repeat(121), purchase_description: 'x'.repeat(5001), purchase_button_text: 'x'.repeat(81), purchase_image_url: 'javascript:alert(1)' })) {
+      expect(() => parseProductForm(fd({ title: 'Atlas', [key]: value }), 's1')).toThrow(FormError)
+    }
+  })
   it('configura versões, packs e apresentação do upgrade com limites', () => {
     expect(parseProductForm(fd({ title: 'Atlas', upgrade_button_text: '  Quero meu completo  ', upgrade_image_url: 'https://example.com/mockup.png' }), 's1')).toMatchObject({ contentMode: 'versions', upgradeButtonText: 'Quero meu completo', upgradeImageUrl: 'https://example.com/mockup.png' })
     expect(parseProductForm(fd({ title: 'Pack', content_mode: 'sections' }), 's1').contentMode).toBe('sections')
@@ -44,7 +52,7 @@ describe('parseProductForm', () => {
       ),
     ).toEqual({
       id: null, storeId: 's1', slug: 'atlas-visual', title: 'Atlas Visual', track: 'Patologias', description: 'texto',
-      coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', upgradeCheckoutUrl: null, contentMode: 'versions', upgradeImageUrl: null, upgradeButtonText: null, studentCheckoutUrl: null, role: 'front', isFeatured: true, sortOrder: 3, isPublished: true,
+      coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', upgradeCheckoutUrl: null, contentMode: 'versions', upgradeImageUrl: null, upgradeButtonText: null, purchaseTitle: null, purchaseDescription: null, purchaseImageUrl: null, purchaseButtonText: null, studentCheckoutUrl: null, role: 'front', isFeatured: true, sortOrder: 3, isPublished: true,
     })
     expect(parseProductForm(fd({ title: 'Atlas Visual' }), 's1').track).toBe('')
     expect(parseProductForm(fd({ title: 'Atlas Visual', track: '   ' }), 's1').track).toBe('')

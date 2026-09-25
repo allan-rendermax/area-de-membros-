@@ -93,6 +93,7 @@ export async function salvarProduto(formData: FormData) {
   try {
     const input = parseProductForm(formData, store.id)
     input.coverUrl = await uploadIfPresent(formData.get('cover'), input.coverUrl, uploadImage)
+    input.purchaseImageUrl = await uploadIfPresent(formData.get('purchase_image'), input.purchaseImageUrl ?? null, uploadImage)
     input.upgradeImageUrl = await uploadIfPresent(formData.get('upgrade_image'), input.upgradeImageUrl ?? null, uploadImage)
     input.bannerUrl = await uploadIfPresent(formData.get('banner'), input.bannerUrl, uploadImage)
     productId = await saveProduct(input)

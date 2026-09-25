@@ -49,6 +49,10 @@ export type Product = {
   contentMode?: ContentMode
   upgradeImageUrl?: string | null
   upgradeButtonText?: string | null
+  purchaseTitle?: string | null
+  purchaseDescription?: string | null
+  purchaseImageUrl?: string | null
+  purchaseButtonText?: string | null
   role: ProductRole
   studentCheckoutUrl?: string | null
   isFeatured: boolean

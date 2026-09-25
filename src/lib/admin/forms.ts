@@ -79,6 +79,10 @@ export type ProductInput = {
   contentMode?: ContentMode
   upgradeImageUrl?: string | null
   upgradeButtonText?: string | null
+  purchaseTitle?: string | null
+  purchaseDescription?: string | null
+  purchaseImageUrl?: string | null
+  purchaseButtonText?: string | null
   role: ProductRole
   studentCheckoutUrl: string | null
   isFeatured: boolean
@@ -99,6 +103,12 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
   const contentMode = selectedMode === 'auto' ? (role === 'front' ? 'versions' : 'sections') : selectedMode as ContentMode
   const upgradeButtonText = text(form, 'upgrade_button_text') || null
   if (upgradeButtonText && upgradeButtonText.length > 80) throw new FormError('Use até 80 caracteres no botão de upgrade.')
+  const purchaseTitle = text(form, 'purchase_title') || null
+  const purchaseDescription = text(form, 'purchase_description') || null
+  const purchaseButtonText = text(form, 'purchase_button_text') || null
+  if ((purchaseTitle?.length ?? 0) > 120) throw new FormError('Use até 120 caracteres no título do modal.')
+  if ((purchaseDescription?.length ?? 0) > 5000) throw new FormError('Use até 5000 caracteres no texto do modal.')
+  if ((purchaseButtonText?.length ?? 0) > 80) throw new FormError('Use até 80 caracteres no botão do modal.')
   const checkoutUrl = optionalUrl(form, 'checkout_url', 'Checkout')
   if (role !== 'front' && !checkoutUrl) throw new FormError('Informe o link do checkout para produto complementar.')
   return {
@@ -113,6 +123,10 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
     checkoutUrl,
     upgradeCheckoutUrl: optionalUrl(form, 'upgrade_checkout_url', 'Checkout de upgrade'),
     contentMode,
+    purchaseTitle,
+    purchaseDescription,
+    purchaseButtonText,
+    purchaseImageUrl: checked(form, 'remove_purchase_image') ? null : optionalUrl(form, 'purchase_image_url', 'Imagem do modal'),
     upgradeImageUrl: optionalUrl(form, 'upgrade_image_url', 'Imagem de upgrade'),
     upgradeButtonText,
     role,
