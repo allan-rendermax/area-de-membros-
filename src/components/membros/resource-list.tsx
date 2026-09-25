@@ -4,23 +4,9 @@ import { resourceLabel } from '@/lib/content/resource-label'
 import { ArrowRightIcon, FileIcon, LinkIcon } from './icons'
 import { withPreview } from '@/lib/membros/paths'
 
-export function ResourceList({ items, storeSlug, currentItemId, standalone = false, legacyPresentation = false, preview = false }: { items: Item[]; storeSlug: string; currentItemId?: string; standalone?: boolean; legacyPresentation?: boolean; preview?: boolean }) {
+export function ResourceList({ items, storeSlug, currentItemId, legacyPresentation = false, preview = false }: { items: Item[]; storeSlug: string; currentItemId?: string; legacyPresentation?: boolean; preview?: boolean }) {
   const resources = items.filter((item) => (preview || item.isPublished) && item.kind !== 'video' && isHttpUrl(item.url))
   if (resources.length === 0) return null
-  if (standalone && resources.length === 1) {
-    const item = resources[0]
-    const isLink = item.kind === 'link'
-    const { actionLabel, typeLabel } = resourceLabel(item)
-    return <div>
-      <a href={withPreview(`/${storeSlug}/item/${item.id}/abrir`, preview)}
-        target={isLink ? '_blank' : undefined} rel={isLink ? 'noopener noreferrer' : undefined}
-        aria-label={`${actionLabel}${isLink ? ' (abre em nova aba)' : ''}`}
-        className="group inline-flex min-h-14 w-full items-center justify-center gap-5 rounded-xl bg-destaque px-6 py-4 text-base font-bold text-white transition-colors hover:bg-destaque-hover focus-visible:outline-2 focus-visible:outline-offset-4 sm:w-auto">
-        {actionLabel}<ArrowRightIcon className="h-5 w-5 shrink-0 motion-safe:transition-transform motion-safe:group-hover:translate-x-1" />
-      </a>
-      <p className="mt-3 text-xs text-texto-suave">{isLink ? 'Abre em nova aba' : typeLabel}</p>
-    </div>
-  }
   const ordered = currentItemId
     ? [...resources.filter((item) => item.id === currentItemId), ...resources.filter((item) => item.id !== currentItemId)]
     : resources

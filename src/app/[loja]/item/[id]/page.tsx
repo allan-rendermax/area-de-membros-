@@ -22,6 +22,10 @@ import { withPreview } from '@/lib/membros/paths'
 
 export const dynamic = 'force-dynamic'
 
+function isGenericTitle(title: string) {
+  return /^clique\s+aqui(?:\s+para\b.*)?[.!]?$/i.test(title.trim())
+}
+
 export default async function ItemPage({ params, searchParams }: PageProps<'/[loja]/item/[id]'>) {
   const { loja, id } = await params
   if (!isUuid(id)) notFound()
@@ -56,14 +60,19 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
     .filter((module) => preview || module.isPublished)
     .map((module) => ({
       ...module,
+      title: isGenericTitle(module.title) ? 'Materiais' : module.title,
       items: module.items.filter((item) => (preview || item.isPublished) &&
-        (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))),
+        (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))).map((item, index, items) => ({
+          ...item,
+          title: isGenericTitle(item.title) ? (items.length === 1 ? 'Material principal' : `Conteúdo ${index + 1}`) : item.title,
+        })),
     }))
     .filter((module) => module.items.length > 0)
   const modules = publishedModules.filter((module) => canAccessLevel(level, module.requiredLevel ?? 'basic'))
   const lockedModules = publishedModules.filter((module) => !canAccessLevel(level, module.requiredLevel ?? 'basic'))
   const sequence = modules.flatMap((module) => module.items)
-  const singleResource = sequence.length === 1 && ctx.item.kind !== 'video'
+  const itemTitle = sequence.find((item) => item.id === ctx.item.id)?.title ?? ctx.item.title
+  const moduleTitle = modules.find((module) => module.id === ctx.module.id)?.title ?? ctx.module.title
   const accessibleItemIds = new Set(sequence.map((item) => item.id))
   const visibleCompletedIds = completedIds.filter((id) => accessibleItemIds.has(id))
   const siblings = modules.find((module) => module.id === ctx.module.id)?.items ?? []
@@ -76,23 +85,18 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
   return (
     <>
       <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} active="materials" actions={<InstallAppButton />} />
-      <main className={`lesson-workspace member-item-workspace mx-auto w-full px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10 ${singleResource ? 'max-w-[880px]' : 'max-w-[1440px]'}`}>
-        <div className={`lesson-workspace-grid grid min-w-0 gap-8 ${singleResource ? '' : 'lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10'}`}>
+      <main className="lesson-workspace member-item-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
+        <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0 order-2 lg:order-1">
             <header className="lesson-heading flex min-w-0 items-start gap-4">
               <Link href={libraryHref} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
-                <h1 className="lesson-title mt-1 text-balance break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{singleResource ? ctx.product.title : ctx.item.title}</h1>
-                {!singleResource && <p className="mt-2 break-words text-sm text-texto-suave">{ctx.product.title}</p>}
+                <h1 className="lesson-title mt-1 text-balance break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{isGenericTitle(ctx.item.title) ? 'Seu conteúdo' : itemTitle}</h1>
+                <p className="mt-2 break-words text-sm text-texto-suave">{ctx.product.title}</p>
                 <p className="mt-2 text-sm font-semibold text-destaque">Seu acesso: {level === 'complete' ? 'Completo' : 'Básico'}</p>
                 {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo faz parte da versão completa.</p>}
               </div>
             </header>
-
-            {singleResource && <div className="mt-8 sm:pl-[60px]">
-              {ctx.product.description && <p className="mb-6 max-w-prose whitespace-pre-line break-words text-sm leading-relaxed text-texto-suave">{ctx.product.description}</p>}
-              <ResourceList items={[ctx.item]} storeSlug={store.slug} preview={preview} standalone />
-            </div>}
 
             {embed && <div className="mt-7 aspect-video overflow-hidden rounded-xl border border-borda bg-fundo">
               <iframe
@@ -105,31 +109,31 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
               />
             </div>}
 
-            {!singleResource && siblings.some((item) => item.kind !== 'video') && <section className="mt-9" aria-label="Materiais disponíveis">
+            {siblings.some((item) => item.kind !== 'video') && <section className="mt-9" aria-label="Materiais disponíveis">
               <h2 className="lesson-section-heading mb-5 text-2xl font-bold">Materiais disponíveis</h2>
               <ResourceList items={siblings} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} />
             </section>}
 
-            {!singleResource && !progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
+            {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
             <LockedModules modules={lockedModules} />
             <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} />
-            <div className={singleResource ? 'mt-10 sm:ml-[60px]' : 'mt-8'}><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
-            {!singleResource && <LessonToolbar
+            <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
+            <LessonToolbar
               key={`${customer?.id ?? 'preview'}:${ctx.item.id}`}
               preview={preview}
               storeSlug={store.slug}
               initialCompleted={visibleCompletedIds.includes(ctx.item.id)}
               progressAvailable={progressAvailable}
               productTitle={ctx.product.title}
-              moduleTitle={ctx.module.title}
+              moduleTitle={moduleTitle}
               itemId={ctx.item.id}
-              itemTitle={ctx.item.title}
+              itemTitle={itemTitle}
               description={ctx.product.description}
               previous={previous ? { href: withPreview(`/${store.slug}/item/${previous.id}`, preview), title: previous.title } : null}
               next={next ? { href: withPreview(`/${store.slug}/item/${next.id}`, preview), title: next.title } : null}
-            />}
+            />
           </div>
-          {!singleResource && <LessonSidebar modules={modules} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />}
+          <LessonSidebar modules={modules} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
         </div>
       </main>
     </>

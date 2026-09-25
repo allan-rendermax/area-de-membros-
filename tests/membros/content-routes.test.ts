@@ -493,32 +493,35 @@ describe('rota de item', () => {
     expect(recordItemAccess).not.toHaveBeenCalled()
   })
 
-  it.each(['arquivo', 'link'] as const)('simplifica material único %s e mantém acesso e ajuda sem repetir nomes de cadastro', async (kind) => {
+  it.each(['arquivo', 'link'] as const)('mantém o layout completo para material único %s e enxuga os títulos genéricos', async (kind) => {
     const file = { ...item, title: 'Clique Aqui', kind, url: 'https://example.com/material' }
     vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...context, item: file, module: { ...courseModule, title: 'Clique aqui para acessar' } })
-    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [file] }])
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, title: 'Clique Aqui para acessar seu Atlas', items: [file] }])
     const doc = await renderedItem()
-    expect(doc.querySelector('h1')?.textContent).toBe(product.title)
+    expect(doc.querySelector('h1')?.textContent).toBe('Seu conteúdo')
     expect(doc.body.textContent).not.toContain('Clique Aqui')
     expect(doc.body.textContent).not.toContain('Clique aqui para acessar')
     expect(doc.body.textContent).toContain('Precisa de ajuda?')
-    expect(doc.querySelector('aside')).toBeNull()
+    expect(doc.querySelector('aside')).not.toBeNull()
+    expect(doc.querySelector('aside')?.textContent).toContain('Materiais')
+    expect(doc.querySelector('aside')?.textContent).toContain('Material principal')
+    expect(doc.querySelector('.lesson-workspace-grid')?.className).toContain('lg:grid-cols-')
     const buttons = [...doc.querySelectorAll('button')].map((node) => node.textContent)
-    for (const label of ['Concluir', 'Conteúdo anterior', 'Próximo conteúdo']) expect(buttons).not.toContain(label)
+    for (const label of ['Concluir', 'Conteúdo anterior', 'Próximo conteúdo']) expect(buttons).toContain(label)
     const access = doc.querySelector(`a[href="/loja-a/item/${item.id}/abrir"]`)
     expect(access?.textContent).toContain('Acesse seu conteúdo')
     expect(access?.getAttribute('target')).toBe(kind === 'link' ? '_blank' : null)
     expect(recordItemAccess).not.toHaveBeenCalled()
   })
 
-  it('mantém extras bloqueados e upgrade ao simplificar o único arquivo acessível', async () => {
+  it('mantém extras bloqueados e upgrade com o único arquivo acessível', async () => {
     const file = { ...item, kind: 'arquivo' as const, url: 'https://example.com/atlas.pdf' }
     const extra = { ...courseModule, id: 'extra', title: 'Projetos extras', requiredLevel: 'complete' as const, items: [{ ...file, id: 'private-id', title: 'Arquivo privado', url: 'https://example.com/secret.pdf' }] }
     vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map([[product.id, 'basic']]))
     vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...context, item: file, product: { ...product, upgradeCheckoutUrl: 'https://example.com/upgrade' } })
     vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [file] }, extra])
     const doc = await renderedItem()
-    expect(doc.querySelector('h1')?.textContent).toBe(product.title)
+    expect(doc.querySelector('h1')?.textContent).toBe(file.title)
     expect(doc.body.textContent).toContain('Projetos extras')
     expect(doc.querySelector('a[href="https://example.com/upgrade"]')).not.toBeNull()
     expect(doc.body.innerHTML).not.toContain('private-id')
