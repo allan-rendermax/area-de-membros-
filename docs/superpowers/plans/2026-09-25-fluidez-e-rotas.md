@@ -66,3 +66,8 @@
 - Ganho verificável: abertura pela capa evita o redirect produto → item e a segunda consulta de sessão/permissões/contexto/módulos. Conteúdo e progresso deixam de executar em sequência.
 - Limite: não foi estabelecido benchmark de latência real de aluno antes/depois; os resultados não representam porcentagem de aceleração.
 - Conferência e deployment registrados em docs/estado-atual.md ao concluir.
+
+## Ajuste encontrado na conferência em produção
+- O Next chegava ao hash antes da seção renderizada sob loading boundary. A URL ficava correta, mas o navegador não rolava até as capas.
+- Adicionado ScrollToMaterials, executado uma vez ao montar a vitrine e somente quando hash é #materiais; rolagem instantânea respeita redução de movimento. Regressões cobrem navegação normal, prévia e entrada sem hash.
+- Suite final após o ajuste: 814 testes em 103 arquivos; build e ESLint aprovados.

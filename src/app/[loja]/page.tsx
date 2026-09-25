@@ -1,4 +1,5 @@
 import { InstallAppButton } from '@/components/membros/install-app-button'
+import { ScrollToMaterials } from '@/components/membros/scroll-to-materials'
 import { Carousel } from '@/components/membros/carousel'
 import { Hero } from '@/components/membros/hero'
 import { LockedPoster } from '@/components/membros/locked-poster'
@@ -37,6 +38,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
     <>
       <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} actions={<InstallAppButton />} active="home" legacyHome />
       <main className="pb-24">
+        <ScrollToMaterials />
         {architecture ? <ArchitectureHero /> : shelf.featured && <Hero product={shelf.featured} storeSlug={store.slug} preview={preview} />}
         {architecture && (
           <div id="materiais" className="arq-library-heading">
