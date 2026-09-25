@@ -35,7 +35,7 @@ export default async function ProdutoAdminPage({ params, searchParams }: PagePro
         </nav>
       )}
       {typeof msg === 'string' && <p role="status" className={ui.notice}>{msg}</p>}
-      {product && showContent ? <ContentEditor productId={product.id} productTitle={product.title} modules={modules} /> : <>
+      {product && showContent ? <ContentEditor productId={product.id} productTitle={product.title} contentMode={product.contentMode} modules={modules} /> : <>
         <ProductForm product={product} tracks={tracks} storeId={store.id} />
         {product && <DeleteProductSection key={product.id} product={{ id: product.id, title: product.title }} storeId={store.id} />}
       </>}

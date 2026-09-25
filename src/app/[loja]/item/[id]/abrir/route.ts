@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
-import { canAccessLevel } from '@/lib/access/access'
+import { canAccessProductModule } from '@/lib/access/product-content'
 import { isUuid } from '@/lib/content/url'
 import { loadGrantedProductLevels } from '@/lib/data/access'
 import { resolveResourceDestination } from '@/lib/data/resource-download'
@@ -22,7 +22,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ loja
   if (!ctx || ctx.product.storeId !== store.id || (!preview && (!ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished))) notFound()
   const level = preview ? 'complete' : levels?.get(ctx.product.id)
   if (!level) redirect(`/${store.slug}?comprar=${ctx.product.slug}`)
-  if (!canAccessLevel(level, ctx.module.requiredLevel ?? 'basic')) redirect(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`)
+  if (!canAccessProductModule(level, ctx.module.requiredLevel, ctx.product.contentMode, preview)) redirect(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`)
 
   const destination = await resolveResourceDestination(ctx.item, env.supabaseUrl)
   if (!destination) notFound()

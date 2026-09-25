@@ -49,6 +49,18 @@ beforeEach(() => {
 })
 
 describe('prévia administrativa sem conta de aluno', () => {
+  it('exibe ambas as versões para o admin mesmo quando Completo substitui Básico', async () => {
+    const versioned = { ...product, contentMode: 'versions' as const }
+    const basic = { ...moduleRow, id: 'basic', requiredLevel: 'basic' as const, title: 'Básico', items: [{ ...item, moduleId: 'basic', title: 'Material básico' }] }
+    const complete = { ...moduleRow, title: 'Completo', items: [{ ...item, id: '22222222-2222-4222-8222-222222222222', title: 'Material completo' }] }
+    vi.mocked(getProductBySlug).mockResolvedValue(versioned)
+    vi.mocked(listModulesWithItems).mockResolvedValue([basic, complete])
+    const html = renderToStaticMarkup(await ProductPage(props))
+    expect(html).toContain('Material básico')
+    expect(html).toContain('Material completo')
+    expect(html).not.toContain('Conheça a versão completa')
+    expect(recordItemAccess).not.toHaveBeenCalled()
+  })
   it('abre a vitrine e produtos em rascunho sem consultar compras de aluno', async () => {
     const html = renderToStaticMarkup(await Home(props))
     expect(html).toContain('Modo de prévia')

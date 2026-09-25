@@ -41,6 +41,13 @@ describe('rota protegida para abrir recurso', () => {
     expect(requireStoreSession).not.toHaveBeenCalled()
   })
 
+  it('impede que Completo abra arquivo Básico diretamente no modo versões', async () => {
+    vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...ctx, product: { ...product, contentMode: 'versions' } })
+    await expect(GET(request, params())).rejects.toThrow('NEXT_REDIRECT:/loja-a/produto/produto-a?bloqueado=1')
+    expect(recordItemAccess).not.toHaveBeenCalled()
+    expect(createAdminClient).not.toHaveBeenCalled()
+  })
+
   it('não consulta item sem uma sessão válida', async () => {
     vi.mocked(requireStoreSession).mockRejectedValueOnce(new Error('SESSION_REQUIRED'))
     await expect(GET(request, params())).rejects.toThrow('SESSION_REQUIRED')

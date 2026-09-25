@@ -28,6 +28,14 @@ describe('parseStoreForm', () => {
 })
 
 describe('parseProductForm', () => {
+  it('configura versões, packs e apresentação do upgrade com limites', () => {
+    expect(parseProductForm(fd({ title: 'Atlas', upgrade_button_text: '  Quero meu completo  ', upgrade_image_url: 'https://example.com/mockup.png' }), 's1')).toMatchObject({ contentMode: 'versions', upgradeButtonText: 'Quero meu completo', upgradeImageUrl: 'https://example.com/mockup.png' })
+    expect(parseProductForm(fd({ title: 'Pack', content_mode: 'sections' }), 's1').contentMode).toBe('sections')
+    expect(parseProductForm(fd({ title: 'Extra', role: 'upsell', checkout_url: 'https://example.com' }), 's1').contentMode).toBe('sections')
+    expect(() => parseProductForm(fd({ title: 'Atlas', content_mode: 'other' }), 's1')).toThrow('Organização')
+    expect(() => parseProductForm(fd({ title: 'Atlas', upgrade_button_text: 'x'.repeat(81) }), 's1')).toThrow('80 caracteres')
+    expect(() => parseProductForm(fd({ title: 'Atlas', upgrade_image_url: 'javascript:bad' }), 's1')).toThrow('Link inválido')
+  })
   it('lê campos, marcações e ordem', () => {
     expect(
       parseProductForm(
@@ -36,7 +44,7 @@ describe('parseProductForm', () => {
       ),
     ).toEqual({
       id: null, storeId: 's1', slug: 'atlas-visual', title: 'Atlas Visual', track: 'Patologias', description: 'texto',
-      coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', upgradeCheckoutUrl: null, studentCheckoutUrl: null, role: 'front', isFeatured: true, sortOrder: 3, isPublished: true,
+      coverUrl: null, bannerUrl: null, checkoutUrl: 'https://payt.com/x', upgradeCheckoutUrl: null, contentMode: 'versions', upgradeImageUrl: null, upgradeButtonText: null, studentCheckoutUrl: null, role: 'front', isFeatured: true, sortOrder: 3, isPublished: true,
     })
     expect(parseProductForm(fd({ title: 'Atlas Visual' }), 's1').track).toBe('')
     expect(parseProductForm(fd({ title: 'Atlas Visual', track: '   ' }), 's1').track).toBe('')

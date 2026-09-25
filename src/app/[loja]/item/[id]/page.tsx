@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { renderItemContent } from '@/components/membros/item-content'
 import { toVideoEmbed } from '@/lib/content/video'
 import { isHttpUrl, isUuid } from '@/lib/content/url'
-import { canAccessLevel } from '@/lib/access/access'
+import { canAccessProductModule } from '@/lib/access/product-content'
 import { loadGrantedProductLevels } from '@/lib/data/access'
 import { getItemWithContext } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
@@ -25,7 +25,7 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
   if (!ctx || ctx.product.storeId !== store.id || (!preview && (!ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished))) notFound()
   const level = preview ? 'complete' : levels?.get(ctx.product.id)
   if (!level) redirect(`/${store.slug}?comprar=${ctx.product.slug}`)
-  if (!canAccessLevel(level, ctx.module.requiredLevel ?? 'basic')) redirect(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`)
+  if (!canAccessProductModule(level, ctx.module.requiredLevel, ctx.product.contentMode, preview)) redirect(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`)
 
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
   if (ctx.item.kind === 'video' && !embed) notFound()

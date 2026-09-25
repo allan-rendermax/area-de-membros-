@@ -1,7 +1,7 @@
 import { isValidSlug, isValidStoreSlug, slugify } from '@/lib/content/slug'
 import { isHttpUrl, isUuid } from '@/lib/content/url'
 import { toVideoEmbed } from '@/lib/content/video'
-import type { AccessLevel, ItemKind, ProductRole } from '@/lib/domain/types'
+import type { AccessLevel, ContentMode, ItemKind, ProductRole } from '@/lib/domain/types'
 import { normalizeWhatsapp } from '@/lib/support/whatsapp'
 
 export class FormError extends Error {}
@@ -76,6 +76,9 @@ export type ProductInput = {
   bannerUrl: string | null
   checkoutUrl: string | null
   upgradeCheckoutUrl?: string | null
+  contentMode?: ContentMode
+  upgradeImageUrl?: string | null
+  upgradeButtonText?: string | null
   role: ProductRole
   studentCheckoutUrl: string | null
   isFeatured: boolean
@@ -91,6 +94,11 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
   const sortOrder = Number(text(form, 'sort_order') || 0)
   const role = text(form, 'role') || 'front'
   if (role !== 'front' && role !== 'orderbump' && role !== 'upsell') throw new FormError('Papel do produto inválido.')
+  const selectedMode = text(form, 'content_mode') || 'auto'
+  if (!['auto', 'versions', 'sections'].includes(selectedMode)) throw new FormError('Organização dos conteúdos inválida.')
+  const contentMode = selectedMode === 'auto' ? (role === 'front' ? 'versions' : 'sections') : selectedMode as ContentMode
+  const upgradeButtonText = text(form, 'upgrade_button_text') || null
+  if (upgradeButtonText && upgradeButtonText.length > 80) throw new FormError('Use até 80 caracteres no botão de upgrade.')
   const checkoutUrl = optionalUrl(form, 'checkout_url', 'Checkout')
   if (role !== 'front' && !checkoutUrl) throw new FormError('Informe o link do checkout para produto complementar.')
   return {
@@ -104,6 +112,9 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
     bannerUrl: optionalUrl(form, 'banner_url', 'Banner'),
     checkoutUrl,
     upgradeCheckoutUrl: optionalUrl(form, 'upgrade_checkout_url', 'Checkout de upgrade'),
+    contentMode,
+    upgradeImageUrl: optionalUrl(form, 'upgrade_image_url', 'Imagem de upgrade'),
+    upgradeButtonText,
     role,
     studentCheckoutUrl: optionalUrl(form, 'student_checkout_url', 'Checkout de aluno'),
     isFeatured: checked(form, 'is_featured'),

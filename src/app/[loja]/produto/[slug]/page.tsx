@@ -6,7 +6,7 @@ import { ProductUpgrade } from '@/components/membros/product-upgrade'
 import { LockedModules } from '@/components/membros/locked-modules'
 import { StoreHeader } from '@/components/membros/store-header'
 import { WhatsAppFloating } from '@/components/membros/whatsapp-button'
-import { canAccessLevel } from '@/lib/access/access'
+import { canAccessProductModule } from '@/lib/access/product-content'
 import { loadGrantedProductLevels } from '@/lib/data/access'
 import { getProductBySlug, listModulesWithItems } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
@@ -35,8 +35,8 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
     .filter((module) => preview || module.isPublished)
     .map((module) => ({ ...module, items: module.items.filter((item) => (preview || item.isPublished) && (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))) }))
     .filter((module) => module.items.length > 0)
-  const modules = publishedModules.filter((module) => canAccessLevel(level, module.requiredLevel ?? 'basic'))
-  const lockedModules = publishedModules.filter((module) => !canAccessLevel(level, module.requiredLevel ?? 'basic'))
+  const modules = publishedModules.filter((module) => canAccessProductModule(level, module.requiredLevel, product.contentMode, preview))
+  const lockedModules = publishedModules.filter((module) => !preview && level === 'basic' && !canAccessProductModule(level, module.requiredLevel, product.contentMode, preview))
   const productHref = withPreview(`/${store.slug}/produto/${product.slug}`, preview)
   const blocked = !preview && query.bloqueado === '1'
   const firstItem = modules[0]?.items[0]
@@ -59,15 +59,14 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
               <div className="min-w-0 flex-1">
                 <p className="lesson-eyebrow text-xs font-bold uppercase tracking-[.16em] text-texto-suave">Seu material</p>
                 <h1 className="lesson-title mt-1 break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{product.title}</h1>
-                <p className="mt-2 text-sm font-semibold text-destaque">Seu acesso: {level === 'complete' ? 'Completo' : 'Básico'}</p>
-                {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo faz parte da versão completa.</p>}
+                {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo não faz parte da sua versão atual.</p>}
                 {product.description && <p className="mt-3 max-w-2xl break-words text-sm leading-relaxed text-texto-suave sm:text-base">{product.description}</p>}
               </div>
             </header>
 
             <p className="mt-10 text-texto-suave">{lockedModules.length ? 'Nenhum conteúdo disponível no seu acesso atual.' : 'Nenhum conteúdo publicado ainda.'}</p>
             <LockedModules modules={lockedModules} />
-            <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={productHref} />
+            <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={productHref} productTitle={product.title} imageUrl={product.upgradeImageUrl || product.coverUrl} buttonText={product.upgradeButtonText} supportUrl={support} />
           </div>
         </div>
       </main>

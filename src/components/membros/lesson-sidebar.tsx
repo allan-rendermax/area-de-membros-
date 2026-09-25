@@ -1,6 +1,6 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
+import { useSyncExternalStore, type ReactNode } from 'react'
 import type { ModuleWithItems } from '@/lib/domain/types'
 import { isHttpUrl } from '@/lib/content/url'
 import { toVideoEmbed } from '@/lib/content/video'
@@ -20,7 +20,8 @@ function subscribeToViewport(onChange: () => void) {
 function isDesktop() { return window.matchMedia(desktopQuery).matches }
 function serverViewport() { return false }
 
-export function LessonSidebar({ modules, storeSlug, currentItemId, completedItemIds = [], legacyPresentation = false, preview = false }: {
+export function LessonSidebar({ modules, storeSlug, currentItemId, completedItemIds = [], legacyPresentation = false, preview = false, upgrade }: {
+  upgrade?: ReactNode
   modules: ModuleWithItems[]
   storeSlug: string
   currentItemId?: string
@@ -54,6 +55,7 @@ export function LessonSidebar({ modules, storeSlug, currentItemId, completedItem
           </ol>
         </details>
       ))}
+      {upgrade}
     </div>
   )
 

@@ -7,20 +7,15 @@ import { listCompletedItemIds } from '@/lib/data/member-progress'
 import { InstallAppButton } from './install-app-button'
 import { LessonSidebar } from './lesson-sidebar'
 import { LessonToolbar } from './lesson-toolbar'
-import { LockedModules } from './locked-modules'
 import { ProductUpgrade } from './product-upgrade'
 import { ResourceList } from './resource-list'
 import { StoreHeader } from './store-header'
 import { toVideoEmbed } from '@/lib/content/video'
 import { isHttpUrl } from '@/lib/content/url'
-import { canAccessLevel } from '@/lib/access/access'
+import { canAccessProductModule, sectionTitle } from '@/lib/access/product-content'
 import { recordItemAccess } from '@/lib/data/item-access'
 import { listModulesWithItems } from '@/lib/data/products'
 import { withPreview } from '@/lib/membros/paths'
-
-function isGenericTitle(title: string) {
-  return /^clique\s+aqui(?:\s+para\b.*)?[.!]?$/i.test(title.trim())
-}
 
 // Both callers authorize the store, product and selected item before rendering.
 export async function renderItemContent({ ctx, store, customer, level, preview, blocked, productModules: suppliedModules }: {
@@ -47,7 +42,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
     .filter((module) => preview || module.isPublished)
     .map((module) => ({
       ...module,
-      title: isGenericTitle(module.title) ? 'Materiais' : module.title,
+      title: sectionTitle(module.title, module.requiredLevel, ctx.product.contentMode),
       items: module.items.filter((item) => (preview || item.isPublished) &&
         (item.kind === 'video' ? Boolean(toVideoEmbed(item.url)) : isHttpUrl(item.url))).map((item) => ({
           ...item,
@@ -55,8 +50,8 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
         })),
     }))
     .filter((module) => module.items.length > 0)
-  const modules = publishedModules.filter((module) => canAccessLevel(level, module.requiredLevel ?? 'basic'))
-  const lockedModules = publishedModules.filter((module) => !canAccessLevel(level, module.requiredLevel ?? 'basic'))
+  const modules = publishedModules.filter((module) => canAccessProductModule(level, module.requiredLevel, ctx.product.contentMode, preview))
+  const lockedModules = publishedModules.filter((module) => !preview && level === 'basic' && !canAccessProductModule(level, module.requiredLevel, ctx.product.contentMode, preview))
   const sequence = modules.flatMap((module) => module.items)
   const itemTitle = sequence.find((item) => item.id === ctx.item.id)?.title ?? ctx.item.title
   const moduleTitle = modules.find((module) => module.id === ctx.module.id)?.title ?? ctx.module.title
@@ -79,7 +74,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
               <Link href={libraryHref} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
                 <h1 className="lesson-title mt-1 text-balance break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{ctx.product.title}</h1>
-                {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo faz parte da versão completa.</p>}
+                {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo não faz parte da sua versão atual.</p>}
               </div>
             </header>
 
@@ -100,8 +95,6 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
             </section>}
 
             {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
-            <LockedModules modules={lockedModules} />
-            <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} />
             <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
             <LessonToolbar
               key={`${customer?.id ?? 'preview'}:${ctx.item.id}`}
@@ -118,7 +111,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
               next={next ? { href: withPreview(`/${store.slug}/item/${next.id}`, preview), title: next.title } : null}
             />
           </div>
-          <LessonSidebar modules={modules} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
+          <LessonSidebar upgrade={<ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} productTitle={ctx.product.title} imageUrl={ctx.product.upgradeImageUrl || ctx.product.coverUrl} buttonText={ctx.product.upgradeButtonText} sectionName={lockedModules[0]?.title} supportUrl={supportHref(store, 'geral', customer?.email ?? null)} />} modules={modules} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
         </div>
       </main>
     </>

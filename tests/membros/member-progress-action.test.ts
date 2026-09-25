@@ -57,6 +57,12 @@ describe('conclusão autorizada', () => {
     expect(setItemCompletion).toHaveBeenCalledOnce()
   })
 
+  it('não grava progresso Básico para comprador Completo no modo versões', async () => {
+    vi.mocked(getItemWithContext).mockResolvedValueOnce({ item, module: courseModule, product: { ...product, contentMode: 'versions' } })
+    expect(await saveCompletion(store.slug, itemId, true)).toMatchObject({ ok: false })
+    expect(setItemCompletion).not.toHaveBeenCalled()
+  })
+
   it.each([
     { ...product, storeId: 'store-b' },
     { ...product, isPublished: false },

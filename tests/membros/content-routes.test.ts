@@ -251,8 +251,21 @@ describe('rota de produto', () => {
 
   it('leva o aviso de conteúdo bloqueado à tela de conteúdo sem criar uma etapa extra', async () => {
     const html = renderToStaticMarkup(await ProdutoPage({ ...productProps(), searchParams: Promise.resolve({ bloqueado: '1' }) }))
-    expect(html).toContain('Este conteúdo faz parte da versão completa.')
+    expect(html).toContain('Este conteúdo não faz parte da sua versão atual.')
     expect(redirect).not.toHaveBeenCalled()
+  })
+
+  it('abre direto o Completo, sem Básico ou chamada de upgrade na versão comprada', async () => {
+    const complete = { ...courseModule, id: 'complete-module', title: 'Materiais', requiredLevel: 'complete' as const }
+    const fullItem = { ...item, id: '22222222-2222-4222-8222-222222222222', moduleId: complete.id, title: 'Arquivo completo', kind: 'arquivo' as const, url: 'https://example.com/full.pdf' }
+    vi.mocked(getProductBySlug).mockResolvedValueOnce({ ...product, contentMode: 'versions' })
+    vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [item] }, { ...complete, items: [fullItem] }])
+    const html = renderToStaticMarkup(await ProdutoPage(productProps()))
+    expect(html).toContain('Completo')
+    expect(html).toContain(fullItem.title)
+    expect(html).not.toContain(item.title)
+    expect(html).not.toContain(item.id)
+    expect(html).not.toContain('Conheça a versão completa')
   })
 
   it('mostra estado vazio quando nenhum item publicado pode ser aberto', async () => {
@@ -272,10 +285,8 @@ describe('rota de produto', () => {
     const html = renderToStaticMarkup(await ItemPage(itemProps()))
     expect(html).not.toContain('Seu acesso:')
     expect(html).toContain('Modelos exclusivos')
-    expect(html).toContain('1 conteúdo bloqueado</span>')
-    expect(html).toContain('Desbloquear versão completa')
-    expect(html).toContain('href="https://checkout.example.com/upgrade"')
-    expect(html).toContain('Já paguei, atualizar acesso')
+    expect(html).toContain('Conheça a versão completa')
+    expect(html).toContain('aria-haspopup="dialog"')
     expect(html).not.toContain(privateItem.title)
     expect(html).not.toContain(privateItem.id)
     expect(html).not.toContain(privateItem.url)
@@ -298,13 +309,18 @@ describe('rota de produto', () => {
     vi.mocked(loadGrantedProductLevels).mockResolvedValueOnce(new Map([[product.id, 'basic']]))
     vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...extra, items: [item] }])
     const html = renderToStaticMarkup(await ProdutoPage(productProps()))
-    expect(html).toContain('entre em contato com o suporte')
+    expect(html).toContain('Conheça a versão completa')
     expect(html).not.toContain('Desbloquear versão completa')
     expect(html).not.toContain(item.id)
   })
 })
 
 describe('rota de item', () => {
+  it('redireciona Completo que tenta abrir página de item Básico em versões', async () => {
+    vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...context, product: { ...product, contentMode: 'versions' } })
+    await expect(ItemPage(itemProps())).rejects.toThrow('NEXT_REDIRECT:/loja-a/produto/produto-a?bloqueado=1')
+    expect(recordItemAccess).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(listCompletedItemIds).mockResolvedValue([])
@@ -555,7 +571,7 @@ describe('rota de item', () => {
     expect(doc.querySelector('h1')?.textContent).toBe(product.title)
     expect(doc.querySelector('aside')?.textContent).toContain(file.title)
     expect(doc.body.textContent).toContain('Projetos extras')
-    expect(doc.querySelector('a[href="https://example.com/upgrade"]')).not.toBeNull()
+    expect(doc.querySelector('button[aria-haspopup="dialog"]')).not.toBeNull()
     expect(doc.body.innerHTML).not.toContain('private-id')
     expect(doc.body.innerHTML).not.toContain('secret.pdf')
     expect(doc.body.textContent).not.toContain('Arquivo privado')

@@ -1,3 +1,5 @@
+import { sectionTitle } from '@/lib/access/product-content'
+import type { ContentMode } from '@/lib/domain/types'
 import { materialTitle } from '@/lib/content/material-title'
 import { ui } from '@/components/admin/ui'
 import type { ModuleWithItems } from '@/lib/domain/types'
@@ -51,12 +53,14 @@ function ConfirmDelete({ action, hidden, question }: { action: (form: FormData) 
   )
 }
 
-export function ContentEditor({ productId, productTitle, modules }: { productId: string; productTitle: string; modules: ModuleWithItems[] }) {
+export function ContentEditor({ productId, productTitle, modules, contentMode }: { productId: string; productTitle: string; modules: ModuleWithItems[]; contentMode?: ContentMode }) {
+  const nextLevel = contentMode === 'versions' && modules.some((module) => module.requiredLevel !== 'complete') ? 'complete' : 'basic'
+  const nextTitle = contentMode === 'versions' ? (nextLevel === 'complete' ? 'Completo' : 'Básico') : ''
   return (
     <div className="flex flex-col gap-4">
       <p className="text-sm text-texto-suave">Cadastre aulas, arquivos e links como itens. Use itens do mesmo módulo para reunir os recursos de uma aula ou produto.</p>
       {modules.length === 0 && (
-        <p className={ui.notice}>Nenhum módulo ainda. Crie o primeiro abaixo — produto com um módulo só não mostra a divisão para o cliente.</p>
+        <p className={ui.notice}>Nenhum módulo ainda. Crie a primeira seção abaixo. Os nomes sugeridos podem ser personalizados.</p>
       )}
 
       {modules.map((m, moduleIndex) => (
@@ -64,11 +68,11 @@ export function ContentEditor({ productId, productTitle, modules }: { productId:
           <div className="flex flex-wrap items-end gap-3">
             <form action={salvarModulo} className="flex flex-1 flex-wrap items-end gap-3">
               <Hidden values={{ id: m.id, product_id: productId }} />
-              <label className={`${ui.label} min-w-48 flex-1`}>Módulo<input name="title" required defaultValue={m.title} className={ui.input} /></label>
+              <label className={`${ui.label} min-w-48 flex-1`}>Nome da seção<input name="title" required defaultValue={sectionTitle(m.title, m.requiredLevel, contentMode)} className={ui.input} /></label>
               <label className={ui.label}>Acesso
                 <select name="required_level" defaultValue={m.requiredLevel ?? 'basic'} className={ui.input}>
-                  <option value="basic">Incluído no Básico</option>
-                  <option value="complete">Exclusivo do Completo</option>
+                  <option value="basic">{contentMode === 'versions' ? 'Versão Básico' : 'Incluído no Básico'}</option>
+                  <option value="complete">{contentMode === 'versions' ? 'Versão Completo' : 'Exclusivo do Completo'}</option>
                 </select>
               </label>
               <label className={ui.checkbox}><input name="is_published" type="checkbox" defaultChecked={m.isPublished} /> Publicado</label>
@@ -116,13 +120,13 @@ export function ContentEditor({ productId, productTitle, modules }: { productId:
       <form action={salvarModulo} className={`${ui.card} flex flex-wrap items-end gap-3 p-4`}>
         <Hidden values={{ product_id: productId, is_published: 'on' }} />
         <label className={`${ui.label} min-w-48 flex-1`}>
-          Novo módulo
-          <input name="title" required placeholder="Ex.: Módulo 1 — Fissuras" className={ui.input} />
+          Nova seção
+          <input name="title" required key={nextTitle} defaultValue={nextTitle} placeholder="Ex.: Materiais do pack" className={ui.input} />
         </label>
         <label className={ui.label}>Acesso
-          <select name="required_level" defaultValue="basic" className={ui.input}>
-            <option value="basic">Incluído no Básico</option>
-            <option value="complete">Exclusivo do Completo</option>
+          <select name="required_level" key={nextLevel} defaultValue={nextLevel} className={ui.input}>
+            <option value="basic">{contentMode === 'versions' ? 'Versão Básico' : 'Incluído no Básico'}</option>
+            <option value="complete">{contentMode === 'versions' ? 'Versão Completo' : 'Exclusivo do Completo'}</option>
           </select>
         </label>
         <button type="submit" className={ui.button}>Criar módulo</button>

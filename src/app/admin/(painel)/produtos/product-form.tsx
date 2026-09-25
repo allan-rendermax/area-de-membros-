@@ -2,6 +2,7 @@ import { ui } from '@/components/admin/ui'
 import { AutoCover } from '@/components/membros/auto-cover'
 import type { Product } from '@/lib/domain/types'
 import { salvarProduto } from './actions'
+import { ProductUpgrade } from '@/components/membros/product-upgrade'
 
 export function ProductForm({ product, tracks, storeId }: { product: Product | null; tracks: string[]; storeId: string }) {
   const seed = product?.id ?? 'novo-produto'
@@ -10,6 +11,7 @@ export function ProductForm({ product, tracks, storeId }: { product: Product | n
       <input type="hidden" name="id" value={product?.id ?? ''} />
       <input type="hidden" name="store_id" value={storeId} />
       <input type="hidden" name="cover_url" value={product?.coverUrl ?? ''} />
+      <input type="hidden" name="upgrade_image_url" value={product?.upgradeImageUrl ?? ''} />
       <input type="hidden" name="banner_url" value={product?.bannerUrl ?? ''} />
 
       <div className="flex min-w-0 flex-col gap-4">
@@ -39,6 +41,14 @@ export function ProductForm({ product, tracks, storeId }: { product: Product | n
             <option value="upsell">Upsell</option>
           </select>
         </label>
+        <label className={ui.label}>Organização dos conteúdos
+          <select name="content_mode" defaultValue={product?.contentMode ?? 'auto'} className={ui.input}>
+            <option value="auto">Automático: Front com versões, complementares com seções</option>
+            <option value="versions">Básico e Completo</option>
+            <option value="sections">Seções personalizadas (packs, orderbumps, upsells)</option>
+          </select>
+          <span className="text-sm text-texto-suave">Em versões, cada cliente vê só o nível comprado; Básico recebe uma chamada para upgrade. O Completo precisa reunir todos os materiais dessa versão. Em seções, o Completo também inclui o Básico.</span>
+        </label>
         <datalist id="product-tracks">
           {tracks.map((track) => <option key={track} value={track} />)}
         </datalist>
@@ -55,6 +65,18 @@ export function ProductForm({ product, tracks, storeId }: { product: Product | n
           Link do checkout para upgrade ao Completo
           <input name="upgrade_checkout_url" type="url" defaultValue={product?.upgradeCheckoutUrl ?? ''} className={ui.input} />
         </label>
+        <label className={ui.label}>Texto do botão de upgrade
+          <input name="upgrade_button_text" maxLength={80} placeholder="Quero a versão completa" defaultValue={product?.upgradeButtonText ?? ''} className={ui.input} />
+        </label>
+        <label className={ui.label}>Mockup do upgrade (quadrado 1:1, até 2 MB)
+          <input name="upgrade_image" type="file" accept="image/*" className={ui.input} />
+          <span className="text-sm text-texto-suave">Sem imagem própria, usamos a capa do produto no modal.</span>
+          {product?.upgradeImageUrl && <a href={product.upgradeImageUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline">Ver mockup atual</a>}
+        </label>
+        {product && <div className="rounded-xl border border-borda p-4">
+          <p className="text-sm text-texto-suave">Prévia do modal com as configurações salvas. Salve para visualizar suas alterações.</p>
+          <ProductUpgrade level="basic" lockedCount={1} productTitle={product.title} imageUrl={product.upgradeImageUrl || product.coverUrl} buttonText={product.upgradeButtonText} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={`/admin/produtos/${product.id}`} />
+        </div>}
         <label className={ui.label}>
           Checkout de aluno com 10% de desconto
           <input name="student_checkout_url" type="url" defaultValue={product?.studentCheckoutUrl ?? ''} className={ui.input} />

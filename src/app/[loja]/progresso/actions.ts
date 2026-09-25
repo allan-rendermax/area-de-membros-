@@ -5,7 +5,7 @@ import { unstable_rethrow } from 'next/navigation'
 import { isUuid, isHttpUrl } from '@/lib/content/url'
 import { toVideoEmbed } from '@/lib/content/video'
 import { isValidStoreSlug } from '@/lib/content/slug'
-import { canAccessLevel } from '@/lib/access/access'
+import { canAccessProductModule } from '@/lib/access/product-content'
 import { loadGrantedProductLevels } from '@/lib/data/access'
 import { setItemCompletion } from '@/lib/data/member-progress'
 import { getItemWithContext } from '@/lib/data/products'
@@ -21,7 +21,7 @@ export async function saveCompletion(storeSlug: string, itemId: string, complete
     const { store, customer } = await requireStoreSession(storeSlug)
     if (store.slug !== storeSlug) return { ok: false, error: 'Esta loja não corresponde à sessão atual.' }
     const [ctx, levels] = await Promise.all([getItemWithContext(itemId), loadGrantedProductLevels(store.id, customer)])
-    if (!ctx || ctx.product.storeId !== store.id || !ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished || !canAccessLevel(levels.get(ctx.product.id), ctx.module.requiredLevel ?? 'basic')) {
+    if (!ctx || ctx.product.storeId !== store.id || !ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished || !canAccessProductModule(levels.get(ctx.product.id), ctx.module.requiredLevel, ctx.product.contentMode)) {
       return { ok: false, error: 'Material indisponível para esta conta.' }
     }
     if (ctx.item.kind === 'video' ? !toVideoEmbed(ctx.item.url) : !(['arquivo', 'link'].includes(ctx.item.kind) && isHttpUrl(ctx.item.url))) {

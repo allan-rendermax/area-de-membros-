@@ -30,6 +30,8 @@ export type CustomerRow = {
 export type OrderRef = { productCode: string; status: OrderStatus }
 
 export type ItemKind = 'arquivo' | 'video' | 'link'
+export type ContentMode = 'versions' | 'sections'
+
 export type ProductRole = 'front' | 'orderbump' | 'upsell'
 export type AccessLevel = 'basic' | 'complete'
 
@@ -44,6 +46,9 @@ export type Product = {
   bannerUrl: string | null
   checkoutUrl: string | null
   upgradeCheckoutUrl?: string | null
+  contentMode?: ContentMode
+  upgradeImageUrl?: string | null
+  upgradeButtonText?: string | null
   role: ProductRole
   studentCheckoutUrl?: string | null
   isFeatured: boolean

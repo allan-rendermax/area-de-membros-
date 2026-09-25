@@ -41,6 +41,18 @@ describe('ContentEditor item upload', () => {
 
   afterEach(async () => { await act(async () => root.unmount()); container.remove() })
 
+  it('sugere Básico e depois Completo com níveis correspondentes; packs mantêm nome livre', async () => {
+    const props = { productId: 'product-1', productTitle: 'Atlas', contentMode: 'versions' as const }
+    await act(async () => root.render(createElement(ContentEditor, { ...props, modules: [] })))
+    expect(new FormData(formWithButton('Criar módulo')).get('title')).toBe('Básico')
+    expect(new FormData(formWithButton('Criar módulo')).get('required_level')).toBe('basic')
+    await act(async () => root.render(createElement(ContentEditor, { ...props, modules: [moduleFixture] })))
+    expect(new FormData(formWithButton('Criar módulo')).get('title')).toBe('Completo')
+    expect(new FormData(formWithButton('Criar módulo')).get('required_level')).toBe('complete')
+    await act(async () => root.render(createElement(ContentEditor, { ...props, contentMode: 'sections', modules: [moduleFixture] })))
+    expect(new FormData(formWithButton('Criar módulo')).get('title')).toBe('')
+  })
+
   it('explica o título visível, o tipo do material e o agrupamento por módulo', () => {
     const form = addForm()
     expect(form.textContent).toContain('nome visível')

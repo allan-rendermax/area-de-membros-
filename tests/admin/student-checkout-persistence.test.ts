@@ -30,8 +30,14 @@ describe('checkout de aluno', () => {
     form.set('id', '00000000-0000-4000-8000-000000000001')
     form.set('title', 'Atlas')
     form.set('student_checkout_url', promotional)
+    form.set('content_mode', 'versions')
+    form.set('upgrade_button_text', 'Liberar meu Atlas')
+    form.set('upgrade_image_url', 'https://example.com/mockup.png')
     await saveProduct(parseProductForm(form, 's'))
     expect(payload.student_checkout_url).toBe(promotional)
+    expect(payload.content_mode).toBe('versions')
+    expect(payload.upgrade_button_text).toBe('Liberar meu Atlas')
+    expect(payload.upgrade_image_url).toBe('https://example.com/mockup.png')
   })
 
   it('migration conserva registro existente e inicializa campo como null', async () => {
