@@ -181,9 +181,11 @@ function toOffer(row: DbOffer): AdminOffer {
 }
 
 export async function listOffers(storeId: string): Promise<AdminOffer[]> {
-  const { data, error } = await createAdminClient().from('offers').select(OFFER_COLUMNS).eq('store_id', storeId).order('name')
+  const { data, error } = await createAdminClient().from('offers').select(`${OFFER_COLUMNS}, offer_groups(name)`).eq('store_id', storeId).order('name')
   if (error) throw error
-  return (data as DbOffer[]).map(toOffer)
+  return (data as unknown as (DbOffer & { offer_groups: { name: string } | null })[]).map(row => ({
+    ...toOffer(row), name: row.offer_groups ? `${row.offer_groups.name} — ${row.name}` : row.name,
+  }))
 }
 
 export async function getOffer(id: string, storeId: string): Promise<AdminOffer | null> {

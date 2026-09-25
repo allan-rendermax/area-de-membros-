@@ -5,13 +5,15 @@ import { ui } from '@/components/admin/ui'
 import { excluirOferta } from './actions'
 
 type OfferReference = { id: string; name: string }
+type DeleteAction = typeof excluirOferta
 
-function DeleteConfirmation({ offer, storeId, onCancel }: {
+function DeleteConfirmation({ offer, storeId, onCancel, deleteAction }: {
   offer: OfferReference
   storeId: string
   onCancel(): void
+  deleteAction: DeleteAction
 }) {
-  const [state, action, pending] = useActionState(excluirOferta, { error: null })
+  const [state, action, pending] = useActionState(deleteAction, { error: null })
   const [name, setName] = useState('')
   const input = useRef<HTMLInputElement>(null)
   const hintId = useId()
@@ -39,13 +41,14 @@ function DeleteConfirmation({ offer, storeId, onCancel }: {
   </form>
 }
 
-export function DeleteOfferSection({ offer, storeId }: { offer: OfferReference; storeId: string }) {
+export function DeleteOfferSection({ offer, storeId, deleteAction = excluirOferta, grouped = false }: { offer: OfferReference; storeId: string; deleteAction?: DeleteAction; grouped?: boolean }) {
   const [open, setOpen] = useState(false)
   const trigger = useRef<HTMLButtonElement>(null)
   const headingId = useId()
   const confirmationId = useId()
   return <section aria-labelledby={headingId} className={`${ui.card} max-w-xl min-w-0 p-5`}>
     <h2 id={headingId} className="font-semibold">Excluir oferta</h2>
+    {grouped && <p className="mt-2 text-sm text-texto-suave">Todos os planos desta oferta serão excluídos. Se algum plano possuir pedidos, a oferta inteira será preservada.</p>}
     <p className="mt-2 text-sm text-texto-suave">
       Remove esta oferta e seus vínculos. Os produtos e conteúdos permanecem cadastrados. Ofertas com qualquer pedido são protegidas.
       Exclua apenas ofertas que não serão mais vendidas. Isso não exclui o produto nem interrompe as vendas na Payt. Depois, você poderá excluir os produtos sem outros vínculos ou histórico.
@@ -53,7 +56,7 @@ export function DeleteOfferSection({ offer, storeId }: { offer: OfferReference; 
     <button ref={trigger} type="button" aria-expanded={open} aria-controls={confirmationId}
       onClick={() => setOpen(true)} className={`${ui.buttonDanger} mt-4 min-h-11`} hidden={open}>Excluir oferta</button>
     <div id={confirmationId}>
-      {open && <DeleteConfirmation offer={offer} storeId={storeId} onCancel={() => {
+      {open && <DeleteConfirmation offer={offer} storeId={storeId} deleteAction={deleteAction} onCancel={() => {
         setOpen(false)
         // Restore focus after React reveals the trigger.
         requestAnimationFrame(() => trigger.current?.focus())

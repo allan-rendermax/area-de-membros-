@@ -16,6 +16,7 @@ vi.mock('@/lib/admin/current-store', async (importOriginal) => ({ ...(await impo
 vi.mock('@/lib/auth/require-admin', () => ({ requireAdmin: vi.fn().mockResolvedValue({ email: 'admin@example.com' }) }))
 vi.mock('@/lib/data/products-admin', () => ({ saveProduct: io.saveProduct, saveOffer: io.saveOffer, uploadImage: io.uploadImage, listOffers: io.listOffers, deleteItem: io.deleteItem, moveItem: io.moveItem }))
 vi.mock('@/lib/data/products', () => ({ getProductById: io.getProductById, listProducts: io.listProducts }))
+vi.mock('@/lib/data/offer-groups', () => ({ listOfferGroups: io.listOffers }))
 vi.mock('@/lib/data/customers', () => ({ changeCustomerEmail: vi.fn(), setCustomerBlocked: vi.fn() }))
 vi.mock('@/lib/data/orders', () => ({ createManualOrder: io.createManualOrder, revokeManualOrder: io.revokeManualOrder }))
 vi.mock('@/lib/email/server', () => ({ resendAccessForCustomer: io.resendAccessForCustomer }))
