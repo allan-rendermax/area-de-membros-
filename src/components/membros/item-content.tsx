@@ -17,6 +17,7 @@ import { isHttpUrl } from '@/lib/content/url'
 import { canAccessProductModule, sectionTitle } from '@/lib/access/product-content'
 import { listModulesWithItems } from '@/lib/data/products'
 import { withPreview } from '@/lib/membros/paths'
+import { PathologyUpsell } from './pathology-upsell'
 
 // Both callers authorize the store, product and selected item before rendering.
 export async function renderItemContent({ ctx, store, customer, level, preview, blocked, productModules: suppliedModules }: {
@@ -93,6 +94,8 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
               <h2 className="lesson-section-heading mb-5 text-2xl font-bold">Materiais disponíveis</h2>
               <ResourceList items={siblings} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} />
             </section>}
+
+            <PathologyUpsell storeSlug={store.slug} productSlug={ctx.product.slug} />
 
             {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
             <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
