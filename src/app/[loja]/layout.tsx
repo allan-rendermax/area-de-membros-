@@ -23,5 +23,13 @@ export default async function LojaLayout({ children, params }: LayoutProps<'/[lo
   const { loja } = await params
   const store = await getStore(loja)
   const theme = getMemberTheme(store.slug)
-  return <MemberTheme theme={theme} className={theme ? display.variable : ''}>{children}</MemberTheme>
+  return (
+    <MemberTheme theme={theme} className={`flex flex-col ${theme ? display.variable : ''}`}>
+      <div className="flex-1">{children}</div>
+      <footer className="px-6 pt-4 pb-8 text-center text-[11px] leading-relaxed text-texto-suave/70">
+        <p className="font-semibold">Grupo ElevaMAX</p>
+        <p>Material de uso pessoal. Todos os direitos reservados</p>
+      </footer>
+    </MemberTheme>
+  )
 }
