@@ -4,8 +4,9 @@ Em **Admin → Ofertas → Nova oferta**, informe o nome da oferta uma única ve
 
 Em cada plano:
 1. Informe nome e ID do produto na Payt (o mesmo código enviado no webhook).
-2. Para cada produto, escolha **Não liberar**, **Básico** ou **Completo**.
-3. Selecione pelo menos um produto. Um combo pode liberar vários produtos, cada qual em Básico ou Completo.
+2. Em **O que este plano libera**, clique em **+ Adicionar produto**. Na coluna **Produto**, abra o menu e busque o produto pelo nome. Na coluna **Plano**, escolha **Básico** ou **Completo**.
+3. Adicione uma linha para cada produto liberado. Use **×** para remover uma liberação. Produtos que não foram adicionados ficam sem acesso por esse plano; o mesmo produto não pode aparecer duas vezes dentro dele.
+4. Selecione pelo menos um produto em cada plano e preencha ou remova as linhas vazias. Ao editar, aparecem apenas os produtos já liberados. Um combo pode liberar vários produtos, cada qual em Básico ou Completo.
 
 Clique em **Salvar oferta** para gravar todos os planos juntos. Em caso de erro, nenhum plano é parcialmente salvo e o preenchimento permanece na tela. Um plano com nome Upgrade concede os produtos/níveis escolhidos quando a compra for confirmada, seguindo as regras de acesso já existentes.
 
