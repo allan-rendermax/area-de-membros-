@@ -78,7 +78,8 @@ export function buildShelf(products: Product[], granted: Set<string>, { includeD
 
 export type Track = { name: string; products: ShelfProduct[] }
 
-export function buildTracks(shelf: Shelf): Track[] {
+export function buildTracks(shelf: Shelf, trackOrder: readonly string[] = []): Track[] {
+  const trackPosition = new Map(trackOrder.map((name, index) => [name, index]))
   const products = [...shelf.unlocked, ...shelf.locked]
   const allUntracked = products.every((p) => !p.track.trim())
   const groups = new Map<string, ShelfProduct[]>()
@@ -99,7 +100,8 @@ export function buildTracks(shelf: Shelf): Track[] {
     lockedPriority: Math.min(...products.filter((p) => !p.unlocked).map((p) => lockedPriority(p.role)), 1),
     minSortOrder: products.reduce((min, p) => Math.min(min, p.sortOrder), Infinity),
   })).sort((a, b) =>
-    Number(b.hasUnlocked) - Number(a.hasUnlocked)
+    (trackPosition.get(a.name) ?? trackOrder.length) - (trackPosition.get(b.name) ?? trackOrder.length)
+    || Number(b.hasUnlocked) - Number(a.hasUnlocked)
     || (!a.hasUnlocked ? a.lockedPriority - b.lockedPriority : 0)
     || a.minSortOrder - b.minSortOrder
     || a.name.localeCompare(b.name, 'pt-BR'),

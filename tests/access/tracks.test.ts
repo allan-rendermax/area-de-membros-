@@ -10,14 +10,33 @@ function product(id: string, track: string, sortOrder: number, extra: Partial<Pr
   }
 }
 
-function rows(products: Product[], granted: string[] = []) {
-  return buildTracks(buildShelf(products, new Set(granted))).map((track) => ({
+function rows(products: Product[], granted: string[] = [], trackOrder: readonly string[] = []) {
+  return buildTracks(buildShelf(products, new Set(granted)), trackOrder).map((track) => ({
     name: track.name,
     ids: track.products.map((p) => p.id),
   }))
 }
 
 describe('buildTracks', () => {
+  it.each([[], ['protocolo'], ['software', 'pratica'], ['atlas', 'software', 'pratica', 'protocolo']].map(granted => ({ granted })))(
+    'mantém a ordem editorial das trilhas independentemente das compras ($granted)', ({ granted }) => {
+      const order = ['Atlas Visuais', 'Softwares e IA', 'Prática Profissional', 'Protocolos Profissionais']
+      expect(rows([
+        product('protocolo', order[3], 0, { role: 'upsell' }),
+        product('pratica', order[2], 1, { role: 'orderbump' }),
+        product('software', order[1], 30),
+        product('atlas', order[0], 40),
+      ], granted, order).map(track => track.name)).toEqual(order)
+    },
+  )
+
+  it('mantém trilhas novas depois das configuradas sem criar trilhas vazias', () => {
+    expect(rows([
+      product('novo', 'Nova trilha', 0), product('atlas', 'Atlas Visuais', 10),
+    ], ['novo'], ['Atlas Visuais', 'Softwares e IA']).map(track => track.name))
+      .toEqual(['Atlas Visuais', 'Nova trilha'])
+  })
+
   it('preserva prioridade complementar dentro da trilha sem reordenar os comprados', () => {
     expect(rows([product('front', 'A', 0), product('comprado', 'A', 1),
       product('orderbump', 'A', 2, { role: 'orderbump' }),

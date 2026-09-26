@@ -33,7 +33,9 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
   ])
   const architecture = getMemberTheme(store.slug) === 'arquitetura'
   const shelf = buildShelf(products.map((product) => withMemberArtwork(product, store.slug)), granted, { includeDrafts: previewIncludesDrafts(preview) })
-  const tracks = buildTracks(shelf)
+  const tracks = buildTracks(shelf, architecture
+    ? ['Atlas Visuais', 'Softwares e IA', 'Prática Profissional', 'Protocolos Profissionais']
+    : [])
   const unlockedById = new Map(shelf.unlocked.map((product) => [product.id, product]))
   const productModes = new Map(products.map((product) => [product.id, product.contentMode]))
   const continuing = [...new Set(recentVisits.map((visit) => visit.productId))].flatMap((id) => {
