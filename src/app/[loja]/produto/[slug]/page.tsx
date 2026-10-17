@@ -1,5 +1,6 @@
 import { previewContext, previewIncludesDrafts, previewAccessLevel } from '@/lib/membros/preview-context'
 import { renderItemContent } from '@/components/membros/item-content'
+import { CommunityWhatsapp } from '@/components/membros/community-whatsapp'
 import { InstallAppButton } from '@/components/membros/install-app-button'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
@@ -72,6 +73,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
           </div>
         </div>
       </main>
+      <CommunityWhatsapp url={store.communityWhatsappUrl} />
       <WhatsAppFloating href={support} />
     </>
   )

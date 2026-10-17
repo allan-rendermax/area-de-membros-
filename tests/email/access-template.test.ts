@@ -13,6 +13,30 @@ const notice: AccessNotice = {
 const url = 'https://app.test/arquitetura/entrar?email=joao%40gmail.com'
 
 describe('accessNoticeEmail', () => {
+  it.each(['acesso_novo', 'produto_novo', 'reenvio'] as const)('includes a secondary invitation for %s', kind => {
+    const group = 'https://chat.whatsapp.com/BfhiSoEHc28E8OglEJQyPo?mode=gi_t'
+    const email = accessNoticeEmail({ ...notice, kind, store: { ...notice.store, communityWhatsappUrl: group } }, url)
+    expect(email.html).toContain(`href="${group}"`)
+    expect(email.html).toContain('Entrar no grupo do WhatsApp')
+    expect(email.html.indexOf('Acessar meus materiais')).toBeLessThan(email.html.indexOf('Entrar no grupo do WhatsApp'))
+    expect(email.html.indexOf('Entrar no grupo do WhatsApp')).toBeLessThan(email.html.indexOf('Guarde este e-mail'))
+    expect(email.html.split(`href="${url}"`)).toHaveLength(3)
+  })
+
+  it.each([undefined, null, '', 'javascript:alert(1)', 'https://example.com/group', 'https://chat.whatsapp.com.evil.test/Example'])('omits the invitation for %s', communityWhatsappUrl => {
+    const email = accessNoticeEmail({ ...notice, store: { ...notice.store, communityWhatsappUrl } }, url)
+    expect(email.html).not.toContain('Entrar no grupo do WhatsApp')
+    expect(email.html.match(/href=/g)).toHaveLength(2)
+    expect(email.html.split(`href="${url}"`)).toHaveLength(3)
+  })
+
+  it('escapes the community URL query in HTML', () => {
+    const communityWhatsappUrl = 'https://chat.whatsapp.com/Example?mode=gi_t&source=%22test%22'
+    const email = accessNoticeEmail({ ...notice, store: { ...notice.store, communityWhatsappUrl } }, url)
+    expect(email.html).toContain('href="https://chat.whatsapp.com/Example?mode=gi_t&amp;source=%22test%22"')
+    expect(email.html).not.toContain(`href="${communityWhatsappUrl}"`)
+  })
+
   it('usa a identidade de arquitetura apenas nessa loja', () => {
     const architecture = accessNoticeEmail(notice, url).html
     expect(architecture).toContain('background:#ffffff')

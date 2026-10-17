@@ -14,11 +14,12 @@ export type Store = {
   name: string
   logoUrl: string | null
   supportUrl: string | null
+  communityWhatsappUrl?: string | null
   supportWhatsapp: string | null
   loginImageUrl: string | null
 }
 
-export type StoreRef = Pick<Store, 'id' | 'slug' | 'name'>
+export type StoreRef = Pick<Store, 'id' | 'slug' | 'name' | 'communityWhatsappUrl'>
 
 export type CustomerRow = {
   id: string

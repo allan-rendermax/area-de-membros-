@@ -15,7 +15,7 @@ describe('parseStoreForm', () => {
   it('gera o endereço a partir do nome e normaliza o WhatsApp', () => {
     expect(parseStoreForm(fd({ name: 'Nutrição Animal', support_whatsapp: '+55 11 99999-8888' }))).toEqual({
       id: null, slug: 'nutricao-animal', name: 'Nutrição Animal', logoUrl: null,
-      supportWhatsapp: '5511999998888', supportUrl: null, loginImageUrl: null,
+      supportWhatsapp: '5511999998888', supportUrl: null, loginImageUrl: null, communityWhatsappUrl: null,
     })
   })
 
@@ -133,4 +133,11 @@ describe('parseOfferForm', () => {
     expect(parseOfferForm(fd({ name: 'Básico', payt_product_code: 'BASIC', product_ids: [UUID], [`grant_level_${UUID}`]: 'basic' }), 's1').productLevels).toEqual({ [UUID]: 'basic' })
     expect(() => parseOfferForm(fd({ name: 'X', payt_product_code: 'OK', product_ids: [UUID], [`grant_level_${UUID}`]: 'vip' }), 's1')).toThrow('Nível')
   })
+})
+
+it('validates optional community invitation independently of support', () => {
+  const invite = 'https://chat.whatsapp.com/BfhiSoEHc28E8OglEJQyPo?mode=gi_t'
+  expect(parseStoreForm(fd({ name: 'Loja', community_whatsapp_url: ` ${invite} ` })).communityWhatsappUrl).toBe(invite)
+  for (const value of ['', '   ']) expect(parseStoreForm(fd({ name: 'Loja', community_whatsapp_url: value })).communityWhatsappUrl).toBeNull()
+  expect(() => parseStoreForm(fd({ name: 'Loja', community_whatsapp_url: 'https://evil.test/abc' }))).toThrow(FormError)
 })

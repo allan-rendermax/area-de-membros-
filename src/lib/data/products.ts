@@ -181,11 +181,12 @@ export async function getProductLinks(storeId: string): Promise<ProductLink[]> {
 export async function findStoreForProductCode(code: string): Promise<StoreRef | null> {
   const { data, error } = await createAdminClient()
     .from('offers')
-    .select('stores(id, slug, name)')
+    .select('stores(id, slug, name, community_whatsapp_url)')
     .eq('payt_product_code', code)
     .maybeSingle()
   if (error) throw error
-  return (data?.stores as unknown as StoreRef | null) ?? null
+  const row = data?.stores as unknown as { id: string; slug: string; name: string; community_whatsapp_url?: string | null } | null
+  return row ? { id: row.id, slug: row.slug, name: row.name, communityWhatsappUrl: row.community_whatsapp_url ?? null } : null
 }
 
 export async function getProductsForCode(code: string): Promise<{ id: string; title: string }[]> {

@@ -19,6 +19,11 @@ export function StoreForm({ store }: { store: Store | null }) {
         <span className="text-sm text-texto-suave">Informe DDI + DDD + número. Se deixar vazio, apenas os outros canais de suporte serão exibidos.</span>
       </label>
       <label className={ui.label}>Link de suporte (opcional)<input name="support_url" type="url" defaultValue={store?.supportUrl ?? ''} className={ui.input} /></label>
+      <label className={ui.label}>
+        Grupo do WhatsApp (opcional)
+        <input name="community_whatsapp_url" type="url" defaultValue={store?.communityWhatsappUrl ?? ''} placeholder="https://chat.whatsapp.com/..." className={ui.input} />
+        <span className="text-sm text-texto-suave">Convite exibido nos e-mails de acesso e nas aulas. Deixe vazio para ocultar.</span>
+      </label>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className={ui.label}>
           Logo (até 2 MB)

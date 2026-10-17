@@ -1,6 +1,7 @@
 import type { AccessNotice, EmailKind } from '@/lib/domain/types'
 import { escapeHtml } from './html'
 import { getMemberTheme } from '@/lib/membros/theme'
+import { getCommunityWhatsappUrl } from '@/lib/community/whatsapp'
 
 const COPY: Record<EmailKind, { subject: string; heading: string; intro: string; instructions: string; footer: string }> = {
   acesso_novo: {
@@ -46,6 +47,8 @@ export function accessNoticeEmail(notice: AccessNotice, loginUrl: string): { sub
   const greeting = firstName ? `Olá, ${escapeHtml(firstName)}!` : 'Olá!'
   const href = escapeHtml(loginUrl)
   const brand = `${store}<span style="color:${theme.accent}">.</span>`
+  const communityUrl = getCommunityWhatsappUrl(notice.store.communityWhatsappUrl)
+  const community = communityUrl ? `<tr><td class="pad" align="center" style="padding:26px 42px 4px"><p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:${theme.body}">Participe também do nosso grupo no WhatsApp.</p><a href="${escapeHtml(communityUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;max-width:100%;box-sizing:border-box;padding:14px 22px;border-radius:999px;background:#25d366;color:#102b1a;text-align:center;text-decoration:none;font-size:14px;font-weight:bold;line-height:1.5">Entrar no grupo do WhatsApp</a></td></tr>` : ''
   const products = notice.products.length ? `<tr><td class="product" style="padding:0 42px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${theme.border};border-bottom:1px solid ${theme.border}"><tr><td style="padding:22px 0">
 <p style="margin:0 0 10px;font-size:13px;color:${theme.muted}">${notice.products.length === 1 ? 'Material liberado para você' : 'Materiais liberados para você'}</p>
@@ -78,6 +81,7 @@ ${products}
 <p style="margin:0;font-size:12px;color:${theme.muted};margin-top:20px;margin-bottom:5px">Use o mesmo e-mail da compra:</p>
 <p style="margin:0;font-size:15px;font-weight:bold;overflow-wrap:anywhere">${escapeHtml(notice.to)}</p>
 </td></tr>
+${community}
 <tr><td class="pad" style="padding:26px 42px 28px"><p style="margin:0;font-size:13px;line-height:1.7;color:${theme.muted}">Guarde este e-mail para encontrar seu acesso sempre que precisar.</p><p style="margin:0;font-size:12px;line-height:1.7;color:${theme.muted};margin-top:14px">O botão não abriu? <a href="${href}" style="color:${theme.link};text-decoration:underline;text-underline-offset:3px">Use este link para acessar.</a></p></td></tr>
 </table>
 <!--[if mso]></td></tr></table><![endif]-->

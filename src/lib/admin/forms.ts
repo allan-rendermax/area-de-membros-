@@ -2,6 +2,7 @@ import { isValidSlug, isValidStoreSlug, slugify } from '@/lib/content/slug'
 import { isHttpUrl, isUuid } from '@/lib/content/url'
 import { toVideoEmbed } from '@/lib/content/video'
 import type { AccessLevel, ContentMode, ItemKind, ProductRole } from '@/lib/domain/types'
+import { getCommunityWhatsappUrl } from '@/lib/community/whatsapp'
 import { normalizeWhatsapp } from '@/lib/support/whatsapp'
 
 export class FormError extends Error {
@@ -41,6 +42,7 @@ export type StoreInput = {
   slug: string
   name: string
   logoUrl: string | null
+  communityWhatsappUrl: string | null
   supportWhatsapp: string | null
   supportUrl: string | null
   loginImageUrl: string | null
@@ -53,6 +55,9 @@ export function parseStoreForm(form: FormData): StoreInput {
   if (!isValidStoreSlug(slug)) {
     throw new FormError('Endereço inválido: use letras minúsculas, números e hífen, sem nomes reservados (admin, api, entrar, sair, icons).')
   }
+  const communityRaw = text(form, 'community_whatsapp_url')
+  const communityWhatsappUrl = getCommunityWhatsappUrl(communityRaw)
+  if (communityRaw && !communityWhatsappUrl) throw new FormError('Link do grupo inválido. Use um convite https://chat.whatsapp.com/...')
   const whatsappRaw = text(form, 'support_whatsapp')
   const supportWhatsapp = whatsappRaw ? normalizeWhatsapp(whatsappRaw) : null
   if (whatsappRaw && !supportWhatsapp) throw new FormError('WhatsApp inválido: use DDI + DDD + número, por exemplo 5511999998888.')
@@ -62,6 +67,7 @@ export function parseStoreForm(form: FormData): StoreInput {
     name,
     logoUrl: optionalUrl(form, 'logo_url', 'Logo'),
     supportWhatsapp,
+    communityWhatsappUrl,
     supportUrl: optionalUrl(form, 'support_url', 'Link de suporte'),
     loginImageUrl: optionalUrl(form, 'login_image_url', 'Imagem do login'),
   }

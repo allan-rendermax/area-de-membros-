@@ -71,6 +71,17 @@ describe('loginUrlFor', () => {
 })
 
 describe('sendAccessNotice', () => {
+  it('includes the configured community while preserving recipient and login', async () => {
+    const group = 'https://chat.whatsapp.com/BfhiSoEHc28E8OglEJQyPo?mode=gi_t'
+    const result = await sendAccessNotice({ ...notice, store: { ...notice.store, communityWhatsappUrl: group } }, deps())
+    expect(result).toEqual({ ok: true, logId: 'log-1' })
+    expect(transport.sent).toHaveLength(1)
+    expect(transport.sent[0].to).toBe(notice.to)
+    expect(transport.sent[0].html).toContain(`href="${group}"`)
+    expect(transport.sent[0].html).toContain('Entrar no grupo do WhatsApp')
+    expect(transport.sent[0].html.split('href="https://app.test/arquitetura/entrar?email=joao%40gmail.com"')).toHaveLength(3)
+  })
+
   it('registra o envio e marca como enviado', async () => {
     const result = await sendAccessNotice(notice, deps())
     expect(result).toEqual({ ok: true, logId: 'log-1' })

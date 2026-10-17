@@ -37,7 +37,7 @@ async function prepareResend(group: { storeId: string; customerId: string }): Pr
       customerId: customer.id,
       to: customer.email,
       customerName: customer.name,
-      store: { id: store.id, slug: store.slug, name: store.name },
+      store: { id: store.id, slug: store.slug, name: store.name, communityWhatsappUrl: store.communityWhatsappUrl ?? null },
       products: unlocked.map((p) => ({ id: p.id, title: p.title })),
       kind: 'reenvio',
     },

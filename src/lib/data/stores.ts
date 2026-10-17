@@ -5,7 +5,7 @@ import { env } from '@/lib/env'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PUBLIC_STORES_REVALIDATE, PUBLIC_STORES_TAG } from './store-cache'
 
-export const STORE_COLUMNS = 'id, slug, name, logo_url, support_url, support_whatsapp, login_image_url'
+export const STORE_COLUMNS = 'id, slug, name, logo_url, support_url, support_whatsapp, login_image_url, community_whatsapp_url'
 
 type DbStore = {
   id: string
@@ -15,6 +15,7 @@ type DbStore = {
   support_url: string | null
   support_whatsapp: string | null
   login_image_url: string | null
+  community_whatsapp_url: string | null
 }
 
 export function toStore(row: DbStore): Store {
@@ -26,6 +27,7 @@ export function toStore(row: DbStore): Store {
     supportUrl: row.support_url,
     supportWhatsapp: row.support_whatsapp,
     loginImageUrl: row.login_image_url,
+    communityWhatsappUrl: row.community_whatsapp_url ?? null,
   }
 }
 
@@ -68,6 +70,7 @@ export async function saveStore(input: StoreInput): Promise<string> {
     support_whatsapp: input.supportWhatsapp,
     support_url: input.supportUrl,
     login_image_url: input.loginImageUrl,
+    community_whatsapp_url: input.communityWhatsappUrl,
   }
   const db = createAdminClient()
   const { data, error } = input.id

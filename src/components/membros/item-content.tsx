@@ -18,6 +18,7 @@ import { canAccessProductModule, sectionTitle } from '@/lib/access/product-conte
 import { listModulesWithItems } from '@/lib/data/products'
 import { withPreview } from '@/lib/membros/paths'
 import { PathologyUpsell } from './pathology-upsell'
+import { CommunityWhatsapp } from './community-whatsapp'
 
 // Both callers authorize the store, product and selected item before rendering.
 export async function renderItemContent({ ctx, store, customer, level, preview, blocked, productModules: suppliedModules }: {
@@ -117,6 +118,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
           <LessonSidebar upgrade={<ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} productTitle={ctx.product.title} imageUrl={ctx.product.upgradeImageUrl || ctx.product.coverUrl} buttonText={ctx.product.upgradeButtonText} sectionName={lockedModules[0]?.title} supportUrl={supportHref(store, 'geral', customer?.email ?? null)} />} modules={modules} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
         </div>
       </main>
+      <CommunityWhatsapp url={store.communityWhatsappUrl} />
     </>
   )
 }
