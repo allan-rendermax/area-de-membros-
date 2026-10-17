@@ -6,21 +6,21 @@ import { getCommunityWhatsappUrl } from '@/lib/community/whatsapp'
 const COPY: Record<EmailKind, { subject: string; heading: string; intro: string; instructions: string; footer: string }> = {
   acesso_novo: {
     subject: 'Seus materiais estão liberados',
-    heading: 'Tudo pronto para<br>você começar.',
+    heading: 'Seu acesso está disponível.',
     intro: 'Sua compra foi confirmada. Você já pode acessar seus materiais na área de membros da',
     instructions: 'Seu primeiro acesso, sem complicação',
     footer: 'Você recebeu este e-mail porque uma compra foi confirmada para este endereço.',
   },
   produto_novo: {
     subject: 'Novo produto liberado',
-    heading: 'Tem material novo<br>esperando por você.',
+    heading: 'Novos materiais disponíveis.',
     intro: 'Novos materiais já estão disponíveis para você na área de membros da',
     instructions: 'Acesse com o mesmo e-mail',
     footer: 'Você recebeu este e-mail porque novos materiais foram liberados para este endereço.',
   },
   reenvio: {
     subject: 'Seu acesso',
-    heading: 'Seu acesso,<br>sempre à mão.',
+    heading: 'Seu link de acesso.',
     intro: 'Aqui está o link para acessar seus materiais na área de membros da',
     instructions: 'Volte aos seus materiais',
     footer: 'Este e-mail é um reenvio do seu acesso à área de membros.',
@@ -48,7 +48,7 @@ export function accessNoticeEmail(notice: AccessNotice, loginUrl: string): { sub
   const href = escapeHtml(loginUrl)
   const brand = `${store}<span style="color:${theme.accent}">.</span>`
   const communityUrl = getCommunityWhatsappUrl(notice.store.communityWhatsappUrl)
-  const community = communityUrl ? `<tr><td class="pad" align="center" style="padding:26px 42px 4px"><p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:${theme.body}">Participe também do nosso grupo no WhatsApp.</p><a href="${escapeHtml(communityUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;max-width:100%;box-sizing:border-box;padding:14px 22px;border-radius:999px;background:#25d366;color:#102b1a;text-align:center;text-decoration:none;font-size:14px;font-weight:bold;line-height:1.5">Entrar no grupo do WhatsApp</a></td></tr>` : ''
+  const community = communityUrl ? `<tr><td class="pad" style="padding:24px 42px 0"><p style="margin:0;font-size:14px;line-height:1.7;color:${theme.body}">Grupo do projeto: <a href="${escapeHtml(communityUrl)}" target="_blank" rel="noopener noreferrer" style="color:#127443;text-decoration:underline;text-underline-offset:3px">Entrar no grupo do WhatsApp</a></p></td></tr>` : ''
   const products = notice.products.length ? `<tr><td class="product" style="padding:0 42px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid ${theme.border};border-bottom:1px solid ${theme.border}"><tr><td style="padding:22px 0">
 <p style="margin:0 0 10px;font-size:13px;color:${theme.muted}">${notice.products.length === 1 ? 'Material liberado para você' : 'Materiais liberados para você'}</p>
@@ -57,7 +57,7 @@ ${notice.products.map((p, i) => `<h2 style="margin:${i ? '16px' : '0'} 0 0;font-
 
   const html = `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${store} — Área de membros</title>
-<style>p{margin:0}a:focus-visible{outline:3px solid ${theme.action};outline-offset:5px}@media(max-width:480px){.pad,.product{padding-left:24px!important;padding-right:24px!important}.title{font-size:32px!important}.outer{padding:16px 12px!important}}</style>
+<style>p{margin:0}a:focus-visible{outline:3px solid ${theme.action};outline-offset:5px}@media(max-width:480px){.pad,.product{padding-left:24px!important;padding-right:24px!important}.title{font-size:24px!important}.outer{padding:16px 12px!important}}</style>
 </head><body style="margin:0;background:${theme.background};color:${theme.text};font-family:Arial,Helvetica,sans-serif">
 <div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all">${escapeHtml(copy.subject)}. Entre com o e-mail da compra, sem senha.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td class="outer" align="center" style="padding:32px 20px">
@@ -65,7 +65,7 @@ ${notice.products.map((p, i) => `<h2 style="margin:${i ? '16px' : '0'} 0 0;font-
 <table class="frame" width="100%" style="max-width:600px;border-collapse:collapse;background:${theme.surface}" role="presentation" cellpadding="0" cellspacing="0">
 <tr><td style="padding:24px 42px;background:${theme.header};color:#fff;border-bottom:4px solid ${theme.accent}"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td style="font-size:21px;letter-spacing:-.5px;font-weight:bold">${brand}</td><td align="right" style="font-size:12px;color:#d3d3d6">Área de membros</td></tr></table></td></tr>
 <tr><td class="pad" style="padding:36px 42px 28px">
-<h1 class="title" style="margin:0 0 24px;font-size:38px;line-height:1.12;letter-spacing:-1.2px;font-weight:bold">${copy.heading}</h1>
+<h1 class="title" style="margin:0 0 24px;font-size:28px;line-height:1.25;letter-spacing:-.5px;font-weight:bold">${copy.heading}</h1>
 <p style="margin:0;font-size:16px;line-height:1.65;margin-bottom:12px">${greeting}</p>
 <p style="margin:0;font-size:16px;line-height:1.65;color:${theme.body}">${copy.intro} <strong style="color:${theme.text}">${store}</strong>.</p>
 </td></tr>
