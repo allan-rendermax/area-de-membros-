@@ -1,4 +1,5 @@
 const OUTCOME_LABEL: Record<string, string> = {
+  recebido: 'Recebido — aguardando processamento',
   liberado: 'Liberado',
   atualizado: 'Atualizado',
   sem_mudanca: 'Sem mudança',

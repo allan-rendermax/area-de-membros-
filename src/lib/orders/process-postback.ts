@@ -80,7 +80,7 @@ function errorMessage(e: unknown): string {
   return String(e)
 }
 
-function keyMatches(body: unknown, expected: string): boolean {
+export function keyMatches(body: unknown, expected: string): boolean {
   const received =
     body && typeof body === 'object' && typeof (body as Record<string, unknown>).integration_key === 'string'
       ? ((body as Record<string, unknown>).integration_key as string)
@@ -108,10 +108,10 @@ async function productsFor(repo: PostbackRepo, lines: Line[]): Promise<{ id: str
 
 export async function processPostback(
   body: unknown,
-  deps: { repo: PostbackRepo; notify(notice: AccessNotice): Promise<NoticeResult>; integrationKey: string },
+  deps: { repo: PostbackRepo; notify(notice: AccessNotice): Promise<NoticeResult>; integrationKey: string; eventId?: string },
 ): Promise<ProcessResult> {
   const { repo } = deps
-  const eventId = await repo.logEvent(body)
+  const eventId = deps.eventId ?? await repo.logEvent(body)
 
   if (!keyMatches(body, deps.integrationKey)) {
     await repo.finishEvent(eventId, { keyValid: false, outcome: 'chave_invalida' })

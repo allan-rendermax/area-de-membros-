@@ -4,6 +4,12 @@ import paid from '../fixtures/payt-paid.json'
 
 let repo: FakeRepo
 let notifier: FakeNotifier
+const queue = vi.hoisted(() => ({ enqueue: vi.fn(), run: vi.fn(), after: vi.fn() }))
+vi.mock('next/server', async (original) => ({ ...await original<object>(), after: queue.after }))
+vi.mock('@/lib/orders/payt-inbox-server', () => ({
+  enqueuePostback: queue.enqueue,
+  runPaytInbox: queue.run,
+}))
 
 vi.mock('@/lib/data/postback-repo', () => ({ createPostbackRepo: () => repo }))
 vi.mock('@/lib/email/server', () => ({ notifyAccess: (notice: Parameters<FakeNotifier['notify']>[0]) => notifier.notify(notice) }))
@@ -18,6 +24,9 @@ const request = (body: unknown) => new Request('https://members.example.test/api
 beforeEach(() => {
   repo = new FakeRepo()
   notifier = new FakeNotifier()
+  queue.enqueue.mockReset().mockResolvedValue('event-1')
+  queue.after.mockReset()
+  queue.run.mockReset()
 })
 
 describe('POST Payt', () => {
@@ -53,11 +62,30 @@ describe('POST Payt', () => {
     expect(notifier.sent).toHaveLength(0)
   })
 
-  it('mantém resposta de liberação e envio de acesso para uma compra real', async () => {
-    const response = await POST(request(paid))
+  it('confirma compra real somente após persistir, sem esperar pedidos ou emails', async () => {
+    let release!: () => void
+    queue.enqueue.mockImplementation(() => new Promise<void>((resolve) => { release = resolve }))
+    let returned = false
+    const pending = POST(request(paid)).then((response) => { returned = true; return response })
+    await vi.waitFor(() => expect(queue.enqueue).toHaveBeenCalled())
+    expect(returned).toBe(false)
+    expect(notifier.sent).toHaveLength(0)
+    release()
+    const response = await pending
     expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ ok: true, result: 'liberado' })
-    expect(repo.orders).toHaveLength(1)
-    expect(notifier.sent).toHaveLength(1)
+    expect(await response.json()).toEqual({ ok: true, result: 'recebido' })
+    expect(repo.orders).toHaveLength(0)
+    expect(notifier.sent).toHaveLength(0)
+    expect(queue.after).toHaveBeenCalledTimes(1)
+    await queue.after.mock.calls[0][0]()
+    expect(queue.run).toHaveBeenCalledTimes(1)
+  })
+
+  it('retorna 500 se não conseguiu guardar o aviso; não confirma nem inicia trabalho', async () => {
+    queue.enqueue.mockRejectedValueOnce(new Error('banco indisponível'))
+    const response = await POST(request(paid))
+    expect(response.status).toBe(500)
+    expect(queue.after).not.toHaveBeenCalled()
+    expect(notifier.sent).toHaveLength(0)
   })
 })
