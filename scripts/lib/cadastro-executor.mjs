@@ -154,6 +154,17 @@ async function preflight(db, planos, { allowIncomplete = false } = {}) {
     if (!store) throw new Error(`Loja não encontrada: ${ficha.loja}.`)
     if (sameSlug.some(row => row.store_id !== store.id)) throw new Error(`Slug ${ficha.slug} já pertence a outra loja; o storage seria compartilhado.`)
     const product = sameSlug.find(row => row.store_id === store.id) ?? null
+    let complementaryProductId
+    if (ficha.complemento !== undefined) {
+      if (ficha.complemento === 'nenhum') complementaryProductId = null
+      else {
+        if (ficha.complemento === ficha.slug) throw new Error('Produto não pode ser complemento de si mesmo.')
+        const candidates = await rows(db, 'products', 'id,store_id,slug', { slug: ficha.complemento })
+        const target = candidates.find(row => row.store_id === store.id)
+        if (!target) throw new Error(`Produto complementar não encontrado nesta loja: ${ficha.complemento}.`)
+        complementaryProductId = target.id
+      }
+    }
     const offers = effectiveOffers(plano).map((spec, index) => ({ spec, existing: offerRows[index].find(row => row.payt_product_code === spec.codigo) ?? null }))
     const links = (await Promise.all(offers.map(({ existing }) => rows(db, 'offer_products', 'offer_id,product_id,grant_level', { offer_id: existing?.id ?? '00000000-0000-0000-0000-000000000000' })))).flat()
     if (product) {
@@ -185,7 +196,7 @@ async function preflight(db, planos, { allowIncomplete = false } = {}) {
     }
     const readiness = readinessPreflight(plano, product, offers, links, modules, items)
     if (readiness.error && !allowIncomplete) throw new Error(readiness.error)
-    prepared.push({ plano, store, product, offers, modules, items, links, ...readiness, bytes: new Map() })
+    prepared.push({ plano, store, product, complementaryProductId, offers, modules, items, links, ...readiness, bytes: new Map() })
   }
   // Ler todo o lote antes da primeira mutação: uma falha na segunda pasta não envia a primeira.
   for (const entry of prepared) {
@@ -265,6 +276,7 @@ export async function executarPlanos(db, planos, { log = console.log } = {}) {
       is_featured: ficha.destaque, sort_order: ficha.ordem, is_published: true,
       cover_url: plano.imagens.capa ? urls.get(plano.imagens.capa) : null,
       banner_url: plano.imagens.banner ? urls.get(plano.imagens.banner) : null,
+      ...(entry.complementaryProductId !== undefined ? { complementary_product_id: entry.complementaryProductId } : {}),
     }
     const productId = product
       ? (await write(db.from('products').update(data).eq('id', product.id), `produto ${ficha.nome}`), product.id)

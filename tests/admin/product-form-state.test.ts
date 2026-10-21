@@ -4,7 +4,7 @@ import { parseProductForm } from '@/lib/admin/forms'
 const io = vi.hoisted(() => ({ saveProduct: vi.fn(), getProductById: vi.fn() }))
 vi.mock('@/lib/auth/require-admin', () => ({ requireAdmin: async () => {} }))
 vi.mock('@/lib/admin/current-store', async importOriginal => ({ ...(await importOriginal<typeof import('@/lib/admin/current-store')>()), getAdminStore: async () => ({ id: 'store-a', slug: 'loja' }) }))
-vi.mock('@/lib/data/products-admin', () => ({ saveProduct: io.saveProduct, saveItem: vi.fn(), saveModule: vi.fn(), uploadImage: vi.fn().mockResolvedValue('https://example.test/upload.png') }))
+vi.mock('@/lib/data/products-admin', () => ({ saveProduct: io.saveProduct, validateProductComplement: vi.fn(), saveItem: vi.fn(), saveModule: vi.fn(), uploadImage: vi.fn().mockResolvedValue('https://example.test/upload.png') }))
 vi.mock('@/lib/data/products', () => ({ getProductById: io.getProductById }))
 vi.mock('@/lib/admin/product-publication', () => ({ assertProductPublicationReady: async () => {} }))
 vi.mock('next/navigation', () => ({ redirect: (url: string) => { throw new Error(`NEXT_REDIRECT:${url}`) } }))

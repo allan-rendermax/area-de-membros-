@@ -41,6 +41,7 @@ export type ShelfProduct = {
   purchaseDescription?: string | null
   purchaseImageUrl?: string | null
   purchaseButtonText?: string | null
+  complementaryProductId?: string | null
 }
 
 export type Shelf = { featured: ShelfProduct | null; unlocked: ShelfProduct[]; locked: ShelfProduct[] }
@@ -66,6 +67,7 @@ export function buildShelf(products: Product[], granted: Set<string>, { includeD
       purchaseImageUrl: p.purchaseImageUrl ?? null,
       purchaseButtonText: p.purchaseButtonText ?? null,
       studentCheckoutUrl: unlocked ? null : (p.studentCheckoutUrl ?? null),
+      complementaryProductId: p.complementaryProductId ?? null,
     }
   })
   const unlocked = all.filter((p) => p.unlocked)

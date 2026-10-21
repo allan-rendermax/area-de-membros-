@@ -38,7 +38,7 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
   if (typeof text !== 'string') throw new Error('A ficha produto.txt deve ser texto.')
   const fields = {}
   const lines = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n')
-  const allowed = new Set(['nome', 'id', 'id_basico', 'id_completo', 'id_upgrade', 'tag', 'loja', 'slug', 'trilha', 'checkout', 'checkout_upgrade', 'destaque', 'ordem', 'descricao', 'organizacao'])
+  const allowed = new Set(['nome', 'id', 'id_basico', 'id_completo', 'id_upgrade', 'tag', 'loja', 'slug', 'trilha', 'checkout', 'checkout_upgrade', 'destaque', 'ordem', 'complemento', 'descricao', 'organizacao'])
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index].trim()
     if (!line || line.startsWith('#')) continue
@@ -70,6 +70,9 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
   if (!SLUG.test(loja) || STORE_RESERVED.has(loja)) throw new Error('produto.txt: slug da loja inválido ou reservado.')
   const slug = fields.slug || gerarSlug(fields.nome)
   if (!SLUG.test(slug) || slug.length > 60) throw new Error('produto.txt: slug inválido.')
+  if (fields.complemento !== undefined && (fields.complemento !== 'nenhum' && (!SLUG.test(fields.complemento) || fields.complemento.length > 60 || fields.complemento === slug))) {
+    throw new Error('produto.txt: complemento deve ser o slug de outro produto ou nenhum.')
+  }
   const checkout = fields.checkout ? httpUrl(fields.checkout, 'checkout') : null
   if (fields.tag !== 'front' && !checkout) throw new Error('produto.txt: checkout obrigatório para orderbump/upsell.')
   const destaque = fields.destaque === undefined ? false : ({ sim: true, nao: false, 'não': false })[fields.destaque.toLowerCase()]
@@ -78,7 +81,7 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
   if (fields.ordem !== undefined && (!/^-?\d+$/.test(fields.ordem) || !Number.isInteger(ordem) || ordem < -2147483648 || ordem > 2147483647)) {
     throw new Error('produto.txt: ordem deve ser inteiro PostgreSQL válido.')
   }
-  const base = { nome: fields.nome, tag: fields.tag, loja, slug, trilha: fields.trilha || '', checkout, destaque, ordem, descricao: fields.descricao || '' }
+  const base = { nome: fields.nome, tag: fields.tag, loja, slug, trilha: fields.trilha || '', checkout, destaque, ordem, descricao: fields.descricao || '', ...(fields.complemento !== undefined ? { complemento: fields.complemento } : {}) }
   if (fields.organizacao !== undefined) base.organizacao = fields.organizacao
   if (!modoNiveis) return { ...base, id: fields.id }
   const ofertas = [

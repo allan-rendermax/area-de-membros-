@@ -17,7 +17,8 @@ import { isHttpUrl } from '@/lib/content/url'
 import { canAccessProductModule, sectionTitle } from '@/lib/access/product-content'
 import { listModulesWithItems } from '@/lib/data/products'
 import { withPreview } from '@/lib/membros/paths'
-import { PathologyUpsell } from './pathology-upsell'
+import { ProductComplementCard, ProductComplementOffer } from './product-complement'
+import { loadProductComplement } from '@/lib/data/product-complement'
 import { CommunityWhatsapp } from './community-whatsapp'
 
 // Both callers authorize the store, product and selected item before rendering.
@@ -32,6 +33,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
 }) {
   const editorial = previewIncludesDrafts(preview)
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
+  const complement = await loadProductComplement(ctx.product, store.slug, customer, preview)
   const [completionResult, productModules] = await Promise.all([
     Promise.allSettled([customer ? listCompletedItemIds(customer.id, store.id, ctx.product.id) : Promise.resolve([])]),
     suppliedModules ?? listModulesWithItems(ctx.product.id, { publishedOnly: !editorial }),
@@ -96,7 +98,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
               <ResourceList items={siblings} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} />
             </section>}
 
-            <PathologyUpsell storeSlug={store.slug} productSlug={ctx.product.slug} />
+            {complement && <ProductComplementOffer complement={complement} />}
 
             {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
             <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
@@ -115,7 +117,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
               next={next ? { href: withPreview(`/${store.slug}/item/${next.id}`, preview), title: next.title } : null}
             />
           </div>
-          <LessonSidebar upgrade={<ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} productTitle={ctx.product.title} imageUrl={ctx.product.upgradeImageUrl || ctx.product.coverUrl} buttonText={ctx.product.upgradeButtonText} sectionName={lockedModules[0]?.title} supportUrl={supportHref(store, 'geral', customer?.email ?? null)} />} modules={modules} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
+          <LessonSidebar complement={complement && <ProductComplementCard complement={complement} />} upgrade={<ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} productTitle={ctx.product.title} imageUrl={ctx.product.upgradeImageUrl || ctx.product.coverUrl} buttonText={ctx.product.upgradeButtonText} sectionName={lockedModules[0]?.title} supportUrl={supportHref(store, 'geral', customer?.email ?? null)} />} modules={modules} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
         </div>
       </main>
       <CommunityWhatsapp url={store.communityWhatsappUrl} />

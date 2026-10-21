@@ -1,0 +1,19 @@
+# Atlas + Protocolo — validação local no navegador
+
+Em 21/10/2026, o Vercel `agent-browser@0.38.1` percorreu a aplicação Next 16.3.5 real em `127.0.0.1:3350`, com Supabase/Auth e checkout **fictícios** no fixture local `127.0.0.1:3351`. Foram usadas sessões separadas para `aluno@example.test` (Atlas Básico, sem Protocolo) e `protocolo@example.test` (Atlas Completo e Protocolo). Nenhum banco, pagamento, e-mail ou grupo externo foi acessado.
+
+| Verificação observada | Resultado |
+|---|---|
+| Vitrine | Em ambos os perfis, Patologias é a primeira trilha, com Atlas e Protocolo como primeiras duas capas. Para o Básico, vem antes de Continuar. Protocolo não reaparece em sua antiga trilha. A capa do comprador abre `/arquitetura/produto/protocolo-anti-retrabalho`, onde o recurso próprio “Guia sintético do Protocolo” está disponível. |
+| Sem compra | Capa, cartão em Conteúdos e bloco abaixo dos materiais exibem “Comprar Protocolo Anti-Retrabalho”. Os três links abriram uma **nova aba** em `http://127.0.0.1:3351/reference?checkout=protocolo`, cuja página mostra “Referência local de QA”. Os cartões usam `target="_blank"` e `rel="noopener noreferrer"`. Tentar abrir diretamente a rota interna do Protocolo redireciona para `?comprar=protocolo-anti-retrabalho`. |
+| Com compra | Capa, cartão e bloco interno abrem os materiais do Protocolo na rota interna. O bloco informa “Seu produto está liberado”, sem oferta de recompra. |
+| Básico/Completo | O Básico vê os arquivos do módulo inicial do Atlas e a versão Completa permanece bloqueada; o Completo vê seu módulo. Protocolo aparece como produto separado, fora da sequência de aulas do Atlas. |
+| Celular e desktop | Em `390×844`, o cartão do complemento continua visível com Conteúdos recolhido. Em páginas de vitrine e Atlas dos dois perfis, `document.documentElement.scrollWidth === innerWidth` em 390 e 1440 px. Capturas foram inspecionadas visualmente. |
+| Link direto `?comprar=` | Para quem não possui, a chamada de compra aparece antes das trilhas, com checkout local; “Voltar ao acervo” remove a chamada e a capa continua com link direto. Para quem possui, a chamada não aparece. |
+| Erros | `agent-browser errors` vazio nos perfis; console contém somente mensagens de React DevTools, HMR e Fast Refresh do modo desenvolvimento, sem erro ou aviso da aplicação. |
+
+Capturas: [vitrine Básico desktop](basic-home-desktop.png), [vitrine Básico celular](basic-home-mobile.png), [Atlas Básico desktop](basic-atlas-desktop.png), [Atlas Básico celular](basic-atlas-mobile.png), [chamada por link direto](basic-deeplink-desktop.png), [vitrine comprador desktop](owned-home-desktop.png), [vitrine comprador celular](owned-home-mobile.png), [Atlas comprador desktop](owned-atlas-desktop.png) e [Atlas comprador celular](owned-atlas-mobile.png).
+
+Com `--allowed-domains 127.0.0.1,localhost`, o clique em link `target="_blank"` fez o daemon do CLI expirar após 30 segundos com erro de conexão 10060, embora o destino local respondesse HTTP 200 e abrisse por navegação direta. Uma sessão isolada do **mesmo agent-browser**, sem essa opção e usada apenas nos URLs locais do fixture, concluiu os cliques da capa, do cartão e do bloco: `tab list` confirmou as três novas abas no checkout fictício. A limitação foi do modo de restrição do CLI para a abertura de abas, não um erro observado na aplicação.
+
+Reprodução: `node docs/qa/atlas-protocolo/browser-fixture.mjs`; depois `npx --yes agent-browser@0.38.1 --session atlas-protocolo --allowed-domains 127.0.0.1,localhost open http://127.0.0.1:3350/arquitetura/entrar`. Para reproduzir a ativação dos links em nova aba nesta versão do CLI, use uma sessão própria sem `--allowed-domains` e navegue somente pelos URLs locais descritos neste fixture. Cenários de complemento ausente/não publicado, checkout inválido, reembolso e prévia administrativa têm cobertura em testes de unidade/integração; não foram exercitados nesta rodada visual.

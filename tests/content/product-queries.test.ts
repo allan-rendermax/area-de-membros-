@@ -82,6 +82,7 @@ const product = {
   checkoutUrl: productRow.checkout_url,
   role: 'upsell',
   studentCheckoutUrl: productRow.student_checkout_url,
+  complementaryProductId: null,
   isFeatured: false,
   sortOrder: 1,
   isPublished: true,

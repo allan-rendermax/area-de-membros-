@@ -4,7 +4,7 @@ import { ui } from '@/components/admin/ui'
 import { getAdminStore } from '@/lib/admin/current-store'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
-import { getProductById, listModulesWithItems } from '@/lib/data/products'
+import { getProductById, listModulesWithItems, listProducts } from '@/lib/data/products'
 import { listTracks, listOffers } from '@/lib/data/products-admin'
 import { ProductReadinessNotice } from '@/components/admin/product-readiness-notice'
 import { sectionTitle } from '@/lib/access/product-content'
@@ -23,6 +23,7 @@ export default async function ProdutoAdminPage({ params, searchParams }: PagePro
   const showContent = Boolean(product) && aba === 'conteudo'
   const [modules, offers] = product ? await Promise.all([listModulesWithItems(product.id, { publishedOnly: false }), listOffers(store.id)]) : [[], []]
   const tracks = showContent ? [] : await listTracks(store.id)
+  const products = showContent ? [] : await listProducts(store.id)
 
   return (
     <div className="flex flex-col gap-4">
@@ -40,7 +41,7 @@ export default async function ProdutoAdminPage({ params, searchParams }: PagePro
       {typeof msg === 'string' && <p role="status" className={ui.notice}>{msg}</p>}
       {product && <ProductReadinessNotice product={product} modules={modules} offers={offers} />}
       {product && showContent ? <ContentEditor productId={product.id} productTitle={product.title} contentMode={product.contentMode} modules={modules} /> : <>
-        <ProductForm product={product} tracks={tracks} storeId={store.id} storeSlug={store.slug} supportUrl={supportHref(store, 'geral', null)} upgradeSectionName={sectionTitle(modules.find((module) => module.requiredLevel === 'complete')?.title ?? '', 'complete', product?.contentMode)} />
+        <ProductForm product={product} products={products} tracks={tracks} storeId={store.id} storeSlug={store.slug} supportUrl={supportHref(store, 'geral', null)} upgradeSectionName={sectionTitle(modules.find((module) => module.requiredLevel === 'complete')?.title ?? '', 'complete', product?.contentMode)} />
         {product && <DeleteProductSection key={product.id} product={{ id: product.id, title: product.title }} storeId={store.id} />}
       </>}
     </div>

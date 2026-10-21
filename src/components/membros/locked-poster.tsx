@@ -4,6 +4,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ShelfProduct } from '@/lib/access/access'
 import { isHttpUrl } from '@/lib/content/url'
+import { preferredCheckoutUrl } from '@/lib/access/product-complement'
 import { ContentImage } from './content-image'
 import { useMemberTheme } from './member-theme'
 import { AutoCover } from './auto-cover'
@@ -19,9 +20,8 @@ export function LockedPoster({ product, initiallyOpen = false, previewOnly = fal
   const trigger = useRef<HTMLButtonElement>(null)
   const primaryAction = useRef<HTMLButtonElement | HTMLAnchorElement>(null)
   const studentCheckoutUrl = product.studentCheckoutUrl && isHttpUrl(product.studentCheckoutUrl) ? product.studentCheckoutUrl : null
-  const checkoutUrl = product.checkoutUrl && isHttpUrl(product.checkoutUrl) ? product.checkoutUrl : null
   const imageUrl = product.purchaseImageUrl && isHttpUrl(product.purchaseImageUrl) ? product.purchaseImageUrl : null
-  const destination = studentCheckoutUrl || checkoutUrl
+  const destination = preferredCheckoutUrl(product)
   const requestedSlug = searchParams.get('comprar')
   const [previousRequestedSlug, setPreviousRequestedSlug] = useState(requestedSlug)
 

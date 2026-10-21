@@ -8,20 +8,20 @@ const offerId = '3b7c9f0e-2d7a-4a53-9a57-1f6f3c1a2b3c'
 const orderId = '4b7c9f0e-2d7a-4a53-9a57-1f6f3c1a2b3c'
 
 const io = vi.hoisted(() => ({
-  getAdminStore: vi.fn(), saveProduct: vi.fn(), saveOffer: vi.fn(), uploadImage: vi.fn(),
+  getAdminStore: vi.fn(), saveProduct: vi.fn(), validateProductImageReference: vi.fn(), saveOffer: vi.fn(), uploadImage: vi.fn(), validateProductComplement: vi.fn(),
   resendAccessForCustomer: vi.fn(), createManualOrder: vi.fn(), revokeManualOrder: vi.fn(),
   listProducts: vi.fn(), listOffers: vi.fn(), getProductById: vi.fn(), deleteItem: vi.fn(), moveItem: vi.fn(),
 }))
 vi.mock('@/lib/admin/current-store', async (importOriginal) => ({ ...(await importOriginal<typeof import('@/lib/admin/current-store')>()), getAdminStore: io.getAdminStore }))
 vi.mock('@/lib/auth/require-admin', () => ({ requireAdmin: vi.fn().mockResolvedValue({ email: 'admin@example.com' }) }))
-vi.mock('@/lib/data/products-admin', () => ({ saveProduct: io.saveProduct, saveOffer: io.saveOffer, uploadImage: io.uploadImage, listOffers: io.listOffers, deleteItem: io.deleteItem, moveItem: io.moveItem }))
+vi.mock('@/lib/data/products-admin', () => ({ saveProduct: io.saveProduct, saveOffer: io.saveOffer, uploadImage: io.uploadImage, validateProductComplement: io.validateProductComplement, listOffers: io.listOffers, deleteItem: io.deleteItem, moveItem: io.moveItem }))
 vi.mock('@/lib/data/products', () => ({ getProductById: io.getProductById, listProducts: io.listProducts }))
 vi.mock('@/lib/data/offer-groups', () => ({ listOfferGroups: io.listOffers }))
 vi.mock('@/lib/data/customers', () => ({ changeCustomerEmail: vi.fn(), setCustomerBlocked: vi.fn() }))
 vi.mock('@/lib/data/orders', () => ({ createManualOrder: io.createManualOrder, revokeManualOrder: io.revokeManualOrder }))
 vi.mock('@/lib/email/server', () => ({ resendAccessForCustomer: io.resendAccessForCustomer }))
 vi.mock('@/lib/admin/product-publication', () => ({ assertProductPublicationReady: vi.fn(), assertOfferProductsReady: vi.fn() }))
-vi.mock('@/lib/data/product-image-uploads', () => ({ validateProductImageReference: vi.fn(), createProductImageUpload: vi.fn() }))
+vi.mock('@/lib/data/product-image-uploads', () => ({ validateProductImageReference: io.validateProductImageReference, createProductImageUpload: vi.fn() }))
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
   unstable_cache: <T extends (...args: never[]) => unknown>(load: T) => load,
@@ -47,6 +47,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   io.getAdminStore.mockResolvedValue(storeB)
   io.saveProduct.mockResolvedValue(customerId)
+  io.validateProductComplement.mockResolvedValue(undefined)
   io.saveOffer.mockResolvedValue(offerId)
   io.resendAccessForCustomer.mockResolvedValue({ ok: true })
   io.listProducts.mockResolvedValue([])
@@ -121,6 +122,38 @@ describe('contexto da loja no envio', () => {
     await expect(salvarProduto(input)).rejects.toThrow(/NEXT_REDIRECT/)
     expect(io.uploadImage).not.toHaveBeenCalled()
     expect(io.saveProduct).toHaveBeenCalledWith(expect.objectContaining({ purchaseTitle: 'Libere seu pack', purchaseDescription: 'Texto do modal', purchaseButtonText: 'Quero comprar', purchaseImageUrl: 'https://example.com/saved-modal.png' }))
+  })
+
+  it('rejeita complemento inválido antes de validar referências ou salvar', async () => {
+    io.validateProductComplement.mockRejectedValueOnce(new Error('Produto complementar inválido para esta loja.'))
+    const input = form({ store_id: storeB.id, title: 'Produto', complementary_product_id: customerId, cover_url: 'https://example.com/cover.png', cover_image_receipt: 'receipt' })
+    await expect(salvarProduto(input)).resolves.toMatchObject({ status: 'error', message: 'Produto complementar inválido para esta loja.' })
+    expect(io.validateProductComplement).toHaveBeenCalledWith(expect.objectContaining({ complementaryProductId: customerId }))
+    expect(io.validateProductImageReference).not.toHaveBeenCalled()
+    expect(io.saveProduct).not.toHaveBeenCalled()
+  })
+
+  it('valida complemento e referência de imagem antes de salvar', async () => {
+    const input = form({ store_id: storeB.id, title: 'Produto', complementary_product_id: customerId, cover_url: 'https://example.com/cover.png', cover_image_receipt: 'receipt' })
+    await expect(salvarProduto(input)).rejects.toThrow(/NEXT_REDIRECT/)
+    expect(io.validateProductComplement).toHaveBeenCalledWith(expect.objectContaining({ complementaryProductId: customerId }))
+    expect(io.validateProductComplement.mock.invocationCallOrder[0]).toBeLessThan(io.validateProductImageReference.mock.invocationCallOrder[0])
+    expect(io.saveProduct).toHaveBeenCalledWith(expect.objectContaining({ complementaryProductId: customerId, coverUrl: 'https://example.com/cover.png' }))
+  })
+
+  it('salva a seleção vazia como ausência de complemento', async () => {
+    await expect(salvarProduto(form({ store_id: storeB.id, title: 'Produto', complementary_product_id: '' }))).rejects.toThrow(/NEXT_REDIRECT/)
+    expect(io.validateProductComplement).toHaveBeenCalledWith(expect.objectContaining({ complementaryProductId: null }))
+    expect(io.saveProduct).toHaveBeenCalledWith(expect.objectContaining({ complementaryProductId: null }))
+  })
+
+  it('oferece complemento no editor atual sem listar o próprio produto', () => {
+    const source = { id: customerId, storeId: storeA.id, title: 'Atlas', slug: 'atlas', description: '', track: '', complementaryProductId: offerId } as import('@/lib/domain/types').Product
+    const target = { ...source, id: offerId, title: 'Protocolo', slug: 'protocolo' }
+    const html = renderToStaticMarkup(ProductForm({ product: source, products: [source, target], tracks: [], storeId: storeA.id }))
+    expect(html).toContain('name="complementary_product_id"')
+    expect(html).toContain('value="' + offerId + '" selected=""')
+    expect(html).not.toContain('<option value="' + customerId + '"')
   })
 
   it('expõe a escolha de papel no formulário de criação', () => {

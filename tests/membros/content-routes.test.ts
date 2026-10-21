@@ -13,7 +13,7 @@ import VitrinePage from '@/app/[loja]/page'
 import { loadGrantedProductLevels, loadStoreAccess } from '@/lib/data/access'
 import { listRecentProductIds, listRecentProductVisits, listRecentMaterials, recordItemAccess } from '@/lib/data/item-access'
 import { getItemWithContext, getProductBySlug, listModulesWithItems } from '@/lib/data/products'
-import type { CustomerRow, Item, Module, ModuleWithItems, Product, Store } from '@/lib/domain/types'
+import type { CustomerRow, Item, Module, Product, Store } from '@/lib/domain/types'
 import { requireStoreSession } from '@/lib/membros/session'
 
 vi.mock('@/app/[loja]/historico/actions', () => ({ recordVisit: vi.fn() }))
@@ -166,6 +166,25 @@ describe('vitrine do aluno', () => {
       window.document.body.innerHTML = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({}) }))
       expect([...window.document.querySelectorAll('section[aria-label="Continuar"] a')].map((a) => a.getAttribute('href'))).toEqual(['/loja-a/produto/produto-a', '/loja-a/item/moved-item'])
     } finally { await window.happyDOM.close() }
+  })
+
+  it('honra comprar do complemento bloqueado sem mudar o clique direto da capa', async () => {
+    const source = { ...product, complementaryProductId: 'protocol' }
+    const target = { ...product, id: 'protocol', slug: 'protocol', title: 'Protocolo', track: 'Outra trilha', sortOrder: 2, studentCheckoutUrl: 'https://checkout.example.com/student' }
+    vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [source, target], granted: new Set([source.id]), levels: new Map([[source.id, 'complete']]) })
+    const requested = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({ comprar: target.slug }) }))
+    expect(requested).toContain('aria-label="Compra solicitada"')
+    expect(requested).toContain('href="https://checkout.example.com/student"')
+    expect(requested).toContain('aria-label="Comprar Protocolo"')
+    expect(requested).toContain('href="/loja-a#materiais"')
+    const ordinary = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({}) }))
+    expect(ordinary).not.toContain('aria-label="Compra solicitada"')
+    expect(ordinary).toContain('aria-label="Comprar Protocolo"')
+    const unknown = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({ comprar: 'unknown' }) }))
+    expect(unknown).not.toContain('aria-label="Compra solicitada"')
+    vi.mocked(loadStoreAccess).mockResolvedValue({ customer, products: [source, target], granted: new Set([source.id, target.id]), levels: new Map([[source.id, 'complete'], [target.id, 'complete']]) })
+    const owned = renderToStaticMarkup(await VitrinePage({ params: Promise.resolve({ loja: store.slug }), searchParams: Promise.resolve({ comprar: target.slug }) }))
+    expect(owned).not.toContain('aria-label="Compra solicitada"')
   })
 
   it('mantém acervo quando o histórico falha e oferece destino de retorno à prateleira', async () => {

@@ -56,6 +56,7 @@ export type Product = {
   purchaseButtonText?: string | null
   role: ProductRole
   studentCheckoutUrl?: string | null
+  complementaryProductId?: string | null
   isFeatured: boolean
   sortOrder: number
   isPublished: boolean

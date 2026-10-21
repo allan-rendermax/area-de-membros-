@@ -19,6 +19,8 @@ import { ArchitectureHero } from '@/components/membros/architecture-hero'
 import { requireStorePreview } from '@/lib/membros/preview'
 import { withPreview } from '@/lib/membros/paths'
 import { listProducts } from '@/lib/data/products'
+import { arrangeComplementaryTracks, findRequestedComplement, selectComplementaryPairs } from '@/lib/access/product-complement'
+import { ComplementPoster, ComplementPurchasePrompt } from '@/components/membros/product-complement'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,9 +35,19 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
   ])
   const architecture = getMemberTheme(store.slug) === 'arquitetura'
   const shelf = buildShelf(products.map((product) => withMemberArtwork(product, store.slug)), granted, { includeDrafts: previewIncludesDrafts(preview) })
-  const tracks = buildTracks(shelf, architecture
+  const originalTracks = buildTracks(shelf, architecture
     ? ['Atlas Visuais', 'Softwares e IA', 'Prática Profissional', 'Protocolos Profissionais']
     : [])
+  const tracks = arrangeComplementaryTracks(originalTracks)
+  const hasComplementPair = tracks !== originalTracks
+  const complementaryTargets = new Set(selectComplementaryPairs(originalTracks.flatMap((track) => track.products)).map(([, target]) => target.id))
+  const requestedComplement = findRequestedComplement(tracks.flatMap((track) => track.products), complementaryTargets, typeof comprar === 'string' ? comprar : null)
+  const renderTrack = (track: typeof tracks[number]) => <Carousel key={track.name} title={track.name}>
+    {track.products.map((p) => p.unlocked
+      ? <PosterLink key={p.id} product={p} href={withPreview(`/${store.slug}/produto/${p.slug}`, preview)} />
+      : complementaryTargets.has(p.id) ? <ComplementPoster key={p.id} product={p} />
+        : <LockedPoster key={`${p.id}-${typeof comprar === 'string' && comprar === p.slug}`} product={p} initiallyOpen={comprar === p.slug} />)}
+  </Carousel>
   const unlockedById = new Map(shelf.unlocked.map((product) => [product.id, product]))
   const productModes = new Map(products.map((product) => [product.id, product.contentMode]))
   const continuing = [...new Set(recentVisits.map((visit) => visit.productId))].flatMap((id) => {
@@ -47,7 +59,6 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
     const itemId = resolveResumeItem(productVisits, accessibleItemIds)
     return [{ product, itemId }]
   })
-  const openSlug = typeof comprar === 'string' ? comprar : null
   const support = supportHref(store, 'geral', customer?.email ?? null)
 
   return (
@@ -62,6 +73,8 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
           </div>
         )}
         <div id={architecture ? undefined : 'materiais'} className={`relative flex scroll-mt-28 flex-col gap-8 ${architecture ? '' : shelf.featured ? '-mt-2 sm:-mt-8' : 'pt-6'}`}>
+          {requestedComplement && <ComplementPurchasePrompt product={requestedComplement} dismissHref={withPreview(`/${store.slug}#materiais`, preview)} />}
+          {hasComplementPair && tracks[0] && renderTrack(tracks[0])}
           {continuing.length > 0 && (
             <Carousel title="Continuar">
               {continuing.map(({ product: p, itemId }) => (
@@ -84,15 +97,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
             </section>
           )}
 
-          {tracks.map((track) => (
-            <Carousel key={track.name} title={track.name}>
-              {track.products.map((p) => (
-                p.unlocked
-                  ? <PosterLink key={p.id} product={p} href={withPreview(`/${store.slug}/produto/${p.slug}`, preview)} />
-                  : <LockedPoster key={`${p.id}-${openSlug === p.slug}`} product={p} initiallyOpen={openSlug === p.slug} />
-              ))}
-            </Carousel>
-          ))}
+          {(hasComplementPair ? tracks.slice(1) : tracks).map(renderTrack)}
         </div>
         <ScrollToMaterials />
       </main>

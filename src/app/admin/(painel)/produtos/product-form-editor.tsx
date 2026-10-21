@@ -16,7 +16,7 @@ import type { ProductFormProps } from './product-form'
 const fields = { title: 'title', description: 'description', checkout_url: 'checkoutUrl', student_checkout_url: 'studentCheckoutUrl', purchase_title: 'purchaseTitle', purchase_description: 'purchaseDescription', purchase_button_text: 'purchaseButtonText', upgrade_checkout_url: 'upgradeCheckoutUrl', upgrade_button_text: 'upgradeButtonText' } as const
 const imageProperties = { cover: 'coverUrl', banner: 'bannerUrl', purchase: 'purchaseImageUrl', upgrade: 'upgradeImageUrl' } as const
 
-export function ProductFormEditor({ product, tracks, storeId, storeSlug = '', supportUrl, upgradeSectionName }: ProductFormProps) {
+export function ProductFormEditor({ product, products = [], tracks, storeId, storeSlug = '', supportUrl, upgradeSectionName }: ProductFormProps) {
   const [dirty, setDirty] = useState(false)
   const [state, action, saving] = useActionState(async (previous: typeof initialProductFormState, form: FormData) => {
     try {
@@ -26,7 +26,7 @@ export function ProductFormEditor({ product, tracks, storeId, storeSlug = '', su
     } catch (error) { unstable_rethrow(error); return productFormError(error) }
   }, initialProductFormState)
   const [draft, setDraft] = useState<Product>(() => product ?? { id: 'novo-produto', storeId, title: '', slug: '', description: '', track: '', coverUrl: null, bannerUrl: null, checkoutUrl: null, role: 'front', isFeatured: false, isPublished: false, sortOrder: 0 })
-  const [values, setValues] = useState<Record<string, string>>({ track: product?.track ?? '', slug: product?.slug ?? '', role: product?.role ?? 'front', content_mode: product?.contentMode ?? 'auto', sort_order: String(product?.sortOrder ?? 0) })
+  const [values, setValues] = useState<Record<string, string>>({ complementary_product_id: product?.complementaryProductId ?? '', track: product?.track ?? '', slug: product?.slug ?? '', role: product?.role ?? 'front', content_mode: product?.contentMode ?? 'auto', sort_order: String(product?.sortOrder ?? 0) })
   const [checks, setChecks] = useState({ is_featured: product?.isFeatured ?? false, is_published: product?.isPublished ?? false })
   const [uploading, setUploading] = useState(false)
   const pendingSlots = useRef(new Set<ProductImageSlot>())
@@ -59,6 +59,14 @@ export function ProductFormEditor({ product, tracks, storeId, storeSlug = '', su
           <label className={ui.label}>Papel<select name="role" value={values.role} onChange={() => {}} className={ui.input}><option value="front">Front</option><option value="orderbump">Orderbump</option><option value="upsell">Upsell</option></select></label>
           <label className={ui.label}>Organização dos conteúdos<select name="content_mode" value={values.content_mode} onChange={() => {}} className={ui.input}><option value="auto">Automático: Front com versões, complementares com seções</option><option value="versions">Básico e Completo</option><option value="sections">Seções personalizadas (packs, orderbumps, upsells)</option></select><span className="text-sm font-normal text-texto-suave">Em versões, cada cliente vê só o nível comprado. O Completo precisa reunir todos os materiais dessa versão. Em seções, o Completo também inclui o Básico.</span></label>
           <label className={ui.label}>Endereço (vazio = gerado do título)<input name="slug" value={values.slug} onChange={() => {}} aria-invalid={Boolean(state.fieldErrors.slug)} aria-describedby="slug-error" className={ui.input} />{fieldError('slug')}</label>
+          <label className={ui.label}>Produto complementar
+            <select name="complementary_product_id" value={values.complementary_product_id} onChange={() => {}} className={ui.input} aria-invalid={Boolean(state.fieldErrors.complementary_product_id)} aria-describedby="complementary_product_id-error">
+              <option value="">Nenhum</option>
+              {products.filter(candidate => candidate.id !== product?.id).map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.title}</option>)}
+            </select>
+            <span className="text-sm font-normal text-texto-suave">Aparece ao lado deste produto e dentro dos conteúdos. A compra é independente.</span>
+            {fieldError('complementary_product_id')}
+          </label>
           <label className={ui.label}>Descrição<textarea name="description" rows={5} value={draft.description} onChange={() => {}} className={ui.input} /></label>
         </div>
       </div>

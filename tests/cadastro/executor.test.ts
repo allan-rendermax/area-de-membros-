@@ -174,6 +174,25 @@ describe('executor do cadastro', () => {
     await expect(executarPlanos(db, [p], { log: () => {} })).rejects.toThrow(/Completo/i)
     expect(db.writes).toBe(0)
   })
+  it('resolve complemento dentro da loja, preserva omissão e aceita remoção explícita', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'target', store_id: 'store-1', slug: 'protocolo' })
+    const linked = await plan({ complemento: 'protocolo' })
+    await executarPlanos(db, [linked], { log: () => {} })
+    expect(db.rows.products.find(row => row.slug === 'kit')?.complementary_product_id).toBe('target')
+    await executarPlanos(db, [await plan()], { log: () => {} })
+    expect(db.rows.products.find(row => row.slug === 'kit')?.complementary_product_id).toBe('target')
+    await executarPlanos(db, [await plan({ complemento: 'nenhum' })], { log: () => {} })
+    expect(db.rows.products.find(row => row.slug === 'kit')?.complementary_product_id).toBeNull()
+  })
+
+  it('recusa complemento ausente ou de outra loja antes da primeira mutação do lote', async () => {
+    const db = new FakeDb()
+    db.rows.products.push({ id: 'other', store_id: 'store-2', slug: 'protocolo' })
+    await expect(executarPlanos(db, [await plan(), await plan({ slug: 'kit-2', id: 'PAYT2', complemento: 'protocolo' })])).rejects.toThrow(/complement/i)
+    expect(db.writes).toBe(0)
+    expect(db.uploads).toHaveLength(0)
+  })
   it('recusa promoção a Completo quando item público extra seria preservado', async () => {
     const db = new FakeDb()
     db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit' })

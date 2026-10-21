@@ -40,7 +40,7 @@ vi.mock('@/lib/data/customers', () => ({ findCustomerByEmail: async (email: stri
   email === 'student@example.com' ? { id: 'student', email, blockedAt: null } : null,
 }))
 vi.mock('@/lib/data/products', () => ({ getProductById: async () => ({ id: '11111111-1111-4111-8111-111111111111', storeId: 'store-1' }) }))
-vi.mock('@/lib/data/products-admin', () => ({ uploadImage: vi.fn(), saveProduct: async (input: { title: string }) => {
+vi.mock('@/lib/data/products-admin', () => ({ uploadImage: vi.fn(), validateProductComplement: async () => {}, saveProduct: async (input: { title: string }) => {
   state.saved.push(input.title)
   return '11111111-1111-4111-8111-111111111111'
 } }))

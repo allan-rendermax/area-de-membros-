@@ -25,7 +25,17 @@ export async function listTracks(storeId: string): Promise<string[]> {
     .sort((a, b) => a.localeCompare(b, 'pt-BR'))
 }
 
+export async function validateProductComplement(input: Pick<ProductInput, 'id' | 'storeId' | 'complementaryProductId'>): Promise<void> {
+  if (input.complementaryProductId) {
+    if (input.complementaryProductId === input.id) throw new Error('Produto não pode ser complemento de si mesmo.')
+    const { data: target, error: targetError } = await createAdminClient().from('products').select('id').eq('id', input.complementaryProductId).eq('store_id', input.storeId).maybeSingle()
+    if (targetError) throw targetError
+    if (!target) throw new Error('Produto complementar inválido para esta loja.')
+  }
+}
+
 export async function saveProduct(input: ProductInput): Promise<string> {
+  await validateProductComplement(input)
   const db = createAdminClient()
   const row = {
     store_id: input.storeId,
@@ -46,6 +56,7 @@ export async function saveProduct(input: ProductInput): Promise<string> {
     purchase_button_text: input.purchaseButtonText ?? null,
     role: input.role,
     student_checkout_url: input.studentCheckoutUrl ?? null,
+    ...(input.complementaryProductId !== undefined ? { complementary_product_id: input.complementaryProductId } : {}),
     is_featured: input.isFeatured,
     sort_order: input.sortOrder,
     is_published: input.isPublished,

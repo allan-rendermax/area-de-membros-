@@ -17,6 +17,8 @@ import { isHttpUrl } from '@/lib/content/url'
 import { toVideoEmbed } from '@/lib/content/video'
 import { requireStorePreview } from '@/lib/membros/preview'
 import { withPreview } from '@/lib/membros/paths'
+import { loadProductComplement } from '@/lib/data/product-complement'
+import { ProductComplementCard, ProductComplementOffer } from '@/components/membros/product-complement'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,6 +52,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
     })
   }
   const support = supportHref(store, 'geral', customer?.email ?? null)
+  const complement = await loadProductComplement(product, store.slug, customer, preview)
 
   return (
     <>
@@ -69,8 +72,10 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
 
             <p className="mt-10 text-texto-suave">{lockedModules.length ? 'Nenhum conteúdo disponível no seu acesso atual.' : 'Nenhum conteúdo publicado ainda.'}</p>
             <LockedModules modules={lockedModules} />
+            {complement && <ProductComplementOffer complement={complement} />}
             <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={productHref} productTitle={product.title} imageUrl={product.upgradeImageUrl || product.coverUrl} buttonText={product.upgradeButtonText} supportUrl={support} />
           </div>
+          {complement && <aside className="min-w-0" aria-label="Conteúdos do produto"><div className="rounded-2xl border border-borda bg-superficie p-5 sm:p-6"><h2 className="text-2xl font-bold">Conteúdos</h2><div className="mt-5"><ProductComplementCard complement={complement} /></div></div></aside>}
         </div>
       </main>
       <CommunityWhatsapp url={store.communityWhatsappUrl} />

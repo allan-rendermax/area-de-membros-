@@ -14,7 +14,7 @@ import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
 import { getProductById } from '@/lib/data/products'
 import { deleteProduct } from '@/lib/data/product-deletion'
-import { createItemUpload, deleteItem, deleteModule, moveItem, moveModule, saveItem, saveModule, saveProduct } from '@/lib/data/products-admin'
+import { createItemUpload, deleteItem, deleteModule, moveItem, moveModule, saveItem, saveModule, saveProduct, validateProductComplement } from '@/lib/data/products-admin'
 
 function field(form: FormData, name: string): string {
   return String(form.get(name) ?? '')
@@ -116,6 +116,7 @@ export async function salvarProduto(formData: FormData): Promise<ProductFormStat
       if (field(formData, `${slot}_image_receipt`) && field(formData, IMAGE_FIELDS[slot])) formData.delete(`remove_${slot}_image`)
     }
     const input = parseProductForm(formData, store.id)
+    await validateProductComplement(input)
     const properties = { cover: 'coverUrl', banner: 'bannerUrl', purchase: 'purchaseImageUrl', upgrade: 'upgradeImageUrl' } as const
     for (const slot of PRODUCT_IMAGE_SLOTS) {
       const value = input[properties[slot]]

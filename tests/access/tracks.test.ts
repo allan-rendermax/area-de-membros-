@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { buildShelf, buildTracks } from '@/lib/access/access'
 import type { Product } from '@/lib/domain/types'
+import { arrangeComplementaryTracks } from '@/lib/access/product-complement'
 
 function product(id: string, track: string, sortOrder: number, extra: Partial<Product> = {}): Product {
   return {
@@ -18,6 +19,23 @@ function rows(products: Product[], granted: string[] = [], trackOrder: readonly 
 }
 
 describe('buildTracks', () => {
+  it.each([{ granted: [] }, { granted: ['atlas'] }, { granted: ['protocolo'] }, { granted: ['atlas', 'protocolo'] }])('promotes a configured pair without duplication for ownership %j', ({ granted }) => {
+    const shelf = buildShelf([product('other', 'Earlier', 0), product('atlas', 'Atlas', 1, { complementaryProductId: 'protocolo' }), product('protocolo', 'Protocolos', 2)], new Set(granted))
+    const tracks = arrangeComplementaryTracks(buildTracks(shelf))
+    expect(tracks[0].products.slice(0, 2).map((p) => p.id)).toEqual(['atlas', 'protocolo'])
+    expect(tracks.flatMap((track) => track.products).filter((p) => p.id === 'protocolo')).toHaveLength(1)
+  })
+  it('leaves order unchanged without a visible valid pair', () => {
+    const shelf = buildShelf([product('atlas', 'A', 1, { complementaryProductId: 'hidden' }), product('hidden', 'B', 2, { isPublished: false })], new Set())
+    const original = buildTracks(shelf)
+    expect(arrangeComplementaryTracks(original)).toBe(original)
+  })
+  it('handles cycles and shared targets deterministically', () => {
+    const shelf = buildShelf([product('a', 'A', 1, { complementaryProductId: 'b' }), product('b', 'B', 2, { complementaryProductId: 'a' }), product('c', 'C', 3, { complementaryProductId: 'b' })], new Set())
+    const tracks = arrangeComplementaryTracks(buildTracks(shelf))
+    expect(tracks.flatMap((track) => track.products.map((p) => p.id)).sort()).toEqual(['a', 'b', 'c'])
+    expect(tracks[0].products.map((p) => p.id)).toEqual(['a', 'b'])
+  })
   it.each([[], ['protocolo'], ['software', 'pratica'], ['atlas', 'software', 'pratica', 'protocolo']].map(granted => ({ granted })))(
     'mantém a ordem editorial das trilhas independentemente das compras ($granted)', ({ granted }) => {
       const order = ['Atlas Visuais', 'Softwares e IA', 'Prática Profissional', 'Protocolos Profissionais']

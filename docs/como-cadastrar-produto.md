@@ -24,6 +24,8 @@ Em `produto.txt`, use uma chave por linha. `nome`, `id` (código Payt), `tag` (`
 
 Use `organizacao: versions` para separar Básico e Completo ou `organizacao: sections` para seções com acesso cumulativo. O valor `auto` e a ausência do campo usam `versions` para um **novo front**, e `sections` para um **novo orderbump/upsell**. Na reimportação, `auto` ou campo ausente preservam o modo já salvo; mudar `tag` sozinho não reorganiza conteúdo existente. Um valor explícito `versions`/`sections` solicita a mudança. Em `versions`, Completo deve conter tudo o que promete: não inclui materiais do Básico automaticamente.
 
+`complemento: protocolo-anti-retrabalho` associa este produto a outro já cadastrado na mesma loja. O complemento aparece para descoberta, mas a compra e o acesso são independentes. Ao reimportar, omitir `complemento` preserva a associação atual; `complemento: nenhum` remove a associação. Informe a chave antes de `descricao`, pois a descrição ocupa todas as linhas seguintes. Aplique a migration de complemento antes de importar fichas com essa chave.
+
 Nomes de pastas e arquivos podem começar com número e espaço para definir a ordem. Esse prefixo sai do título exibido. Arquivos sem prefixo vêm depois dos numerados. Aceita-se um nível de pastas de módulo em `entregaveis`; pastas mais profundas, módulos vazios, links simbólicos e entradas desconhecidas são recusados. Use nomes únicos para módulos e itens, inclusive após remover prefixos e acentos. O destino dos arquivos no bucket público `arquivos` começa com `<slug>/`.
 
 Confira uma pasta antes de cadastrar:
