@@ -83,6 +83,15 @@ describe('checkout plans SQL', () => {
     await expect(db.query("insert into orders(store_id,payt_transaction_id,payt_product_code,customer_email,status,status_rank,source) values ($1,'BADMANUAL','SHARED','a@example.test','pago',1,'manual')",[store])).rejects.toThrow()
     await expect(db.query('select delete_offer_atomic($1,$2,$3)',[basic,store,'Basic'])).rejects.toThrow(/pedidos/i)
   })
+  it('preserves null binding and duplicate semantics for an existing legacy paid order', async () => {
+    const db=await setup()
+    await db.query("select * from apply_order_status($1,'LEGACY-TX','LEGACY','Legacy','a@example.test','A','pago',1::smallint,'order',false,100)",[store])
+    const replay=await apply(db,{tx:'LEGACY-TX',code:'LEGACY'})
+    expect(replay).toMatchObject({out_offer_id:null,out_changed:false,out_status:'pago'})
+    expect((await db.query('select offer_id,status from orders')).rows).toEqual([{offer_id:null,status:'pago'}])
+    const refund=await apply(db,{tx:'LEGACY-TX',code:'LEGACY',status:'reembolsado'})
+    expect(refund).toMatchObject({out_offer_id:null,out_changed:true,out_status:'reembolsado'})
+  })
   it('retains legacy RPC and restricts new RPC execution', async () => {
     const db=await setup()
     await db.query("select * from apply_order_status($1,'LEGACY-TX','LEGACY','Legacy','a@example.test','A','pago',1::smallint,'order',false,100)",[store])

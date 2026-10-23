@@ -7,9 +7,10 @@ import { setup, save, apply, store, product } from '../helpers/checkout-db'
 
 async function fixture() {
   const db=await setup(); await save(db)
+  await db.query("insert into offer_products(offer_id,product_id) select id,$1 from offers where payt_product_code='LEGACY'",[product])
   const offerRows=(await db.query<{id:string;name:string}>('select id,name from offers')).rows
   class Repo extends FakeRepo {
-    storesByCode = { SHARED: {id:store,slug:'arq',name:'ARQ'} }
+    storesByCode = { SHARED: {id:store,slug:'arq',name:'ARQ'}, LEGACY: {id:store,slug:'arq',name:'ARQ'} }
     // Deliberately unsafe code-wide catalog: the processor must never use this for a resolved plan.
     productsByCode = { SHARED: [{id:product,title:'Atlas'},{id:'full-only',title:'Full only'}] }
     async applyOrderStatus(input: ApplyOrderInput) {
@@ -17,6 +18,7 @@ async function fixture() {
       return {orderId:result.out_order_id,changed:result.out_changed,status:result.out_status as OrderStatus,customerEmail:result.out_customer_email,customerName:'A',offerId:result.out_offer_id,identificationWarning:result.out_identification_warning}
     }
     async getProductsForOrder(code:string,offerId:string|null) {
+      if(code==='LEGACY') return [{id:product,title:'Atlas'}]
       if(!offerId) return []
       const offer=offerRows.find(o=>o.id===offerId)
       return offer?.name==='Basic' ? [{id:product,title:'Atlas'}] : [{id:product,title:'Atlas'},{id:'full-only',title:'Full only'}]
@@ -31,7 +33,7 @@ async function fixture() {
     const links=(await db.query<ProductLink>('select o.payt_product_code as "productCode",o.id as "offerId",o.match_type as "matchType",p.product_id as "productId",p.grant_level as "grantLevel" from offers o join offer_products p on p.offer_id=o.id')).rows
     return grantedProductLevels(orders,links,false).get(product)
   }
-  return {run,repo,notifier,level}
+  return {run,repo,notifier,level,db}
 }
 
 describe('checkout processing with real persisted orders and fake delivery',()=>{
@@ -53,6 +55,17 @@ describe('checkout processing with real persisted orders and fake delivery',()=>
     expect(f.repo.events[0].error).toContain('identificador_desconhecido')
     await f.run({link:{url:'https://payt.site/Basic'}})
     expect(f.notifier.sent).toHaveLength(1); expect(await f.level()).toBe('basic')
+  })
+  it('does not resend a prior notice on an existing legacy paid replay',async()=>{
+    const f=await fixture()
+    await f.db.query("select * from apply_order_status($1,'LEGACY-TX','LEGACY','Legacy','a@example.test','A','pago',1::smallint,'order',false,100)",[store])
+    const {customer}=await f.repo.createCustomer('a@example.test','A')
+    f.repo.markNotified(customer.id,store,[product])
+    const replay=await f.run({transaction_id:'LEGACY-TX',product:{code:'LEGACY'}})
+    expect(f.notifier.sent).toHaveLength(0)
+    expect(replay).toMatchObject({outcome:'sem_mudanca',emailsSent:0,lines:[{offerId:null,changed:false,status:'pago'}]})
+    expect(await f.level()).toBe('complete')
+    expect((await f.db.query('select offer_id from orders')).rows).toEqual([{offer_id:null}])
   })
   it('records mismatch and refunds original plan without mailing another plan',async()=>{
     const f=await fixture()

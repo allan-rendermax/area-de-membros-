@@ -143,6 +143,11 @@ begin
       if p_checkout_url is null and p_upsell_code is null and not coalesce(p_identifier_invalid,false) then v_warning := null;
       elsif v_offer is distinct from v_order.offer_id then v_warning := 'identificador_conflitante'; end if;
     end if;
+    -- Existing product-only purchases keep their legacy null binding. Merely
+    -- enriching that identity must not look like new access or resend a notice.
+    if v_order.offer_id is null and exists (
+      select 1 from public.offers where id=v_offer and match_type='product'
+    ) then v_offer := null; end if;
     v_advance := v_order.status_rank < p_status_rank;
     v_resolve := v_order.offer_id is null and v_offer is not null;
     v_changed := v_advance or v_resolve;
