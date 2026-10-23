@@ -28,7 +28,8 @@ export type CustomerRow = {
   blockedAt: string | null
 }
 
-export type OrderRef = { productCode: string; status: OrderStatus }
+export type OfferMatchType = 'product' | 'checkout' | 'upsell'
+export type OrderRef = { productCode: string; offerId?: string | null; status: OrderStatus }
 
 export type ItemKind = 'arquivo' | 'video' | 'link'
 export type ContentMode = 'versions' | 'sections'
@@ -84,7 +85,7 @@ export type Item = {
 
 export type ModuleWithItems = Module & { items: Item[] }
 
-export type ProductLink = { productCode: string; productId: string; grantLevel?: AccessLevel }
+export type ProductLink = { productCode: string; offerId?: string; matchType?: OfferMatchType; productId: string; grantLevel?: AccessLevel }
 
 export type EmailKind = 'acesso_novo' | 'produto_novo' | 'reenvio'
 

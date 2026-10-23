@@ -6,10 +6,10 @@ import { getCustomer } from './customers'
 export async function listAllOrderRefsByEmail(email: string): Promise<OrderRef[]> {
   const { data, error } = await createAdminClient()
     .from('orders')
-    .select('payt_product_code, status')
+    .select('payt_product_code, offer_id, status')
     .eq('customer_email', email)
   if (error) throw error
-  return data.map((o) => ({ productCode: o.payt_product_code, status: o.status as OrderStatus }))
+  return data.map((o) => ({ productCode: o.payt_product_code, offerId: o.offer_id ?? null, status: o.status as OrderStatus }))
 }
 
 export type AdminOrder = {
@@ -18,6 +18,10 @@ export type AdminOrder = {
   createdAt: string
   customerEmail: string
   productCode: string
+  offerId?: string | null
+  checkoutUrl?: string | null
+  upsellCode?: string | null
+  identificationWarning?: string | null
   productName: string
   status: OrderStatus
   isTest: boolean
@@ -29,7 +33,7 @@ export type AdminOrder = {
 
 export type OrderFilter = 'todos' | 'problemas' | 'desconhecidas' | 'teste'
 
-const ORDER_COLUMNS = 'id, store_id, created_at, customer_email, payt_product_code, payt_product_name, status, is_test, amount_cents, source, note, created_by'
+const ORDER_COLUMNS = 'id, store_id, created_at, customer_email, payt_product_code, payt_product_name, status, is_test, amount_cents, source, note, created_by, offer_id, checkout_url, upsell_code, identification_warning'
 
 type DbOrder = {
   id: string
@@ -37,6 +41,10 @@ type DbOrder = {
   created_at: string
   customer_email: string
   payt_product_code: string
+  offer_id: string | null
+  checkout_url: string | null
+  upsell_code: string | null
+  identification_warning: string | null
   payt_product_name: string
   status: string
   is_test: boolean
@@ -53,6 +61,10 @@ function toAdminOrder(o: DbOrder): AdminOrder {
     createdAt: o.created_at,
     customerEmail: o.customer_email,
     productCode: o.payt_product_code,
+    offerId: o.offer_id ?? null,
+    checkoutUrl: o.checkout_url ?? null,
+    upsellCode: o.upsell_code ?? null,
+    identificationWarning: o.identification_warning ?? null,
     productName: o.payt_product_name,
     status: o.status as OrderStatus,
     isTest: o.is_test,
@@ -67,7 +79,7 @@ export async function listOrders(storeId: string, filter: OrderFilter): Promise<
   const db = createAdminClient()
   let query = db.from('orders').select(ORDER_COLUMNS).order('created_at', { ascending: false }).limit(200)
   query = filter === 'desconhecidas' ? query.is('store_id', null) : query.eq('store_id', storeId)
-  if (filter === 'problemas') query = query.in('status', ['reembolsado', 'chargeback'])
+  if (filter === 'problemas') query = query.or('status.in.(reembolsado,chargeback),identification_warning.not.is.null')
   if (filter === 'teste') query = query.eq('is_test', true)
   const { data, error } = await query
   if (error) throw error
@@ -97,20 +109,21 @@ export async function hasPaidOrderInStore(email: string, storeId: string): Promi
   const db = createAdminClient()
   const { data: orders, error } = await db
     .from('orders')
-    .select('payt_product_code')
+    .select('payt_product_code, offer_id')
     .eq('customer_email', email)
     .eq('status', 'pago')
   if (error) throw error
   const codes = [...new Set(orders.map((o) => o.payt_product_code as string))]
   if (codes.length === 0) return false
 
-  const { count, error: offersError } = await db
+  const { data: offers, error: offersError } = await db
     .from('offers')
-    .select('id', { count: 'exact', head: true })
+    .select('id, payt_product_code, match_type')
     .eq('store_id', storeId)
     .in('payt_product_code', codes)
   if (offersError) throw offersError
-  return (count ?? 0) > 0
+  return orders.some((order) => offers.some((offer) => offer.payt_product_code === order.payt_product_code
+    && (order.offer_id ? offer.id === order.offer_id : offer.match_type === 'product')))
 }
 
 export async function createManualOrder(input: {

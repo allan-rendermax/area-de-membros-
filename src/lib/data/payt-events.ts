@@ -47,8 +47,8 @@ export async function listPaytEvents(filter: PaytEventFilter, page: number): Pro
     .select(COLUMNS)
     .order('received_at', { ascending: false })
     .range(from, from + PAYT_EVENTS_PAGE_SIZE)
-  if (filter === 'erros') query = query.in('outcome', ['erro', 'invalido', 'chave_invalida', 'failed', 'invalid', 'unauthorized'])
-  if (filter === 'desconhecidos') query = query.or('outcome.eq.codigo_desconhecido,error.ilike.*desconhecidos*')
+  if (filter === 'erros') query = query.or('outcome.in.(erro,invalido,chave_invalida,failed,invalid,unauthorized),error.ilike.*identificador_*')
+  if (filter === 'desconhecidos') query = query.or('outcome.eq.codigo_desconhecido,error.ilike.*desconhecidos*,error.ilike.*identificador_*')
   const { data, error } = await query
   if (error) throw error
   const rows = (data as DbEvent[]).map(toRow)

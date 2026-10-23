@@ -1,7 +1,8 @@
 import { z } from 'zod'
+import { normalizeCheckoutUrl, normalizeUpsellCode } from './checkout'
 import { normalizeEmail } from '@/lib/domain/email'
 
-export type PaytProductLine = { code: string; name: string; amountCents: number | null }
+export type PaytProductLine = { code: string; name: string; amountCents: number | null; checkoutUrl?: string; upsellCode?: string; identifierInvalid?: boolean }
 
 export type PaytPostback = {
   transactionId: string
@@ -32,6 +33,8 @@ const schema = z.object({
     items: z.unknown().optional(),
   }),
   order_bumps: z.unknown().optional(),
+  link: z.unknown().optional(),
+  upsell_code: z.unknown().optional(),
 })
 
 function firstNonEmptyCode(...values: unknown[]): string | undefined {
@@ -39,6 +42,17 @@ function firstNonEmptyCode(...values: unknown[]): string | undefined {
     if (typeof value !== 'string' && typeof value !== 'number') continue
     const code = String(value).trim()
     if (code) return code
+  }
+}
+
+function identifiers(value: Record<string, unknown>): Pick<PaytProductLine, 'checkoutUrl' | 'upsellCode' | 'identifierInvalid'> {
+  const rawUrl = value.link && typeof value.link === 'object' ? (value.link as Record<string, unknown>).url : undefined
+  const checkoutUrl = normalizeCheckoutUrl(rawUrl)
+  const upsellCode = normalizeUpsellCode(value.upsell_code)
+  return {
+    ...(checkoutUrl ? { checkoutUrl } : {}),
+    ...(upsellCode ? { upsellCode } : {}),
+    ...((rawUrl != null && !checkoutUrl) || (value.upsell_code != null && !upsellCode) ? { identifierInvalid: true } : {}),
   }
 }
 
@@ -51,6 +65,7 @@ function lineFrom(value: unknown): PaytProductLine | null {
     code,
     name: typeof v.name === 'string' ? v.name : '',
     amountCents: typeof v.price === 'number' ? v.price : null,
+    ...identifiers(v),
   }
 }
 
@@ -65,13 +80,20 @@ export function parsePaytPostback(body: unknown): { ok: true; value: PaytPostbac
   if (!mainCode) return { ok: false, error: 'produto sem code/sku' }
 
   const candidates: PaytProductLine[] = [
-    { code: mainCode, name: data.product.name ?? '', amountCents: data.product.price ?? null },
+    { code: mainCode, name: data.product.name ?? '', amountCents: data.product.price ?? null, ...identifiers(data) },
     ...[...asList(data.product.items), ...asList(data.order_bumps)]
       .map(lineFrom)
       .filter((line): line is PaytProductLine => line !== null),
   ]
-  const seen = new Set<string>()
-  const products = candidates.filter((line) => (seen.has(line.code) ? false : (seen.add(line.code), true)))
+  const seen = new Map<string, PaytProductLine>()
+  for (const line of candidates) {
+    const previous = seen.get(line.code)
+    if (previous && (previous.checkoutUrl !== line.checkoutUrl || previous.upsellCode !== line.upsellCode || previous.identifierInvalid !== line.identifierInvalid)) {
+      return { ok: false, error: `identificadores conflitantes para o produto ${line.code}` }
+    }
+    if (!previous) seen.set(line.code, line)
+  }
+  const products = [...seen.values()]
 
   return {
     ok: true,

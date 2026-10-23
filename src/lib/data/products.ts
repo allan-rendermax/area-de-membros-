@@ -1,4 +1,4 @@
-import type { AccessLevel, ContentMode, Item, ItemKind, Module, ModuleWithItems, Product, ProductLink, ProductRole, StoreRef } from '@/lib/domain/types'
+import type { AccessLevel, ContentMode, OfferMatchType, Item, ItemKind, Module, ModuleWithItems, Product, ProductLink, ProductRole, StoreRef } from '@/lib/domain/types'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const PRODUCT_COLUMNS =
@@ -168,12 +168,14 @@ export async function listPublishedItemsInModule(moduleId: string): Promise<Item
 export async function getProductLinks(storeId: string): Promise<ProductLink[]> {
   const { data, error } = await createAdminClient()
     .from('offers')
-    .select('payt_product_code, offer_products(product_id, grant_level)')
+    .select('id, payt_product_code, match_type, offer_products(product_id, grant_level)')
     .eq('store_id', storeId)
   if (error) throw error
   return data.flatMap((offer) =>
     (offer.offer_products as { product_id: string; grant_level?: AccessLevel }[]).map((link) => ({
       productCode: offer.payt_product_code as string,
+      offerId: offer.id as string,
+      matchType: offer.match_type as OfferMatchType,
       productId: link.product_id,
       grantLevel: link.grant_level ?? 'complete',
     })),
@@ -185,6 +187,7 @@ export async function findStoreForProductCode(code: string): Promise<StoreRef | 
     .from('offers')
     .select('stores(id, slug, name, community_whatsapp_url)')
     .eq('payt_product_code', code)
+    .limit(1)
     .maybeSingle()
   if (error) throw error
   const row = data?.stores as unknown as { id: string; slug: string; name: string; community_whatsapp_url?: string | null } | null
@@ -192,11 +195,16 @@ export async function findStoreForProductCode(code: string): Promise<StoreRef | 
 }
 
 export async function getProductsForCode(code: string): Promise<{ id: string; title: string }[]> {
-  const { data, error } = await createAdminClient()
+  return getProductsForOrder(code, null)
+}
+
+export async function getProductsForOrder(code: string, offerId: string | null): Promise<{ id: string; title: string }[]> {
+  let query = createAdminClient()
     .from('offers')
     .select('offer_products(products(id, title, sort_order, is_published))')
     .eq('payt_product_code', code)
-    .maybeSingle()
+  query = offerId ? query.eq('id', offerId) : query.eq('match_type', 'product')
+  const { data, error } = await query.maybeSingle()
   if (error) throw error
   if (!data) return []
 

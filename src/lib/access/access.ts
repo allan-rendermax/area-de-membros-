@@ -11,9 +11,11 @@ export function grantedProductIds(orders: OrderRef[], links: ProductLink[], bloc
 export function grantedProductLevels(orders: OrderRef[], links: ProductLink[], blocked: boolean): Map<string, AccessLevel> {
   const granted = new Map<string, AccessLevel>()
   if (blocked) return granted
-  const paidCodes = new Set(orders.filter((o) => o.status === 'pago').map((o) => o.productCode))
+  const paid = orders.filter((o) => o.status === 'pago')
   for (const link of links) {
-    if (!paidCodes.has(link.productCode)) continue
+    if (!paid.some((order) => order.productCode === link.productCode && (order.offerId
+      ? order.offerId === link.offerId
+      : (link.matchType ?? 'product') === 'product'))) continue
     const level = link.grantLevel ?? 'complete'
     if (level === 'complete' || !granted.has(link.productId)) granted.set(link.productId, level)
   }

@@ -58,7 +58,7 @@ export class FakeRepo implements PostbackRepo {
       const order = { ...input, customerEmail: effectiveEmail, id: `ord-${this.orders.length + 1}` }
       this.orders.push(order)
       if (this.failReadOrder) throw new Error('leitura do pedido indisponível')
-      return { orderId: order.id, changed: true, status: order.status, customerEmail: order.customerEmail, customerName: order.customerName }
+      return { offerId: null as string | null, identificationWarning: null as string | null, orderId: order.id, changed: true, status: order.status, customerEmail: order.customerEmail, customerName: order.customerName }
     }
     if (STATUS_RANK[input.status] > STATUS_RANK[existing.status]) {
       if (existing.status === 'pendente' && input.status === 'pago') {
@@ -67,10 +67,10 @@ export class FakeRepo implements PostbackRepo {
       }
       existing.status = input.status
       if (this.failReadOrder) throw new Error('leitura do pedido indisponível')
-      return { orderId: existing.id, changed: true, status: existing.status as OrderStatus, customerEmail: existing.customerEmail, customerName: existing.customerName }
+      return { offerId: null as string | null, identificationWarning: null as string | null, orderId: existing.id, changed: true, status: existing.status as OrderStatus, customerEmail: existing.customerEmail, customerName: existing.customerName }
     }
     if (this.failReadOrder) throw new Error('leitura do pedido indisponível')
-    return { orderId: existing.id, changed: false, status: existing.status as OrderStatus, customerEmail: existing.customerEmail, customerName: existing.customerName }
+    return { offerId: null as string | null, identificationWarning: null as string | null, orderId: existing.id, changed: false, status: existing.status as OrderStatus, customerEmail: existing.customerEmail, customerName: existing.customerName }
   }
   async findCustomerByEmail(email: string) {
     if (this.hideCustomerFromLookupOnce) {
@@ -89,6 +89,10 @@ export class FakeRepo implements PostbackRepo {
     const customer = { id: `cus-${this.customers.length + 1}`, email, name, blockedAt: null }
     this.customers.push(customer)
     return { customer, created: true }
+  }
+  async getProductsForOrder(code: string, offerId: string | null) {
+    if (offerId) throw new Error('Configure os produtos do plano no fake antes de usá-lo.')
+    return this.getProductsForCode(code)
   }
   async getProductsForCode(code: string) {
     if (this.failGetProductsForCode === code) throw new Error('produtos indisponíveis')

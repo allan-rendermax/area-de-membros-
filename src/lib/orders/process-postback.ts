@@ -14,6 +14,9 @@ export type ApplyOrderInput = {
   paytType: string
   isTest: boolean
   amountCents: number | null
+  checkoutUrl?: string
+  upsellCode?: string
+  identifierInvalid?: boolean
 }
 
 export type EventOutcome =
@@ -40,11 +43,11 @@ export interface PostbackRepo {
   logEvent(payload: unknown): Promise<string>
   finishEvent(id: string, result: EventFinish): Promise<void>
   findStoreForProductCode(code: string): Promise<StoreRef | null>
-  applyOrderStatus(input: ApplyOrderInput): Promise<{ orderId: string; changed: boolean; status: OrderStatus; customerEmail: string; customerName: string }>
+  applyOrderStatus(input: ApplyOrderInput): Promise<{ orderId: string; changed: boolean; status: OrderStatus; customerEmail: string; customerName: string; offerId: string | null; identificationWarning: string | null }>
   findCustomerByEmail(email: string): Promise<CustomerRow | null>
   // created = false quando outro aviso simultâneo criou o cliente primeiro.
   createCustomer(email: string, name: string): Promise<{ customer: CustomerRow; created: boolean }>
-  getProductsForCode(code: string): Promise<{ id: string; title: string }[]>
+  getProductsForOrder(code: string, offerId: string | null): Promise<{ id: string; title: string }[]>
   hasNoticeForProducts(customerId: string, storeId: string, productIds: string[]): Promise<boolean>
   logFailedNotice(entry: {
     storeId: string
@@ -56,7 +59,7 @@ export interface PostbackRepo {
   }): Promise<void>
 }
 
-export type ProcessedLine = { code: string; storeId: string | null; orderId: string; changed: boolean; status: OrderStatus }
+export type ProcessedLine = { offerId: string | null; identificationWarning: string | null; code: string; storeId: string | null; orderId: string; changed: boolean; status: OrderStatus }
 
 export type ProcessResult =
   | { kind: 'unauthorized' }
@@ -73,7 +76,7 @@ export type ProcessResult =
       emailErrors: string[]
     }
 
-type Line = { product: PaytProductLine; store: StoreRef | null; orderId: string; changed: boolean; status: OrderStatus; customerEmail: string; customerName: string }
+type Line = { product: PaytProductLine; store: StoreRef | null; orderId: string; changed: boolean; status: OrderStatus; customerEmail: string; customerName: string; offerId: string | null; identificationWarning: string | null }
 
 function errorMessage(e: unknown): string {
   if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message)
@@ -99,7 +102,7 @@ function storesOf(lines: Line[]): StoreRef[] {
 async function productsFor(repo: PostbackRepo, lines: Line[]): Promise<{ id: string; title: string }[]> {
   const products = new Map<string, { id: string; title: string }>()
   for (const line of lines) {
-    for (const product of await repo.getProductsForCode(line.product.code)) {
+    for (const product of await repo.getProductsForOrder(line.product.code, line.offerId)) {
       if (!products.has(product.id)) products.set(product.id, product)
     }
   }
@@ -154,8 +157,11 @@ export async function processPostback(
         paytType: p.type,
         isTest: p.isTest,
         amountCents: product.amountCents,
+        checkoutUrl: product.checkoutUrl,
+        upsellCode: product.upsellCode,
+        identifierInvalid: product.identifierInvalid,
       })
-      lines.push({ product, store, orderId: order.orderId, changed: order.changed, status: order.status, customerEmail: order.customerEmail, customerName: order.customerName })
+      lines.push({ product, store, ...order })
     }
 
     const unknownCodes = lines.filter((l) => !l.store).map((l) => l.product.code)
@@ -243,6 +249,7 @@ export async function processPostback(
           : 'sem_mudanca'
     const errors = [
       ...(unknownCodes.length ? [`códigos desconhecidos: ${unknownCodes.join(', ')}`] : []),
+      ...lines.filter((line) => line.identificationWarning && line.identificationWarning !== 'codigo_desconhecido').map((line) => `${line.product.code}: ${line.identificationWarning}`),
       ...emailErrors.map((e) => `falha no email: ${e}`),
     ]
 
@@ -257,7 +264,7 @@ export async function processPostback(
       kind: 'processed',
       outcome,
       status: lines[0].status,
-      lines: lines.map((l) => ({ code: l.product.code, storeId: l.store?.id ?? null, orderId: l.orderId, changed: l.changed, status: l.status })),
+      lines: lines.map((l) => ({ offerId: l.offerId, identificationWarning: l.identificationWarning, code: l.product.code, storeId: l.store?.id ?? null, orderId: l.orderId, changed: l.changed, status: l.status })),
       unknownCodes,
       customerCreated,
       emailsSent,

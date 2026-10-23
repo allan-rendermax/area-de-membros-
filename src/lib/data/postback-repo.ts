@@ -2,7 +2,7 @@ import { STATUS_RANK, type OrderStatus } from '@/lib/domain/types'
 import type { PostbackRepo } from '@/lib/orders/process-postback'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createCustomer, findCustomerByEmail } from './customers'
-import { findStoreForProductCode, getProductsForCode } from './products'
+import { findStoreForProductCode, getProductsForOrder } from './products'
 
 export function createPostbackRepo(): PostbackRepo {
   const db = createAdminClient()
@@ -34,7 +34,7 @@ export function createPostbackRepo(): PostbackRepo {
 
     async applyOrderStatus(input) {
       const { data, error } = await db
-        .rpc('apply_order_status', {
+        .rpc('apply_payt_order_status', {
           p_store_id: input.storeId,
           p_transaction_id: input.transactionId,
           p_product_code: input.productCode,
@@ -46,13 +46,16 @@ export function createPostbackRepo(): PostbackRepo {
           p_payt_type: input.paytType,
           p_is_test: input.isTest,
           p_amount_cents: input.amountCents,
+          p_checkout_url: input.checkoutUrl ?? null,
+          p_upsell_code: input.upsellCode ?? null,
+          p_identifier_invalid: input.identifierInvalid ?? false,
         })
         .single()
       if (error) throw error
-      const row = data as { out_order_id: string; out_changed: boolean; out_status: OrderStatus }
+      const row = data as { out_order_id: string; out_changed: boolean; out_status: OrderStatus; out_identification_warning: string | null }
       const { data: persisted, error: readError } = await db
         .from('orders')
-        .select('id, customer_email, customer_name, status')
+        .select('id, customer_email, customer_name, status, offer_id')
         .eq('id', row.out_order_id)
         .single()
       if (readError) throw readError
@@ -63,12 +66,14 @@ export function createPostbackRepo(): PostbackRepo {
         status: persisted.status as OrderStatus,
         customerEmail: persisted.customer_email,
         customerName: persisted.customer_name,
+        offerId: persisted.offer_id ?? null,
+        identificationWarning: row.out_identification_warning ?? null,
       }
     },
 
     findCustomerByEmail,
     createCustomer,
-    getProductsForCode,
+    getProductsForOrder,
 
     async hasNoticeForProducts(customerId, storeId, productIds) {
       if (productIds.length === 0) return false

@@ -6,7 +6,7 @@ const { from, select, eq, contains, limit, insert, rpc, single } = vi.hoisted(()
 }))
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => ({ from, rpc }) }))
 vi.mock('@/lib/data/customers', () => ({ createCustomer: vi.fn(), findCustomerByEmail: vi.fn() }))
-vi.mock('@/lib/data/products', () => ({ findStoreForProductCode: vi.fn(), getProductsForCode: vi.fn() }))
+vi.mock('@/lib/data/products', () => ({ findStoreForProductCode: vi.fn(), getProductsForOrder: vi.fn() }))
 
 beforeEach(() => {
   vi.resetAllMocks()
@@ -36,11 +36,26 @@ describe('resultado efetivo do pedido', () => {
 
     await expect(createPostbackRepo().applyOrderStatus(input)).resolves.toEqual({
       orderId: 'ord-1', changed: false, status: 'reembolsado',
-      customerEmail: 'corrigido@example.test', customerName: 'Titular Corrigido',
+      customerEmail: 'corrigido@example.test', customerName: 'Titular Corrigido', offerId: null, identificationWarning: null,
     })
     expect(from).toHaveBeenCalledWith('orders')
-    expect(select).toHaveBeenCalledWith('id, customer_email, customer_name, status')
+    expect(select).toHaveBeenCalledWith('id, customer_email, customer_name, status, offer_id')
     expect(eq).toHaveBeenCalledWith('id', 'ord-1')
+  })
+
+  it('passes own identifiers to atomic resolution and returns the persisted plan plus warning', async () => {
+    rpc.mockReturnValue({ single: vi.fn().mockResolvedValue({ data: {
+      out_order_id: 'ord-1', out_changed: false, out_status: 'pago', out_identification_warning: 'identificador_conflitante',
+    }, error: null }) })
+    eq.mockReturnValue({ single })
+    single.mockResolvedValue({ data: {
+      id: 'ord-1', customer_email: 'owner@example.test', customer_name: 'Owner', status: 'pago', offer_id: 'basic',
+    }, error: null })
+    const result = await createPostbackRepo().applyOrderStatus({ ...input, checkoutUrl: 'https://payt.site/Full', upsellCode: 'UP' })
+    expect(rpc).toHaveBeenCalledWith('apply_payt_order_status', expect.objectContaining({
+      p_checkout_url: 'https://payt.site/Full', p_upsell_code: 'UP', p_identifier_invalid: false,
+    }))
+    expect(result).toMatchObject({ offerId: 'basic', identificationWarning: 'identificador_conflitante', customerEmail: 'owner@example.test' })
   })
 
   it('propaga falha do SELECT e não devolve identidade do payload', async () => {
