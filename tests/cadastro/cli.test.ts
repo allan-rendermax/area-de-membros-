@@ -20,6 +20,16 @@ function run(...args: string[]) {
   return spawnSync(process.execPath, [script, ...args], { cwd: resolve('.'), encoding: 'utf8', env: { ...process.env, SUPABASE_URL: '', SUPABASE_SECRET_KEY: '', NEXT_PUBLIC_SUPABASE_URL: '' } })
 }
 describe('CLI de cadastro', () => {
+  it('simula checkout compartilhado exibindo referências e aliases sem botão de diferença', async () => {
+    const dir = await root()
+    const folder = await product(dir, 'kit', 'nome: Kit\nproduto_payt: SHARED\ncodigo_checkout_basico: REF-B\nlinks_checkout_basico: https://payt.site/Basic?utm=x\ncodigo_checkout_completo: REF-C\nlinks_checkout_completo: https://payt.site/Full\ntag: front\nloja: loja\n')
+    const result = run(folder, '--simular')
+    expect(result.status).toBe(0)
+    expect(result.stdout).toContain('Referência checkout: REF-B')
+    expect(result.stdout).toContain('Aliases (checkout): https://payt.site/Basic')
+    expect(result.stdout).toContain('Aliases (checkout): https://payt.site/Full')
+    expect(result.stdout).not.toContain('Checkout upgrade:')
+  })
   it('simula a pasta exemplo com três ofertas e módulos por nível sem credenciais', () => {
     const result = run('docs/exemplo-pasta-produto-niveis', '--simular')
     expect(result.status).toBe(0)

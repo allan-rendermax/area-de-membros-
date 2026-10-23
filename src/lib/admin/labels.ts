@@ -16,6 +16,23 @@ const OUTCOME_LABEL: Record<string, string> = {
   failed: 'Erro',
 }
 
+const IDENTIFICATION_WARNING: Record<string, string> = {
+  codigo_desconhecido: 'Código Payt sem oferta',
+  identificador_ausente: 'Checkout ou upsell ausente; plano não identificado',
+  identificador_desconhecido: 'Checkout ou upsell não cadastrado',
+  identificador_invalido: 'Identificador de checkout ou upsell inválido',
+  identificador_ambiguo: 'Identificador corresponde a mais de um plano',
+  identificador_conflitante: 'Identificador conflita com o plano salvo; vínculo preservado',
+}
+
+export function identificationWarningLabel(value: string): string {
+  return IDENTIFICATION_WARNING[value] ?? value
+}
+
+export function eventErrorLabel(value: string | null): string {
+  return (value ?? '').replace(/\b(?:codigo_desconhecido|identificador_(?:ausente|desconhecido|invalido|ambiguo|conflitante))\b/g, identificationWarningLabel)
+}
+
 const OUTCOME_STYLE: Record<string, string> = {
   liberado: 'bg-sucesso/15 text-sucesso',
   atualizado: 'bg-alerta/15 text-alerta',

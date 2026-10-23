@@ -30,6 +30,7 @@ export default async function OfertasPage({ searchParams }: PageProps<'/admin/of
               <ul className="mt-3 flex flex-col gap-2">
                 {o.plans.map(plan => <li key={plan.id} className="text-sm">
                   <span>{plan.name}</span> <span className="break-all text-texto-suave">({plan.paytProductCode})</span>
+                  <span className="block text-texto-suave">Identificação: {plan.matchType === 'checkout' ? 'link do checkout' : plan.matchType === 'upsell' ? 'código de upsell' : 'ID do produto'}{plan.checkoutCode ? ` · referência ${plan.checkoutCode}` : ''}</span>
                   <span className="block text-texto-suave">{plan.grants.map(g => `${titles.get(g.productId) ?? 'Produto'} — ${g.level === 'basic' ? 'Básico' : 'Completo'}`).join(' · ') || 'Nenhum produto'}</span>
                 </li>)}
               </ul>

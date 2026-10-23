@@ -1,16 +1,18 @@
 import type { OfferGroupInput, OfferPlanInput } from '@/lib/admin/offer-groups'
 import type { AccessLevel } from '@/lib/domain/types'
+import type { OfferMatchType } from '@/lib/domain/types'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export type AdminOfferGroup = { id: string; name: string; version: number; plans: OfferPlanInput[] }
 type DbGroup = {
   id: string; name: string; version: number
-  offers: { id: string; name: string; payt_product_code: string; offer_products: { product_id: string; grant_level: AccessLevel }[] }[]
+  offers: { id: string; name: string; payt_product_code: string; match_type?: OfferMatchType; checkout_code?: string | null; match_values?: string[]; offer_products: { product_id: string; grant_level: AccessLevel }[] }[]
 }
-const columns = 'id, name, version, offers(id, name, payt_product_code, offer_products(product_id, grant_level))'
+const columns = 'id, name, version, offers(id, name, payt_product_code, match_type, checkout_code, match_values, offer_products(product_id, grant_level))'
 function fromRow(row: DbGroup): AdminOfferGroup {
   return { id: row.id, name: row.name, version: row.version, plans: row.offers.map(p => ({
     id: p.id, name: p.name, paytProductCode: p.payt_product_code,
+    matchType: p.match_type ?? 'product', checkoutCode: p.checkout_code ?? null, matchValues: p.match_values ?? [],
     grants: p.offer_products.map(g => ({ productId: g.product_id, level: g.grant_level })),
   })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')) }
 }
@@ -43,6 +45,7 @@ export async function saveOfferGroup(input: OfferGroupInput): Promise<string> {
   const { data, error } = await createAdminClient().rpc('save_offer_group_atomic', {
     p_id: input.id, p_store_id: input.storeId, p_name: input.name, p_version: input.version,
     p_plans: input.plans.map(p => ({ id: p.id, name: p.name, payt_product_code: p.paytProductCode,
+      match_type: p.matchType ?? 'product', checkout_code: p.checkoutCode ?? null, match_values: p.matchValues ?? [],
       grants: p.grants.map(g => ({ product_id: g.productId, grant_level: g.level })),
     })),
   })

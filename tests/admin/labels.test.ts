@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { outcomeLabel, outcomeStyle } from '@/lib/admin/labels'
+import { outcomeLabel, outcomeStyle, identificationWarningLabel, eventErrorLabel } from '@/lib/admin/labels'
 
 describe('labels', () => {
+  it('explica avisos de identificação mantendo o restante do erro para auditoria', () => {
+    expect(identificationWarningLabel('identificador_ausente')).toContain('ausente')
+    expect(identificationWarningLabel('identificador_conflitante')).toContain('conflita')
+    expect(eventErrorLabel('SHARED: identificador_desconhecido')).toBe('SHARED: Checkout ou upsell não cadastrado')
+    expect(eventErrorLabel('Outro erro')).toBe('Outro erro')
+  })
   it('traduz resultados novos e antigos', () => {
     expect(outcomeLabel('liberado')).toBe('Liberado')
     expect(outcomeLabel('codigo_desconhecido')).toBe('Código desconhecido')

@@ -1,9 +1,10 @@
 import { readFile } from 'node:fs/promises'
 import { assessProductReadiness } from '../../src/lib/access/product-readiness-core.mjs'
+import { normalizarOferta, validarOfertas } from './cadastro-identidade.mjs'
 
 const BUCKET = 'arquivos'
 const PRIVATE_BUCKET = 'arquivos-restritos'
-const effectiveOffers = plano => plano.ofertas ?? [{ codigo: plano.ficha.id, nivel: 'complete', nome: plano.ficha.nome }]
+const effectiveOffers = plano => (plano.ofertas ?? [{ codigo: plano.ficha.id, nivel: 'complete', nome: plano.ficha.nome }]).map(normalizarOferta)
 
 function resolveMode(ficha, product) {
   return !ficha.organizacao || ficha.organizacao === 'auto'
@@ -120,6 +121,9 @@ export function validarLote(planos) {
     if (!ficha?.loja || !ficha.slug || !Array.isArray(plano.arquivos) || !Array.isArray(plano.modulos)) throw new Error('Plano de produto inválido.')
     if (ficha.organizacao !== undefined && !['auto', 'versions', 'sections'].includes(ficha.organizacao)) throw new Error('Organização do produto inválida.')
     const offers = effectiveOffers(plano)
+    validarOfertas(offers)
+    const references = offers.filter(offer => offer.checkoutCode).map(offer => JSON.stringify([offer.codigo, offer.matchType, offer.checkoutCode]))
+    if (new Set(references).size !== references.length) throw new Error('Referência de checkout repetida na ficha; use uma por plano.')
     if (!Array.isArray(offers) || !offers.length || offers.some(offer => !offer?.codigo || !['basic', 'complete'].includes(offer.nivel) || !offer.nome)) throw new Error('Ofertas do plano inválidas.')
     if (plano.modulos.some(modulo => modulo.requiredLevel && !['basic', 'complete'].includes(modulo.requiredLevel))) throw new Error('Nível de módulo inválido.')
     for (const file of plano.arquivos) {
@@ -129,9 +133,9 @@ export function validarLote(planos) {
     }
     const key = `${ficha.loja}/${ficha.slug}`
     if (keys.has(key)) throw new Error(`Produto repetido no lote: ${key}.`)
-    for (const offer of offers) {
-      if (codes.has(offer.codigo)) throw new Error(`Código Payt repetido no lote: ${offer.codigo}.`)
-      codes.add(offer.codigo)
+    for (const code of new Set(offers.map(offer => offer.codigo))) {
+      if (codes.has(code)) throw new Error(`Código Payt repetido no lote: ${code}.`)
+      codes.add(code)
     }
     if (slugs.has(ficha.slug) && slugs.get(ficha.slug) !== ficha.loja) throw new Error(`Slug ${ficha.slug} usado por lojas diferentes no lote; storage compartilhado.`)
     keys.add(key); slugs.set(ficha.slug, ficha.loja)
@@ -148,7 +152,7 @@ async function preflight(db, planos, { allowIncomplete = false } = {}) {
     const [stores, sameSlug, ...offerRows] = await Promise.all([
       rows(db, 'stores', 'id,slug', { slug: ficha.loja }),
       rows(db, 'products', 'id,store_id,slug,role,upgrade_checkout_url,content_mode,is_published', { slug: ficha.slug }),
-      ...effectiveOffers(plano).map(offer => rows(db, 'offers', 'id,store_id,payt_product_code', { payt_product_code: offer.codigo })),
+      ...effectiveOffers(plano).map(offer => rows(db, 'offers', 'id,store_id,group_id,payt_product_code,match_type,checkout_code,match_values', { payt_product_code: offer.codigo })),
     ])
     const store = stores.find(row => row.slug === ficha.loja)
     if (!store) throw new Error(`Loja não encontrada: ${ficha.loja}.`)
@@ -165,7 +169,25 @@ async function preflight(db, planos, { allowIncomplete = false } = {}) {
         complementaryProductId = target.id
       }
     }
-    const offers = effectiveOffers(plano).map((spec, index) => ({ spec, existing: offerRows[index].find(row => row.payt_product_code === spec.codigo) ?? null }))
+    const offers = effectiveOffers(plano).map((spec, index) => {
+      const candidates = offerRows[index]
+      if (candidates.some(row => row.store_id !== store.id)) throw new Error(`Código Payt ${spec.codigo} já pertence a outra loja.`)
+      const normalized = candidates.map(row => ({ row, spec: normalizarOferta({ codigo: row.payt_product_code, matchType: row.match_type, checkoutCode: row.checkout_code, matchValues: row.match_values }) }))
+      const exact = normalized.filter(candidate => candidate.spec.matchType === spec.matchType && candidate.spec.checkoutCode === spec.checkoutCode)
+      if (exact.length > 1) throw new Error(`Identidade ambígua para ${spec.codigo}; revise as referências no admin.`)
+      const existing = exact[0]?.row ?? null
+      if (existing && (existing.match_values ?? []).some(value => !spec.matchValues.includes(value))) throw new Error(`Aliases existentes de ${spec.codigo} devem ser preservados.`)
+      // Exclude only the selected identity: all sibling rules must remain disjoint.
+      validarOfertas([...normalized.filter(candidate => candidate.row.id !== existing?.id).map(candidate => candidate.spec), spec])
+      return { spec, existing }
+    })
+    // Every existing plan for these codes must belong to this product, even when
+    // the incoming alias describes a new sibling plan.
+    const allExisting = [...new Map(offerRows.flat().map(row => [row.id, row])).values()]
+    const allLinks = (await Promise.all(allExisting.map(offer => rows(db, 'offer_products', 'offer_id,product_id,grant_level', { offer_id: offer.id })))).flat()
+    if (allLinks.some(link => link.product_id !== product?.id)) throw new Error('Oferta Payt já libera outro produto; vínculo preservado.')
+    const sharedGroups = new Set(allExisting.filter(row => row.match_type && row.match_type !== 'product').map(row => row.group_id))
+    if (sharedGroups.size > 1) throw new Error('Identidade compartilhada em grupos diferentes; revise no admin.')
     const links = (await Promise.all(offers.map(({ existing }) => rows(db, 'offer_products', 'offer_id,product_id,grant_level', { offer_id: existing?.id ?? '00000000-0000-0000-0000-000000000000' })))).flat()
     if (product) {
       const otherLinks = await rows(db, 'offer_products', 'offer_id,product_id,grant_level', { product_id: product.id })
@@ -196,7 +218,7 @@ async function preflight(db, planos, { allowIncomplete = false } = {}) {
     }
     const readiness = readinessPreflight(plano, product, offers, links, modules, items)
     if (readiness.error && !allowIncomplete) throw new Error(readiness.error)
-    prepared.push({ plano, store, product, complementaryProductId, offers, modules, items, links, ...readiness, bytes: new Map() })
+    prepared.push({ plano, store, product, complementaryProductId, offers, modules, items, links, groupId: allExisting.find(row => row.group_id)?.group_id ?? null, ...readiness, bytes: new Map() })
   }
   // Ler todo o lote antes da primeira mutação: uma falha na segunda pasta não envia a primeira.
   for (const entry of prepared) {
@@ -283,11 +305,16 @@ export async function executarPlanos(db, planos, { log = console.log } = {}) {
       : (await write(db.from('products').insert(data), `produto ${ficha.nome}`, true)).id
     log(`Produto ${product ? 'atualizado' : 'criado'}: ${ficha.nome}`)
     await content(db, productId, plano, urls, entry.modules, entry.items, log)
+    let groupId = entry.groupId
+    if (!groupId && (offers.length > 1 || offers.some(({ spec }) => spec.matchType !== 'product'))) {
+      groupId = (await write(db.from('offer_groups').insert({ store_id: store.id, name: ficha.nome }), `grupo ${ficha.nome}`, true)).id
+    }
     const offerIds = []
     for (const { spec, existing } of offers) {
+      const identity = { match_type: spec.matchType, checkout_code: spec.checkoutCode, match_values: spec.matchValues }
       const offerId = existing
-        ? (await write(db.from('offers').update({ name: spec.nome }).eq('id', existing.id), `oferta ${spec.codigo}`), existing.id)
-        : (await write(db.from('offers').insert({ store_id: store.id, name: spec.nome, payt_product_code: spec.codigo }), `oferta ${spec.codigo}`, true)).id
+        ? (await write(db.from('offers').update({ name: spec.nome, ...identity }).eq('id', existing.id), `oferta ${spec.codigo}`), existing.id)
+        : (await write(db.from('offers').insert({ store_id: store.id, name: spec.nome, payt_product_code: spec.codigo, ...identity, ...(groupId ? { group_id: groupId } : {}) }), `oferta ${spec.codigo}`, true)).id
       const link = entry.links.find(row => row.offer_id === offerId && row.product_id === productId)
       if (link) await write(db.from('offer_products').update({ grant_level: spec.nivel }).eq('offer_id', offerId).eq('product_id', productId), `vínculo da oferta ${spec.codigo}`)
       else await write(db.from('offer_products').insert({ offer_id: offerId, product_id: productId, grant_level: spec.nivel }), `vínculo da oferta ${spec.codigo}`)

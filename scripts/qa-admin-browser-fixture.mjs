@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { createServer } from 'node:http'
+import { createCheckoutPlansFixture } from './lib/qa-checkout-plans-fixture.mjs'
 
 const port = Number(process.env.QA_PROVIDER_PORT || 3311)
 const key = 'local-browser-qa-only-secret'
@@ -10,6 +11,7 @@ const store = {
   id: '00000000-0000-4000-8000-000000000003', slug: 'teste', name: 'Loja de teste',
   logo_url: null, support_url: null, support_whatsapp: null, login_image_url: null,
 }
+const checkoutFixture = process.argv.includes('--checkout-plans') ? createCheckoutPlansFixture(store) : null
 
 if (process.argv.includes('--expired-token')) {
   const issuedAt = Date.now() - 604800001
@@ -73,6 +75,8 @@ createServer(async (request, response) => {
     return validToken(bearer) ? send(response, 200, user()) : send(response, 401, { code: 'bad_jwt', msg: 'Invalid JWT' })
   }
   if (path === '/auth/v1/logout') return send(response, 204, {})
+
+  if (checkoutFixture?.(request, response, url, input, send)) return
 
   if (path === '/rest/v1/stores') {
     const rows = url.searchParams.has('slug') ? (url.searchParams.get('slug') === 'eq.teste' ? [store] : []) : [store]

@@ -9,8 +9,8 @@ import { salvarGrupoOferta } from './group-actions'
 import { ProductSelect } from './product-select'
 
 type DraftGrant = OfferPlanInput['grants'][number] & { key: string }
-type DraftPlan = Omit<OfferPlanInput, 'grants'> & { key: string; grants: DraftGrant[] }
-const newPlan = (key: string, name: string, code = ''): DraftPlan => ({ key, id: null, name, paytProductCode: code, grants: [] })
+type DraftPlan = Omit<OfferPlanInput, 'grants'> & { key: string; grants: DraftGrant[]; matchType: 'product' | 'checkout' | 'upsell'; checkoutCode: string | null; matchValues: string[] }
+const newPlan = (key: string, name: string, code = ''): DraftPlan => ({ key, id: null, name, paytProductCode: code, matchType: 'product', checkoutCode: null, matchValues: [], grants: [] })
 
 export function OfferGroupForm({ offer, products, initialCode, storeId }: {
   offer: AdminOfferGroup | null; products: Product[]; initialCode: string; storeId: string
@@ -18,7 +18,7 @@ export function OfferGroupForm({ offer, products, initialCode, storeId }: {
   const [state, action, pending] = useActionState(salvarGrupoOferta, { error: null })
   const [name, setName] = useState(offer?.name ?? '')
   const [plans, setPlans] = useState<DraftPlan[]>(() => offer
-    ? offer.plans.map(p => ({ ...p, key: p.id!, grants: p.grants.map(g => ({ ...g, key: g.productId })) }))
+    ? offer.plans.map(p => ({ ...p, matchType: p.matchType ?? 'product', checkoutCode: p.checkoutCode ?? null, matchValues: p.matchValues ?? [], key: p.id!, grants: p.grants.map(g => ({ ...g, key: g.productId })) }))
     : initialCode ? [newPlan('initial', 'Completo', initialCode)]
       : [newPlan('basic', 'Básico'), newPlan('complete', 'Completo')])
   const [removing, setRemoving] = useState<string | null>(null)
@@ -37,7 +37,7 @@ export function OfferGroupForm({ offer, products, initialCode, storeId }: {
     <input type="hidden" name="id" value={offer?.id ?? ''} />
     <input type="hidden" name="store_id" value={storeId} />
     <input type="hidden" name="version" value={offer?.version ?? 0} />
-    <input type="hidden" name="plans" value={JSON.stringify(plans.map(p => ({ id: p.id, name: p.name, paytProductCode: p.paytProductCode, grants: p.grants.map(({ productId, level }) => ({ productId, level })) })))} />
+    <input type="hidden" name="plans" value={JSON.stringify(plans.map(p => ({ id: p.id, name: p.name, paytProductCode: p.paytProductCode, matchType: p.matchType, checkoutCode: p.checkoutCode, matchValues: p.matchValues.map(value => value.trim()).filter(Boolean), grants: p.grants.map(({ productId, level }) => ({ productId, level })) })))} />
     <fieldset disabled={pending} className="flex min-w-0 flex-col gap-5 disabled:opacity-70">
       <div className={`${ui.card} p-5`}>
         <label className={ui.label}>Nome da oferta
@@ -48,7 +48,7 @@ export function OfferGroupForm({ offer, products, initialCode, storeId }: {
 
       <div>
         <h2 className="font-semibold">Planos da oferta</h2>
-        <p className="mt-1 text-sm text-texto-suave">Cada plano tem seu próprio ID Payt e define quais produtos libera.</p>
+        <p className="mt-1 text-sm text-texto-suave">Cada plano define seus produtos e níveis. Para compartilhar um ID Payt, identifique todos os planos desse ID por checkout ou upsell.</p>
       </div>
 
       {plans.map((plan, index) => <section key={plan.key} data-plan className={`${ui.card} min-w-0 p-4 sm:p-5`} aria-label={`Plano ${index + 1}`}>
@@ -76,6 +76,24 @@ export function OfferGroupForm({ offer, products, initialCode, storeId }: {
             {plan.id && <span className="text-xs font-normal">Para usar outro ID, adicione um plano.</span>}
           </label>
         </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className={ui.label}>Identificar compra por
+            <select name={`plan_match_type_${index}`} value={plan.matchType} disabled={Boolean(plan.id)} onChange={e => update(plan.key, { matchType: e.target.value as DraftPlan['matchType'], matchValues: [] })} className={`${ui.input} w-full`}>
+              <option value="product">ID do produto Payt</option>
+              <option value="checkout">Link do checkout</option>
+              <option value="upsell">Código de upsell</option>
+            </select>
+          </label>
+          {plan.matchType !== 'product' && <label className={ui.label}>Código do checkout (referência opcional)
+            <input name={`plan_checkout_code_${index}`} value={plan.checkoutCode ?? ''} readOnly={Boolean(plan.id)} onChange={e => update(plan.key, { checkoutCode: e.target.value })} spellCheck={false} className={`${ui.input} min-w-0 w-full read-only:opacity-70`} />
+          </label>}
+        </div>
+        {plan.matchType !== 'product' && <label className={`${ui.label} mt-4 block`}>
+          {plan.matchType === 'checkout' ? 'Links que identificam este plano (um por linha)' : 'Códigos de upsell deste plano (um por linha)'}
+          <textarea name={`plan_aliases_${index}`} required rows={3} value={plan.matchValues.join('\n')} onChange={e => update(plan.key, { matchValues: e.target.value.split('\n') })} spellCheck={false} className={`${ui.input} min-w-0 w-full`} />
+          <span className="mt-1 block text-xs font-normal text-texto-suave">{plan.matchType === 'checkout' ? 'Cadastre os links curtos payt.site e finais checkout.payt.com.br confirmados nos avisos da Payt. O código de referência sozinho não libera acesso.' : 'Use os identificadores upsell_code confirmados nos avisos da Payt.'} {plan.id ? 'Preserve os aliases salvos; você pode acrescentar outros.' : 'Cada identificador deve pertencer a um único plano deste ID Payt.'}</span>
+        </label>}
+        {plan.id && <p className="mt-2 text-xs text-texto-suave">O modo, o ID Payt e a referência são fixos após salvar. Para outra identificação, adicione um plano.</p>}
         <h4 className="mb-2 mt-5 text-sm font-medium">O que este plano libera</h4>
         <div className="flex flex-col gap-2">
           {plan.grants.map((grant, rowIndex) => <div key={grant.key} data-grant className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-3 rounded-md border border-borda p-3 sm:grid-cols-[minmax(0,1fr)_10rem_auto]">

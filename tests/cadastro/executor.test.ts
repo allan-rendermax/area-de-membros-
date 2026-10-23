@@ -11,7 +11,7 @@ import { privateFilePath } from '../../src/lib/content/private-files'
 type Row = Record<string, any>
 class FakeDb {
   supabaseUrl = 'https://supabase.example'
-  rows: Record<string, Row[]> = { stores: [{ id: 'store-1', slug: 'loja' }, { id: 'store-2', slug: 'outra' }], products: [], offers: [], offer_products: [], modules: [], items: [] }
+  rows: Record<string, Row[]> = { stores: [{ id: 'store-1', slug: 'loja' }, { id: 'store-2', slug: 'outra' }], products: [], offers: [], offer_groups: [], offer_products: [], modules: [], items: [] }
   uploads: { bucket: string; path: string; options: Row; bytes: number }[] = []
   writes = 0
   failTable = ''
@@ -67,12 +67,46 @@ async function plan(overrides: Row = {}) {
   return {
     ficha: { nome: 'Kit', id: 'PAYT1', tag: 'front', organizacao: 'sections', loja: 'loja', slug: 'kit', trilha: 'Técnica', checkout: null, destaque: true, ordem: 2, descricao: 'Descrição', ...overrides },
     arquivos: [file], imagens: { capa: null, banner: null },
-    ofertas: undefined as undefined | { codigo: string; nivel: string; nome: string }[],
+    ofertas: undefined as undefined | { codigo: string; nivel: string; nome: string; matchType?: string; checkoutCode?: string; matchValues?: string[] }[],
     modulos: [{ title: 'Material', sortOrder: 1, requiredLevel: 'basic', itens: [{ title: 'Guia', kind: 'arquivo', sortOrder: 1, url: null, arquivo: file }] }],
   }
 }
 
 describe('executor do cadastro', () => {
+  it('agrupa planos compartilhados, reexecuta por identidade e acrescenta aliases sem duplicar', async () => {
+    const db = new FakeDb()
+    const p = await plan()
+    p.ofertas = [
+      { codigo: 'SHARED', nivel: 'basic', nome: 'Básico', matchType: 'checkout', checkoutCode: 'B', matchValues: ['https://payt.site/Basic'] },
+      { codigo: 'SHARED', nivel: 'complete', nome: 'Completo', matchType: 'checkout', checkoutCode: 'C', matchValues: ['https://payt.site/Full'] },
+    ] as typeof p.ofertas
+    const first = await executarPlanos(db, [p], { log: () => {} })
+    expect(db.rows.offer_groups).toHaveLength(1)
+    expect(db.rows.offers).toHaveLength(2)
+    expect(new Set(db.rows.offers.map(offer => offer.group_id)).size).toBe(1)
+    expect(db.rows.offers.map(offer => [offer.checkout_code, offer.match_type, offer.match_values])).toEqual([
+      ['B', 'checkout', ['https://payt.site/Basic']], ['C', 'checkout', ['https://payt.site/Full']],
+    ])
+    db.rows.offers.reverse() // The first row for a product code is not the plan identity.
+    const second = await executarPlanos(db, [p], { log: () => {} })
+    expect(second[0].offerIds).toEqual(first[0].offerIds)
+    expect(db.rows.offers).toHaveLength(2)
+    expect(db.rows.offer_products).toHaveLength(2)
+    const basic = p.ofertas![0] as Row
+    basic.matchValues.push('https://checkout.payt.com.br/basic')
+    await executarPlanos(db, [p], { log: () => {} })
+    expect(db.rows.offers.find(offer => offer.checkout_code === 'B')!.match_values).toHaveLength(2)
+  })
+  it('recusa reatribuição de alias e referência alterada antes de qualquer escrita', async () => {
+    const db = new FakeDb()
+    const p = await plan()
+    p.ofertas = [{ codigo: 'SHARED', nivel: 'basic', nome: 'Básico', matchType: 'checkout', checkoutCode: 'B', matchValues: ['https://payt.site/Basic'] }] as typeof p.ofertas
+    await executarPlanos(db, [p], { log: () => {} })
+    const writes = db.writes
+    ;(p.ofertas![0] as Row).checkoutCode = 'OTHER'
+    await expect(executarPlanos(db, [p], { log: () => {} })).rejects.toThrow(/identidade|referência|alias/i)
+    expect(db.writes).toBe(writes)
+  })
   it('preflight de leitura informa modo preservado e bloqueio sem mutações', async () => {
     const db = new FakeDb()
     db.rows.products.push({ id: 'product-1', store_id: 'store-1', slug: 'kit', content_mode: 'versions', is_published: true })

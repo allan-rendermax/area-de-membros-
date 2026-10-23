@@ -29,11 +29,12 @@ function button(label: string) {
   return el
 }
 async function change(selector: string, value: string) {
-  const el = container.querySelector<HTMLInputElement | HTMLSelectElement>(selector)!
+  const el = container.querySelector<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(selector)!
   await act(async () => {
     if (el instanceof HTMLInputElement) Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(el, value)
+    else if (el instanceof HTMLTextAreaElement) Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(el, value)
     else el.value = value
-    el.dispatchEvent(new Event(el instanceof HTMLInputElement ? 'input' : 'change', { bubbles: true }))
+    el.dispatchEvent(new Event(el instanceof HTMLSelectElement ? 'change' : 'input', { bubbles: true }))
   })
 }
 function plans() { return JSON.parse(container.querySelector<HTMLInputElement>('input[name="plans"]')!.value) }
@@ -48,6 +49,24 @@ async function addProduct(planIndex = 0, title = 'Atlas') {
 }
 
 describe('cadastro de uma oferta com vários planos', () => {
+  it('edita modo e referência em planos novos', async () => {
+    await render(null, 'SHARED')
+    await change('[name="plan_match_type_0"]', 'checkout')
+    await change('[name="plan_checkout_code_0"]', 'CHECK-B')
+    expect(container.querySelector('[name="plan_aliases_0"]')).not.toBeNull()
+    expect(plans()[0]).toMatchObject({ matchType: 'checkout', checkoutCode: 'CHECK-B' })
+    await change('[name="plan_aliases_0"]', 'https://payt.site/Basic\nhttps://checkout.payt.com.br/basic\n')
+    expect(plans()[0].matchValues).toEqual(['https://payt.site/Basic', 'https://checkout.payt.com.br/basic'])
+  })
+  it('reabre identificação específica sem perder aliases na serialização', async () => {
+    await render({ id: 'group-1', name: 'Kit', version: 2, plans: [{ id: 'plan-1', name: 'Básico', paytProductCode: 'SHARED', matchType: 'checkout', checkoutCode: 'CHECK-B', matchValues: ['https://payt.site/Basic'], grants: [{ productId: 'product-1', level: 'basic' }] }] })
+    expect(container.querySelector<HTMLSelectElement>('[name="plan_match_type_0"]')!.disabled).toBe(true)
+    expect(container.querySelector<HTMLInputElement>('[name="plan_checkout_code_0"]')!.readOnly).toBe(true)
+    expect(plans()[0]).toMatchObject({ matchType: 'checkout', checkoutCode: 'CHECK-B', matchValues: ['https://payt.site/Basic'] })
+    await act(async () => button('Salvar oferta').click())
+    expect(container.querySelector('[role="alert"]')).not.toBeNull()
+    expect(plans()[0].matchValues).toEqual(['https://payt.site/Basic'])
+  })
   it('começa com Básico e Completo e permite adicionar nomes livres', async () => {
     await render()
     expect(plans().map((p: { name: string }) => p.name)).toEqual(['Básico', 'Completo'])

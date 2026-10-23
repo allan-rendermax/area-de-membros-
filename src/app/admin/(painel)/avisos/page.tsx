@@ -1,13 +1,13 @@
 import Link from 'next/link'
 import { ui } from '@/components/admin/ui'
-import { formatDateTime, outcomeLabel, outcomeStyle } from '@/lib/admin/labels'
+import { eventErrorLabel, formatDateTime, outcomeLabel, outcomeStyle } from '@/lib/admin/labels'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { listKnownProductCodes, listPaytEvents, type PaytEventFilter } from '@/lib/data/payt-events'
 
 const FILTERS: { value: PaytEventFilter; label: string }[] = [
   { value: 'todos', label: 'Todos' },
-  { value: 'erros', label: 'Com erro' },
-  { value: 'desconhecidos', label: 'Código desconhecido' },
+  { value: 'erros', label: 'Erros e identificação' },
+  { value: 'desconhecidos', label: 'Código ou checkout desconhecido' },
 ]
 
 export const dynamic = 'force-dynamic'
@@ -35,7 +35,7 @@ export default async function AvisosPage({ searchParams }: PageProps<'/admin/avi
           <thead className="border-b border-borda">
             <tr>
               <th className={ui.th}>Recebido</th><th className={ui.th}>E-mail</th><th className={ui.th}>Códigos</th>
-              <th className={ui.th}>Status Payt</th><th className={ui.th}>Chave válida</th><th className={ui.th}>Resultado</th><th className={ui.th}>Erro</th>
+              <th className={ui.th}>Status Payt</th><th className={ui.th}>Chave válida</th><th className={ui.th}>Resultado</th><th className={ui.th}>Erro ou identificação</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-borda">
@@ -64,7 +64,7 @@ export default async function AvisosPage({ searchParams }: PageProps<'/admin/avi
                 <td className={ui.td}>{r.paytStatus ?? '—'}</td>
                 <td className={ui.td}>{r.keyValid === true ? 'Sim' : r.keyValid === false ? 'Não' : '—'}</td>
                 <td className={ui.td}><span className={`${ui.pill} ${outcomeStyle(r.outcome)}`}>{outcomeLabel(r.outcome)}</span></td>
-                <td className={`${ui.td} max-w-xs truncate text-texto-suave`} title={r.error ?? undefined}>{r.error ?? ''}</td>
+                <td className={`${ui.td} max-w-xs text-texto-suave`} title={r.error ?? undefined}>{eventErrorLabel(r.error)}</td>
               </tr>
             ))}
             {rows.length === 0 && <tr><td colSpan={7} className={`${ui.td} text-texto-suave`}>Nenhum aviso.</td></tr>}

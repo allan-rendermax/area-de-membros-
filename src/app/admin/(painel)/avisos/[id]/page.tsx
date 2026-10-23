@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ui } from '@/components/admin/ui'
-import { formatDateTime, outcomeLabel, outcomeStyle } from '@/lib/admin/labels'
+import { eventErrorLabel, formatDateTime, outcomeLabel, outcomeStyle } from '@/lib/admin/labels'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
 import { getPaytEvent } from '@/lib/data/payt-events'
@@ -20,7 +20,7 @@ export default async function AvisoPage({ params }: PageProps<'/admin/avisos/[id
     ['Códigos', event.productCodes.join(', ') || '—'],
     ['Status Payt', event.paytStatus ?? '—'],
     ['Chave válida', event.keyValid === null ? '—' : event.keyValid ? 'Sim' : 'Não'],
-    ['Erro', event.error ?? '—'],
+    ['Erro ou identificação', eventErrorLabel(event.error) || '—'],
   ]
 
   return (

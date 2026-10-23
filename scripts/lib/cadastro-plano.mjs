@@ -1,4 +1,5 @@
 import { extname } from 'node:path'
+import { validarOfertas } from './cadastro-identidade.mjs'
 
 const MIME = {
   pdf: 'application/pdf', zip: 'application/zip', jpg: 'image/jpeg', jpeg: 'image/jpeg',
@@ -39,6 +40,11 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
   const fields = {}
   const lines = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n')
   const allowed = new Set(['nome', 'id', 'id_basico', 'id_completo', 'id_upgrade', 'tag', 'loja', 'slug', 'trilha', 'checkout', 'checkout_upgrade', 'destaque', 'ordem', 'complemento', 'descricao', 'organizacao'])
+  allowed.add('produto_payt')
+  for (const level of ['basico', 'completo', 'upgrade']) {
+    allowed.add(`codigo_checkout_${level}`)
+    allowed.add(`links_checkout_${level}`)
+  }
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index].trim()
     if (!line || line.startsWith('#')) continue
@@ -54,13 +60,20 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
     fields[key] = match[2].trim()
   }
   for (const field of ['nome', 'tag']) if (!fields[field]) throw new Error(`produto.txt: campo ${field} obrigatório.`)
-  const modoNiveis = Object.keys(fields).some(key => ['id_basico', 'id_completo', 'id_upgrade', 'checkout_upgrade'].includes(key))
-  if (modoNiveis) {
+  const shared = Object.keys(fields).some(key => key === 'produto_payt' || key.startsWith('codigo_checkout_') || key.startsWith('links_checkout_'))
+  const modoNiveis = shared || Object.keys(fields).some(key => ['id_basico', 'id_completo', 'id_upgrade', 'checkout_upgrade'].includes(key))
+  if (shared) {
+    if (fields.id || fields.id_basico || fields.id_completo || fields.id_upgrade) throw new Error('produto.txt: produto_payt não pode ser combinado com IDs legados.')
+    if (!fields.produto_payt || /\s/.test(fields.produto_payt)) throw new Error('produto.txt: produto_payt obrigatório, sem espaços.')
+    for (const level of ['basico', 'completo', 'upgrade']) {
+      if ((level !== 'upgrade' || fields.codigo_checkout_upgrade || fields.links_checkout_upgrade) && (!fields[`codigo_checkout_${level}`] || !fields[`links_checkout_${level}`])) throw new Error(`produto.txt: codigo_checkout_${level} e links_checkout_${level} obrigatórios.`)
+    }
+  } else if (modoNiveis) {
     if (fields.id) throw new Error('produto.txt: id legado não pode ser usado com id_basico/id_completo/id_upgrade.')
     if (!fields.id_basico || !(fields.id_completo || fields.id_upgrade)) throw new Error('produto.txt: id_basico e ao menos id_completo ou id_upgrade são obrigatórios.')
     if (!fields.checkout_upgrade) throw new Error('produto.txt: checkout_upgrade obrigatório.')
   } else if (!fields.id) throw new Error('produto.txt: campo id obrigatório.')
-  const codes = modoNiveis ? [fields.id_basico, fields.id_completo, fields.id_upgrade].filter(Boolean) : [fields.id]
+  const codes = shared ? [fields.produto_payt] : modoNiveis ? [fields.id_basico, fields.id_completo, fields.id_upgrade].filter(Boolean) : [fields.id]
   if (codes.some(code => /\s/.test(code))) throw new Error('produto.txt: id/código Payt não pode conter espaços.')
   if (new Set(codes).size !== codes.length) throw new Error('produto.txt: códigos Payt repetidos.')
   if (!['front', 'orderbump', 'upsell'].includes(fields.tag)) throw new Error('produto.txt: tag deve ser front, orderbump ou upsell.')
@@ -83,6 +96,15 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
   }
   const base = { nome: fields.nome, tag: fields.tag, loja, slug, trilha: fields.trilha || '', checkout, destaque, ordem, descricao: fields.descricao || '', ...(fields.complemento !== undefined ? { complemento: fields.complemento } : {}) }
   if (fields.organizacao !== undefined) base.organizacao = fields.organizacao
+  if (shared) {
+    const ofertas = validarOfertas(['basico', 'completo', 'upgrade'].filter(level => fields[`codigo_checkout_${level}`]).map(level => ({
+      codigo: fields.produto_payt, nivel: level === 'basico' ? 'basic' : 'complete',
+      nome: `${fields.nome} — ${{ basico: 'Básico', completo: 'Completo', upgrade: 'Upgrade' }[level]}`,
+      matchType: 'checkout', checkoutCode: fields[`codigo_checkout_${level}`], matchValues: fields[`links_checkout_${level}`].split(',').map(value => value.trim()),
+    })))
+    if (new Set(ofertas.map(offer => offer.checkoutCode)).size !== ofertas.length) throw new Error('produto.txt: cada referência de checkout deve identificar um único plano na ficha.')
+    return { ...base, modoNiveis: true, checkoutUpgrade: fields.checkout_upgrade ? httpUrl(fields.checkout_upgrade, 'checkout_upgrade') : null, ofertas }
+  }
   if (!modoNiveis) return { ...base, id: fields.id }
   const ofertas = [
     { codigo: fields.id_basico, nivel: 'basic', nome: `${fields.nome} — Básico` },

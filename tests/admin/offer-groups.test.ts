@@ -7,6 +7,8 @@ const product = '00000000-0000-4000-8000-000000000101'
 const id = '00000000-0000-4000-8000-000000000201'
 const basic = { id: null, name: ' Básico ', paytProductCode: ' BASIC ', grants: [{ productId: product, level: 'basic' }] }
 const complete = { ...basic, name: 'Completo', paytProductCode: 'COMPLETE', grants: [{ productId: product, level: 'complete' }] }
+const defaults = { matchType: 'product', checkoutCode: null, matchValues: [] }
+const dbDefaults = { match_type: 'product', checkout_code: null, match_values: [] }
 const io = vi.hoisted(() => ({ rpc: vi.fn(), from: vi.fn() }))
 vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: () => io }))
 beforeEach(() => vi.resetAllMocks())
@@ -18,7 +20,7 @@ function form(plans: unknown = [basic, complete], fields: Record<string, string>
 describe('contrato de oferta com planos', () => {
   it('normaliza nomes/códigos e mantém liberações separadas', () => {
     expect(parseOfferGroupForm(form(), store)).toEqual({ id: null, storeId: store, name: 'Atlas', version: 0, plans: [
-      { ...basic, name: 'Básico', paytProductCode: 'BASIC' }, complete,
+      { ...basic, ...defaults, name: 'Básico', paytProductCode: 'BASIC' }, { ...complete, ...defaults },
     ] })
   })
   it.each([
@@ -40,8 +42,8 @@ describe('contrato de oferta com planos', () => {
     await expect(saveOfferGroup(parseOfferGroupForm(form(), store))).resolves.toBe(id)
     expect(io.rpc).toHaveBeenCalledExactlyOnceWith('save_offer_group_atomic', {
       p_id: null, p_store_id: store, p_name: 'Atlas', p_version: 0, p_plans: [
-        { id: null, name: 'Básico', payt_product_code: 'BASIC', grants: [{ product_id: product, grant_level: 'basic' }] },
-        { id: null, name: 'Completo', payt_product_code: 'COMPLETE', grants: [{ product_id: product, grant_level: 'complete' }] },
+        { id: null, name: 'Básico', payt_product_code: 'BASIC', ...dbDefaults, grants: [{ product_id: product, grant_level: 'basic' }] },
+        { id: null, name: 'Completo', payt_product_code: 'COMPLETE', ...dbDefaults, grants: [{ product_id: product, grant_level: 'complete' }] },
       ],
     })
   })
@@ -57,7 +59,18 @@ describe('contrato de oferta com planos', () => {
     const query = { select: vi.fn(() => query), eq, maybeSingle: single }
     eq.mockReturnValue(query)
     io.from.mockReturnValue(query)
-    await expect(getOfferGroup(id, store)).resolves.toEqual({ id: groupId, name: 'Atlas', version: 3, plans: [{ id, name: 'Básico', paytProductCode: 'BASIC', grants: [{ productId: product, level: 'basic' }] }] })
+    await expect(getOfferGroup(id, store)).resolves.toEqual({ id: groupId, name: 'Atlas', version: 3, plans: [{ id, name: 'Básico', paytProductCode: 'BASIC', ...defaults, grants: [{ productId: product, level: 'basic' }] }] })
     expect(query.eq.mock.calls.filter(c => c[0] === 'store_id')).toEqual([['store_id', store], ['store_id', store], ['store_id', store]])
+  })
+  it('reabre e salva todos os campos específicos sem perder aliases', async () => {
+    const groupResult = { id, name: 'Atlas', version: 3, offers: [{ id, name: 'Básico', payt_product_code: 'SHARED', match_type: 'checkout', checkout_code: 'REF', match_values: ['https://payt.site/Basic'], offer_products: [{ product_id: product, grant_level: 'basic' }] }] }
+    const query = { select: vi.fn((columns: string) => { expect(columns).toContain('match_values'); return query }), eq: vi.fn(() => query), maybeSingle: vi.fn().mockResolvedValue({ data: groupResult, error: null }) }
+    io.from.mockReturnValue(query)
+    const group = await getOfferGroup(id, store)
+    expect(group!.plans[0]).toMatchObject({ matchType: 'checkout', checkoutCode: 'REF', matchValues: ['https://payt.site/Basic'] })
+    io.rpc.mockResolvedValue({ data: id, error: null })
+    await saveOfferGroup({ ...group!, storeId: store })
+    expect(io.rpc.mock.calls[0][1].p_plans[0]).toMatchObject({ match_type: 'checkout', checkout_code: 'REF', match_values: ['https://payt.site/Basic'] })
+    expect(query.select.mock.calls[0][0]).toContain('match_values')
   })
 })

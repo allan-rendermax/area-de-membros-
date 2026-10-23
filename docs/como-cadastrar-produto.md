@@ -51,11 +51,13 @@ node scripts/cadastrar-produto.mjs "C:\caminho com espaços\lote" --todos
 
 Para o cadastro real, configure `SUPABASE_URL` ou `NEXT_PUBLIC_SUPABASE_URL`, mais `SUPABASE_SECRET_KEY`, em `.env.local` na raiz do projeto. Variáveis do processo prevalecem. Aplique antes a migration `supabase/migrations/20260924000003_product_role.sql` manualmente no SQL Editor do projeto correto. O script consulta a coluna `role` no preflight e interrompe se ela faltar. No painel Supabase Storage do mesmo projeto, confira que o bucket `arquivos` existe e é público; o aplicativo já depende dele. Não imprima nem compartilhe a chave secreta.
 
-Uma reexecução atualiza produto por loja e slug, módulo por título dentro do produto, item por título dentro do módulo, e oferta pelo código Payt. Também atualiza ordem e publicação. Módulos e itens extras já existentes são relatados e preservados. Um código Payt vinculado a outro produto ou loja e um slug existente em outra loja são conflitos: corrija-os antes de repetir. Execute um único processo de cadastro por vez, pois títulos de módulos e itens não têm restrição única no banco.
+Uma reexecução atualiza produto por loja e slug, módulo por título dentro do produto, item por título dentro do módulo, e oferta pela identidade do plano (código Payt, modo e referência do checkout; no legado, código exclusivo). Também atualiza ordem e publicação. Módulos e itens extras já existentes são relatados e preservados. Um código Payt vinculado a outro produto ou loja e um slug existente em outra loja são conflitos: corrija-os antes de repetir. Execute um único processo de cadastro por vez, pois títulos de módulos e itens não têm restrição única no banco.
 
 Falhas de rede podem deixar uploads ou registros parciais. Corrija a causa e reexecute a mesma pasta; o processo retoma pelos registros existentes. A validação inicial protege o lote contra pasta inválida ou arquivo ilegível, mas não constitui transação entre storage e banco.
 
 ## Produto com Básico e Completo
+
+Há dois formatos aceitos: códigos Payt distintos por plano (abaixo) e um código Payt compartilhado com identificadores explícitos (seção seguinte). Eles não podem ser combinados na mesma ficha.
 
 A ficha antiga com `id: CODIGO` continua válida: esse código libera o nível Completo e os arquivos soltos/pastas legadas são Básicos. Para criar um front novo com essa estrutura cumulativa, informe `organizacao: sections`; no modo automático de um front novo, a oferta Completo sem material Completo será recusada. Reimportar um produto existente sem `organizacao` mantém seu modo salvo. Para um produto novo com níveis, use `id_basico`, pelo menos um de `id_completo` ou `id_upgrade`, e `checkout_upgrade`. Não misture `id` com esses campos. Cada código Payt precisa ser distinto no lote. `checkout` continua sendo o checkout de entrada; `checkout_upgrade` é o link do botão de upgrade dentro da área de membros. O app não calcula diferença de preço: configure esse valor no checkout Payt correspondente.
 
@@ -84,3 +86,29 @@ No Payt, configure o código Básico para a compra inicial, o código Completo p
 Antes de executar o cadastro real, aplique manualmente a migration de role indicada acima e a migration de níveis, nessa ordem, no projeto Supabase correto. Crie/confira o bucket privado `arquivos-restritos` e suas políticas conforme a migration de níveis. A capa e o banner continuam públicos no bucket `arquivos`; entregáveis de fichas com níveis vão para `arquivos-restritos`. O cadastro grava referências privadas estáveis e o servidor assina downloads somente após conferir acesso. A simulação não cria cliente Supabase nem faz rede. Execute um cadastro por vez e confira a saída inteira antes da execução real.
 
 Reexecutar a mesma pasta atualiza o produto, módulos, itens, ofertas e níveis de vínculo sem apagar conteúdo extra existente. O preflight recusa códigos associados a outro produto ou loja e verifica todos os arquivos antes de começar uploads. Falhas após o preflight podem deixar gravações parciais; corrija a causa e reexecute. Reembolsar o pedido Completo ou Upgrade retira apenas o nível concedido por aquele pedido: se ainda houver um pedido Básico pago, o acesso volta a Básico. Acesso manual usa uma oferta existente e herda o nível dessa oferta.
+
+## Um produto Payt com vários checkouts
+
+Após aplicar `20261023010000_checkout_plans.sql` e publicar o código correspondente, a ficha aceita estes campos explícitos. Valores abaixo são exemplos fictícios; substitua por identificadores confirmados em eventos autenticados da sua integração:
+
+```text
+nome: Kit de exemplo
+produto_payt: PRODUTO-EXEMPLO
+codigo_checkout_basico: REF-BASICO
+links_checkout_basico: https://payt.site/ExemploBasic, https://checkout.payt.com.br/exemplo-basic
+codigo_checkout_completo: REF-COMPLETO
+links_checkout_completo: https://payt.site/ExemploFull, https://checkout.payt.com.br/exemplo-full
+tag: front
+loja: arquitetura
+organizacao: versions
+```
+
+`produto_payt` substitui todos os campos `id`, `id_basico`, `id_completo` e `id_upgrade`; misturá-los é erro. Básico e Completo exigem seus pares `codigo_checkout_*` e `links_checkout_*`. Para um terceiro plano Completo, acrescente ambos `codigo_checkout_upgrade` e `links_checkout_upgrade`; esse nome apenas identifica o terceiro plano da ficha. Cada referência precisa identificar um único plano desse código no cadastro por pasta. Os aliases de cada linha são separados por vírgula e normalizados antes de qualquer consulta de rede; não use vírgulas internas no alias. Links sobrepostos entre planos, hosts externos, HTTP, credenciais, portas e caminhos inválidos são recusados.
+
+O código de checkout é uma referência administrativa, e o acesso usa os links explicitamente cadastrados que forem recebidos no evento autenticado. Cadastre a URL curta e a final quando comprovadas; não há busca de redirects nem inferência pelo preço, título ou UTM. Query, hash e barras finais são removidos, preservando maiúsculas no caminho.
+
+O campo `checkout_upgrade` continua sendo exclusivamente o link do botão de pagamento da diferença dentro da área de membros. É **opcional neste formato compartilhado** e independente de `codigo_checkout_upgrade`/`links_checkout_upgrade`; um Completo promocional de compra integral não deve virar botão de diferença. Ao omitir `checkout_upgrade`, a ficha grava esse botão como vazio. O formato antigo com `id_basico`/`id_completo`/`id_upgrade` mantém sua exigência anterior desse botão.
+
+O importador cria um grupo comum para os novos planos, seleciona a oferta pela identidade completa e preserva os UUIDs ao reexecutar. Na reimportação, mantenha referências e todos os aliases salvos; novos aliases podem ser acrescentados. Referência alterada com alias de outro plano, mistura com modo legado, sobreposição ou código de outro produto/loja interrompem o lote antes do primeiro upload. Planos antigos não são convertidos; seus grupos existentes são preservados. Códigos distintos antigos continuam aceitos.
+
+A ficha por pasta suporta esses dois ou três planos de checkout para o mesmo produto. Para upsell por `upsell_code`, combos, planos com nomes livres ou mais planos, use **Admin → Ofertas**. Não há suporte a `planos.json`; entradas desconhecidas na pasta continuam recusadas.

@@ -39,7 +39,11 @@ function printPlan(plano) {
   console.log(`  Materiais utilizáveis na pasta: Básico ${readiness.itemCounts.basic}, Completo ${readiness.itemCounts.complete} (avaliação local como produto novo).`)
   for (const level of readiness.emptyLevels) console.log(`  Atenção: ${level === 'basic' ? 'Básico' : 'Completo'} sem material utilizável para o nível vendido. O preflight real confere também conteúdo e ofertas já salvos antes de publicar.`)
   const ofertas = plano.ofertas ?? [{ codigo: ficha.id, nivel: 'complete', nome: ficha.nome }]
-  for (const oferta of ofertas) console.log(`  Payt: ${oferta.codigo} (${oferta.nivel}, ${oferta.nome}); link: /${ficha.loja}/produto/${ficha.slug}`)
+  for (const oferta of ofertas) {
+    console.log(`  Payt: ${oferta.codigo} (${oferta.nivel}, ${oferta.nome}); link: /${ficha.loja}/produto/${ficha.slug}`)
+    if (oferta.checkoutCode) console.log(`    Referência checkout: ${oferta.checkoutCode}`)
+    if (oferta.matchValues?.length) console.log(`    Aliases (${oferta.matchType}): ${oferta.matchValues.join(', ')}`)
+  }
   if (ficha.checkoutUpgrade) console.log(`  Checkout upgrade: ${ficha.checkoutUpgrade}`)
   for (const modulo of plano.modulos) {
     console.log(`  Módulo ${modulo.sortOrder}: ${modulo.title} (${modulo.requiredLevel ?? 'basic'})`)

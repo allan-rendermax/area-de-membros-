@@ -1,12 +1,13 @@
 import Link from 'next/link'
 import { ui } from '@/components/admin/ui'
+import { identificationWarningLabel } from '@/lib/admin/labels'
 import { getAdminStore } from '@/lib/admin/current-store'
 import { requireAdmin } from '@/lib/auth/require-admin'
 import { listOrders, type OrderFilter } from '@/lib/data/orders'
 
 const FILTERS: { value: OrderFilter; label: string }[] = [
   { value: 'todos', label: 'Todos' },
-  { value: 'problemas', label: 'Reembolsos e chargebacks' },
+  { value: 'problemas', label: 'Problemas e identificação' },
   { value: 'desconhecidas', label: 'Código sem oferta (todas as lojas)' },
   { value: 'teste', label: 'Teste' },
 ]
@@ -46,10 +47,13 @@ export default async function PedidosPage({ searchParams }: PageProps<'/admin/pe
                 <td className={ui.td}><Link href={`/admin/clientes?q=${encodeURIComponent(o.customerEmail)}`} className="underline">{o.customerEmail}</Link></td>
                 <td className={ui.td}>
                   {o.productName || o.productCode} <span className="text-texto-suave">({o.productCode})</span>
-                  {filter === 'desconhecidas' && (
+                  {filter === 'desconhecidas' && (!o.identificationWarning || o.identificationWarning === 'codigo_desconhecido') && (
                     <Link href={`/admin/ofertas/novo?codigo=${encodeURIComponent(o.productCode)}`} className="ml-2 text-destaque hover:underline">criar oferta</Link>
                   )}
                   {o.isTest && <span className="ml-2 text-xs text-texto-suave">teste</span>}
+                  {o.offerId && <Link href={`/admin/ofertas/${o.offerId}`} className="mt-1 block text-sm underline">Ver plano identificado</Link>}
+                  {o.identificationWarning && <p className="mt-1 text-sm text-alerta">{identificationWarningLabel(o.identificationWarning)}. Confira os identificadores em Ofertas e o aviso recebido em Avisos da Payt.</p>}
+                  {(o.checkoutUrl || o.upsellCode) && <p className="mt-1 max-w-sm break-all text-xs text-texto-suave">{o.checkoutUrl || `Upsell: ${o.upsellCode}`}</p>}
                 </td>
                 <td className={ui.td}>{o.source}</td>
                 <td className={ui.td}><span className={`${ui.pill} ${STATUS_STYLE[o.status]}`}>{o.status}</span></td>
