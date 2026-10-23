@@ -39,12 +39,12 @@
 - PostbackRepo deve usar resolução/persistência atômica no banco e produtos do plano persistido para avisos; mocks antigos podem ser atualizados sem remover testes.
 - save_offer_group_atomic preserva assinatura e aceita match_type/checkout_code/match_values em p_plans, ausentes significam modo legado.
 
-- [ ] Escrever testes novos com código compartilhado SHARED, dois aliases/planos e concessões basic/complete. Exemplo: expect(grantedProductLevels([{productCode:'SHARED',offerId:'basic',status:'pago'}],[{productCode:'SHARED',offerId:'basic',matchType:'checkout',productId:'atlas',grantLevel:'basic'},{productCode:'SHARED',offerId:'full',matchType:'checkout',productId:'atlas',grantLevel:'complete'}],false).get('atlas')).toBe('basic').
-- [ ] Executar testes e registrar falha antes de implementar.
-- [ ] Criar migração e núcleo conforme spec. Cobrir SQL real para vínculos, validação de aliases, conflitos/reembolsos, resolução tardia, manual, exclusão e success RPC.
-- [ ] Atualizar consumidores de acesso/login/e-mails de forma coerente, sem fallback em planos específicos. Adicionar testes de ponta a ponta em memória com notificações falsas.
-- [ ] Rodar testes focados, suite completa com maxWorkers=2 e tsc; corrigir falhas. Commit feat: resolve Payt plans by checkout without changing legacy access.
-- [ ] Reportar contrato exato das interfaces e evidência RED/GREEN ao controlador.
+- [x] Escrever testes novos com código compartilhado SHARED, dois aliases/planos e concessões basic/complete. Exemplo: expect(grantedProductLevels([{productCode:'SHARED',offerId:'basic',status:'pago'}],[{productCode:'SHARED',offerId:'basic',matchType:'checkout',productId:'atlas',grantLevel:'basic'},{productCode:'SHARED',offerId:'full',matchType:'checkout',productId:'atlas',grantLevel:'complete'}],false).get('atlas')).toBe('basic').
+- [x] Executar testes e registrar falha antes de implementar.
+- [x] Criar migração e núcleo conforme spec. Cobrir SQL real para vínculos, validação de aliases, conflitos/reembolsos, resolução tardia, manual, exclusão e success RPC.
+- [x] Atualizar consumidores de acesso/login/e-mails de forma coerente, sem fallback em planos específicos. Adicionar testes de ponta a ponta em memória com notificações falsas.
+- [x] Rodar testes focados, suite completa com maxWorkers=2 e tsc; corrigir falhas. Commit feat: resolve Payt plans by checkout without changing legacy access.
+- [x] Reportar contrato exato das interfaces e evidência RED/GREEN ao controlador.
 
 ### Task 2: Cadastro administrativo e importação
 
@@ -52,19 +52,19 @@
 
 **Interfaces:** Consumir match_type, checkout_code e match_values da Task 1. OfferPlanInput expõe matchType, checkoutCode e matchValues. Planos sem campos são product.
 
-- [ ] Adicionar testes que aceitam código compartilhado com matchValues distintos, rejeitam mistura product/checkout e sobreposição, e preservam planos legados.
-- [ ] Implementar modo de identificação, código checkout de referência e aliases na interface. O seletor de produtos e níveis continua igual. Dados de erro ficam no formulário.
-- [ ] Implementar ficha por pasta com campos explícitos para cada nível: produto_payt compartilhado, codigo_checkout_basico/completo/upgrade, links_checkout_basico/completo/upgrade (aliases separados por vírgula); documentação deve indicar campos realmente suportados. Não confundir checkout_upgrade (botão) com identificador comercial. Oferecer alternativa genérica planos.json se necessária para upsell/combos, com validação antes de rede.
-- [ ] Preflight e gravação do importador usam identidade completa do plano e agrupamento correto; reexecução não altera outros produtos. Códigos distintos antigos continuam aceitos.
-- [ ] Conferir tela administrativa com fixture local e testes. Testes focados, tsc, suite completa e commit feat: configure checkout plans in admin and folder imports.
+- [x] Adicionar testes que aceitam código compartilhado com matchValues distintos, rejeitam mistura product/checkout e sobreposição, e preservam planos legados.
+- [x] Implementar modo de identificação, código checkout de referência e aliases na interface. O seletor de produtos e níveis continua igual. Dados de erro ficam no formulário.
+- [x] Implementar ficha por pasta com campos explícitos para cada nível: produto_payt compartilhado, codigo_checkout_basico/completo/upgrade, links_checkout_basico/completo/upgrade (aliases separados por vírgula); documentação deve indicar campos realmente suportados. Não confundir checkout_upgrade (botão) com identificador comercial. Oferecer alternativa genérica planos.json se necessária para upsell/combos, com validação antes de rede.
+- [x] Preflight e gravação do importador usam identidade completa do plano e agrupamento correto; reexecução não altera outros produtos. Códigos distintos antigos continuam aceitos.
+- [x] Conferir tela administrativa com fixture local e testes. Testes focados, tsc, suite completa e commit feat: configure checkout plans in admin and folder imports.
 
 ### Task 3: Revisão e publicação
 
 **Files:** docs/status-cadastro-urbanismo-2026-10-23.md e artefatos de operação fora de fontes versionadas.
 
-- [ ] Revisão independente da branch e correção de achados reais com testes.
-- [ ] Build/lint e plano de aplicação sobre origin/main conferidos. Snapshot somente leitura de ofertas/vínculos/produtos atuais.
-- [ ] Confirmar formato de identificador em eventos autenticados Payt e mapear aliases oficiais já observados no painel.
-- [ ] Aplicar migration em transação e publicar aplicação. Criar grupo de três planos Urbanismo, com um produto LG5BGY e referências R272NA/LJPMZ2/R6GZ2X. Configurar postback da área de membros, preservando integrações atuais.
-- [ ] Publicar produto somente após plano e entrega válidos. Validar Básico/Completo em simulação, acesso privado sem compra, modo legado preservado e teste de conexão.
-- [ ] Salvar evidências e documentação final, sem credenciais ou dados de clientes.
+- [x] Revisão independente da branch e correção de achados reais com testes.
+- [x] Build/lint e plano de aplicação sobre origin/main conferidos. Snapshot somente leitura de ofertas/vínculos/produtos atuais.
+- [x] Confirmar formato de identificador em eventos autenticados Payt e mapear aliases oficiais já observados no painel.
+- [x] Aplicar migration em transação e publicar aplicação. Criar grupo de três planos Urbanismo, com um produto LG5BGY e referências R272NA/LJPMZ2/R6GZ2X. Configurar postback da área de membros, preservando integrações atuais.
+- [x] Publicar produto somente após plano e entrega válidos. Validar Básico/Completo em simulação, acesso privado sem compra, modo legado preservado e teste de conexão.
+- [x] Salvar evidências e documentação final, sem credenciais ou dados de clientes.
