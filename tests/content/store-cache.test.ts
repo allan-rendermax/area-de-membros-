@@ -39,6 +39,7 @@ const storeA = {
 const storeB = { ...storeA, id: 'store-b', slug: 'loja-b', name: 'Loja B' }
 
 const expectedA = {
+  memberLibraryMode: 'legacy',
   id: 'store-a', slug: 'loja-a', name: 'Loja A', logoUrl: null,
   supportUrl: null, supportWhatsapp: null, loginImageUrl: null, communityWhatsappUrl: null,
 }
