@@ -21,7 +21,7 @@ function subscribeToViewport(onChange: () => void) {
 function isDesktop() { return window.matchMedia(desktopQuery).matches }
 function serverViewport() { return false }
 
-export function LessonSidebar({ modules, storeSlug, currentItemId, completedItemIds = [], legacyPresentation = false, preview = false, upgrade, complement }: {
+export function LessonSidebar({ modules, storeSlug, currentItemId, completedItemIds = [], legacyPresentation = false, preview = false, complementScenario, upgrade, complement }: {
   upgrade?: ReactNode
   complement?: ReactNode
   modules: ModuleWithItems[]
@@ -29,6 +29,7 @@ export function LessonSidebar({ modules, storeSlug, currentItemId, completedItem
   currentItemId?: string
   completedItemIds?: string[]
   legacyPresentation?: boolean
+  complementScenario?: string
   preview?: PreviewContext
 }) {
   const desktop = useSyncExternalStore(subscribeToViewport, isDesktop, serverViewport)
@@ -48,7 +49,7 @@ export function LessonSidebar({ modules, storeSlug, currentItemId, completedItem
             {module.items.map((item) => {
               const Icon = item.kind === 'video' ? PlayIcon : item.kind === 'link' ? LinkIcon : FileIcon
               return <li key={item.id} className="min-w-0">
-                <ItemAnchor item={item} storeSlug={storeSlug} preview={preview} current={item.id === currentItemId} className={`lesson-sidebar-link flex min-w-0 items-start gap-3 rounded-lg px-3 py-3 text-sm leading-snug ${item.id === currentItemId ? 'bg-superficie-2 text-texto' : 'text-texto-suave hover:bg-superficie-2 hover:text-texto'}`}>
+                <ItemAnchor item={item} storeSlug={storeSlug} preview={preview} complementScenario={complementScenario} current={item.id === currentItemId} className={`lesson-sidebar-link flex min-w-0 items-start gap-3 rounded-lg px-3 py-3 text-sm leading-snug ${item.id === currentItemId ? 'bg-superficie-2 text-texto' : 'text-texto-suave hover:bg-superficie-2 hover:text-texto'}`}>
                   <Icon className="mt-0.5 h-4 w-4 shrink-0 text-destaque" />
                   <span className="min-w-0 break-words [overflow-wrap:anywhere]">{item.title}{!legacyPresentation && item.id === currentItemId && <span className="mt-1 block text-xs text-destaque">Conteúdo atual</span>}{!legacyPresentation && completedItemIds.includes(item.id) && <span className="mt-1 block text-xs text-texto">Concluído</span>}</span>
                 </ItemAnchor>

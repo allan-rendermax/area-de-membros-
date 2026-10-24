@@ -1,0 +1,61 @@
+
+> area-de-membros@0.1.0 build
+> next build
+
+▲ Next.js 16.3.5 (Turbopack)
+- Environments: .env.local
+✓ Running next.config.ts took 34ms
+- Experiments (use with caution):
+  · serverActions
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 966ms
+  Running TypeScript ...
+  Finished TypeScript in 3.4s ...
+  Collecting page data using 31 workers ...
+  Generating static pages using 31 workers (0/10) ...
+  Generating static pages using 31 workers (2/10) 
+  Generating static pages using 31 workers (4/10) 
+  Generating static pages using 31 workers (7/10) 
+✓ Generating static pages using 31 workers (10/10) in 274ms
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ƒ /[loja]
+├ ƒ /[loja]/boas-vindas
+├ ƒ /[loja]/entrar
+├ ƒ /[loja]/item/[id]
+├ ƒ /[loja]/item/[id]/abrir
+├ ƒ /[loja]/manifest.webmanifest
+├ ƒ /[loja]/produto/[slug]
+├ ƒ /admin
+├ ƒ /admin/avisos
+├ ƒ /admin/avisos/[id]
+├ ƒ /admin/clientes
+├ ƒ /admin/clientes/[id]
+├ ƒ /admin/clientes/[id]/vitrine
+├ ƒ /admin/emails
+├ ƒ /admin/entrar
+├ ƒ /admin/lojas
+├ ƒ /admin/lojas/[id]
+├ ƒ /admin/ofertas
+├ ƒ /admin/ofertas/[id]
+├ ƒ /admin/pedidos
+├ ƒ /admin/produtos
+├ ƒ /admin/produtos/[id]
+├ ƒ /admin/sucesso
+├ ƒ /api/cron/payt-inbox
+├ ƒ /api/webhooks/payt
+├ ƒ /entrar
+├ ○ /icon.png
+├ ƒ /icons/[loja]/[size]
+└ ƒ /sair
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

@@ -17,15 +17,17 @@ export function ItemAnchor({
   children,
   current = false,
   preview = false,
+  complementScenario,
 }: {
   item: Pick<Item, 'id' | 'kind'>
   storeSlug: string
   className: string
   children: React.ReactNode
   current?: boolean
+  complementScenario?: string
   preview?: PreviewContext
 }) {
-  const href = withPreview(`/${storeSlug}/item/${item.id}`, preview)
+  const href = withPreview(`/${storeSlug}/item/${item.id}`, preview, complementScenario)
   return (
     <Link href={href} prefetch={false} className={className} aria-current={current ? 'page' : undefined}>
       {children}

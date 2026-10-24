@@ -21,6 +21,16 @@ const modules = [
 ] as ModuleWithItems[]
 
 describe('item content complement', () => {
+  it('keeps the complement scenario in sidebar, toolbar, resource and refresh destinations', async () => {
+    const second = { ...basic, id: 'second', title: 'Segundo material' }
+    const expanded = [{ ...modules[0], items: [basic, second] }, modules[1]]
+    const tree = await renderItemContent({ ctx: { product, module: expanded[0], item: basic }, store, customer: null, level: 'basic', preview: 'basic', complementScenario: 'one', blocked: false, productModules: expanded })
+    const window = new Window()
+    window.document.body.innerHTML = renderToStaticMarkup(tree)
+    const links = [...window.document.querySelectorAll('a[href*="/item/"]')]
+    expect(links.length).toBeGreaterThanOrEqual(4)
+    for (const link of links) expect(new URL(link.getAttribute('href')!, 'https://example.test').searchParams.get('complementos')).toBe('one')
+  })
   it.each(['basic', 'complete'] as const)('keeps complement separate from %s materials and progress', async (level: AccessLevel) => {
     const index = level === 'basic' ? 0 : 1
     const tree = await renderItemContent({ ctx: { product, module: modules[index], item: modules[index].items[0] }, store, customer: { id: 'c', email: 'c@example.test', name: 'C', blockedAt: null }, level, preview: false, blocked: false, productModules: modules })

@@ -9,6 +9,7 @@
     "Old purchase URL resolves inside owned parent",
     "No purchase cannot open item; query alone does not grant",
     "Blocked customer denied",
+    "Preview one/all/solo survives next, previous and sidebar item transitions",
     "Admin preview scenario preserved; admin editor rendered"
   ],
   "errors": []

@@ -1,0 +1,19 @@
+
+> area-de-membros@0.1.0 test
+> vitest run --maxWorkers=2 --testTimeout=20000
+
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.1 C:/Users/arqal/.codex/worktrees/complementos-netflix/Area de membros
+
+
+ Test Files  162 passed (162)
+      Tests  1286 passed (1286)
+   Start at  13:58:18
+   Duration  82.67s (tests 87%, import 6%, environment 5%, transform 2%)
+
+    Isolate  162 workers spawned · ~137ms startup each (spawn + environment, per file)
+             at least ~10.94s faster with isolate: false — reuses workers across files instead of one per file
+

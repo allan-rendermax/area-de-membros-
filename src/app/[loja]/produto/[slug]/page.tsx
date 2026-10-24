@@ -48,7 +48,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
     .filter((module) => module.items.length > 0)
   const modules = publishedModules.filter((module) => canAccessProductModule(level, module.requiredLevel, product.contentMode, editorial))
   const lockedModules = publishedModules.filter((module) => !editorial && level === 'basic' && !canAccessProductModule(level, module.requiredLevel, product.contentMode, editorial))
-  const productHref = withPreview(`/${store.slug}/produto/${product.slug}`, preview)
+  const productHref = withPreview(`/${store.slug}/produto/${product.slug}`, preview, complementScenario)
   const blocked = !editorial && query.bloqueado === '1'
   const firstItem = modules[0]?.items[0]
   if (firstItem) {

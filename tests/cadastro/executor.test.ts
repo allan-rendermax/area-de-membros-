@@ -73,6 +73,55 @@ async function plan(overrides: Row = {}) {
 }
 
 describe('executor do cadastro', () => {
+  it('orders contextual relations by their actual composite key in the Supabase request', async () => {
+    const db = new FakeDb()
+    const urls: URL[] = []
+    const transport = createClient('https://supabase.example', 'test-key', { global: { fetch: async (input) => {
+      urls.push(new URL(String(input)))
+      return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } })
+    } } })
+    const originalFrom = db.from.bind(db)
+    db.from = (table: string) => table === 'product_complements' ? transport.from(table) : originalFrom(table)
+    await simularPlanos(db, [await plan({ complementos: [] })])
+    expect(urls).toHaveLength(1)
+    expect(urls[0].searchParams.get('order')).toBe('store_id.asc,parent_product_id.asc,complement_product_id.asc')
+  })
+  it('preserves stored image and delivery bytes when a contextual save is rejected', async () => {
+    const db = new FakeDb()
+    const p = await plan({ complementos: [] })
+    const cover = { ...p.arquivos[0], relativePath: 'capa.webp', storagePath: 'kit/capa.webp', contentType: 'image/webp', downloadName: 'capa.webp' }
+    p.arquivos.push(cover)
+    Object.assign(p.imagens, { capa: cover })
+    db.rows.products.push({ id: 'p', slug: 'kit', store_id: 'store-1', editorial_revision: 4, cover_url: 'https://files.example/kit/capa.webp' })
+    const stored = new Map(p.arquivos.map(file => [file.storagePath, Buffer.from('original')]))
+    const storageFrom = db.storage.from
+    db.storage.from = bucket => ({ ...storageFrom(bucket), upload: async (path, bytes, options) => {
+      stored.set(path, Buffer.from(bytes))
+      return storageFrom(bucket).upload(path, bytes, options)
+    } })
+    Object.assign(db, { rpc: async () => ({ data: null, error: { code: '40001', message: 'Recarregue' } }) })
+    await expect(executarPlanos(db, [p], { log: () => {} })).rejects.toThrow(/Recarregue/)
+    for (const file of p.arquivos) expect(stored.get(file.storagePath)?.toString()).toBe('original')
+    expect(db.uploads.every(file => file.options.upsert === false)).toBe(true)
+    expect(db.rows.products[0].cover_url).toBe('https://files.example/kit/capa.webp')
+    expect(db.rows.items).toHaveLength(0)
+  })
+  it('attaches new versioned public and private files after a successful contextual save', async () => {
+    const db = new FakeDb()
+    const p = await plan({ complementos: [] })
+    const cover = { ...p.arquivos[0], relativePath: 'capa.webp', storagePath: 'kit/capa.webp', contentType: 'image/webp', downloadName: 'capa.webp' }
+    p.arquivos[0].bucket = 'arquivos-restritos'
+    p.arquivos.push(cover)
+    Object.assign(p.imagens, { capa: cover })
+    let patch: Row = {}
+    Object.assign(db, { rpc: async (_name: string, args: Row) => { patch = args.p_patch; return { data: [{ id: 'p', editorial_revision: 1 }], error: null } } })
+    await executarPlanos(db, [p], { log: () => {} })
+    expect(db.uploads).toHaveLength(2)
+    expect(db.uploads.every(file => file.options.upsert === false)).toBe(true)
+    expect(new URL(patch.cover_url).pathname).toBe('/' + db.uploads[1].path)
+    expect(privateFilePath(db.rows.items[0].url, db.supabaseUrl)).toBe(db.uploads[0].path)
+    expect(db.uploads[0].path).toMatch(/^kit\/revisions\/[\w-]+\/entregaveis\/Guia.pdf$/)
+  })
   it('refuses missing or foreign contextual targets before any upload or write', async()=>{
     for(const target of [undefined,{id:'target',slug:'guia',store_id:'store-2'}]) {
       const db=new FakeDb();if(target)db.rows.products.push(target)

@@ -14,7 +14,7 @@ Implementação em `codex/complementos-netflix`, baseada no deploy verificado `6
 
 ## Evidências
 
-`artifacts/complementos-contextuais-20261024/qa/browser.json` registra 10 grupos de verificações no Chrome real, em 1440, 390 e 320 px, sem erros JavaScript e sem overflow horizontal. Capturas na mesma pasta. Autenticação e dados sintéticos são servidos exclusivamente por HTTP em loopback; o aplicativo real utiliza seus guardas e carregadores normais. Isso não é uma compra real nem prova de entrega transacional em produção.
+`artifacts/complementos-contextuais-20261024/qa/browser.json` registra 11 grupos de verificações no Chrome real, em 1440, 390 e 320 px, sem erros JavaScript e sem overflow horizontal. Capturas na mesma pasta. Autenticação e dados sintéticos são servidos exclusivamente por HTTP em loopback; o aplicativo real utiliza seus guardas e carregadores normais. Isso não é uma compra real nem prova de entrega transacional em produção.
 
 `qa/postgres-concurrency.json`: PostgreSQL 18.4 real, duas conexões. Edição antiga aguardou a primeira transação e foi recusada com 40001, preservando título/relações vencedores. Relações concorrentes que criariam uma cadeia também foram recusadas.
 
@@ -35,6 +35,12 @@ node scripts/qa-contextual-concurrency.mjs
 
 Os dois pacotes de QA não são dependências da aplicação. A fixture não aceita credenciais de produção: substitui URL/chaves de Supabase, Payt, Resend, origem e autenticação por valores locais. Não reutilizar em hospedagem pública. A fixture de concorrência usa uma pasta local nova e não é um comando de migração de produção.
 
+## Revisão final e verificações
+
+A revisão independente encontrou três problemas importantes e nenhum crítico. Todos foram reproduzidos em testes, corrigidos e verificados: chave composta no importador, preservação de bytes em upload seguido de conflito e manutenção das compras simuladas na navegação. Consulte [revisao.md](revisao.md).
+
+Suíte final: **1.286 testes aprovados em 162 arquivos**. Lint: **zero erros, três avisos já presentes na base**. Testes reais de concorrência e os 11 grupos de navegação complementam a suíte. **Build final aprovado** após as correções. `git diff --check` sem erros. Evidências de comandos em `verificacoes/`.
+
 ## Artes e conteúdo
 
 Seis novas capas 1024×1536 WebP, 187–456 KB, títulos conferidos em tamanho normal e miniaturas. Seis quadradas existentes reaproveitadas, exportadas em 1024×1024; nenhuma capa 2:3 foi cortada para simular 1:1. Manifesto com dimensões, bytes, SHA-256 e campo de destino em `capas/manifest.json`.
@@ -42,6 +48,23 @@ Seis novas capas 1024×1536 WebP, 187–456 KB, títulos conferidos em tamanho n
 Cinco PDFs de Paisagismo: 242,60 → 194,05 MiB. Originais preservados; estrutura, texto, links e renderização de todas as páginas comparados pelo otimizador. Neste lote, pixels idênticos a 120 dpi em todas as páginas. Inspeção visual de capa e páginas de consulta registrada em `qa/material-validation.json`. Isso não equivale a uma auditoria editorial integral do conteúdo.
 
 Biblioteca dos Mestres localizada concluída: 35 páginas, 74 links e 66 marcadores no PDF. A pendência anterior de produção do PDF foi resolvida. Arquivos ainda não foram enviados ao armazenamento de entrega.
+
+## Cobertura dos critérios de aceite
+
+| Critério da especificação | Evidência / limite |
+|---|---|
+| 1. Netflix e larguras 1440/390/320 | Capturas browser.json; hero/carrosséis preservados |
+| 2. Básico/Completo e zero/um/todos | Projeções e rotas; navegação real em um e todos; acesso e módulos por nível |
+| 3. Acesso avulso | Browser solo e rotas de produto/item; testes existentes da rota protegida de download |
+| 4. Agrupamento e reembolso independente | Projeção pura, retomada, suíte existente de direitos; browser com principal reembolsado |
+| 5. Oferta apenas interna | Home sem oferta, principal com modal, link de compra antigo redirecionado |
+| 6. Complemento compartilhado | Testes de projeção com seleção determinística do principal |
+| 7. Admin/importador e atomicidade | SQL, ações, parser/executor, transporte Supabase e duas conexões PostgreSQL |
+| 8. Legado/Protocolo/versions/prévias | Regressões de conteúdo/upsell e navegação simulada; cliente bloqueado negado |
+| 9. Isolamento | Schema aditivo com defaults, testes de lojas/direitos; nenhuma escrita em produção |
+| 10. Eventos de venda | Suíte existente de parser/processamento/idempotência/reembolso; pendente confirmação dos IDs reais de Paisagismo e observação de entrega real |
+| 11. Artes | Doze WebP com dimensões/hashes; inspeção de títulos/miniaturas; modal quadrado no browser |
+| 12. Testes integrados | 1.286 testes, banco real local, 11 grupos browser; produção não exercitada |
 
 ## Limites para ativação
 

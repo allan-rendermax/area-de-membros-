@@ -401,3 +401,7 @@ Revisão inline: contratos compartilhados nomeados; novas migrations sem seed; c
 Recomendação: execução nativa nesta conversa, mantendo as tarefas sequenciais e uma revisão independente da alteração completa ao final. Banco, importador e apresentação compartilham interfaces; concentrar a implementação reduz desencontros. Se preferido, execução por subagentes usa implementador e revisor novos por tarefa, com maior custo de contexto e mais revisões intermediárias.
 
 Após o usuário revisar este plano e escolher o método, aplicar a skill correspondente. A aprovação da especificação já está preservada; não rediscutir o visual nem os formatos de capa.
+
+## Registro da execução — 24/10/2026
+
+Execução nativa autorizada posteriormente nesta conversa, com revisão independente final. Implementação e preparação local registradas em [relatorio.md](../../qa/complementos-contextuais/relatorio.md); achados/correções em [revisao.md](../../qa/complementos-contextuais/revisao.md). Os checklists acima preservam o plano aprovado; a evidência executada e as pendências de ativação estão nesses relatórios. Nenhuma publicação ou alteração comercial em produção foi realizada.

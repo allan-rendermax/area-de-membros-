@@ -73,7 +73,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
   const previous = index > 0 ? sequence[index - 1] : null
   const next = index >= 0 && index < sequence.length - 1 ? sequence[index + 1] : null
   const libraryHref = withPreview(contextual?.backParent?`/${store.slug}/produto/${contextual.backParent.slug}`:`/${store.slug}#materiais`, preview,complementScenario)
-  const itemHref = withPreview(`/${store.slug}/item/${ctx.item.id}`, preview)
+  const itemHref = withPreview(`/${store.slug}/item/${ctx.item.id}`, preview, complementScenario)
 
   return (
     <>
@@ -105,7 +105,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
 
             {siblings.some((item) => item.kind !== 'video') && <section className="mt-9" aria-label="Materiais disponíveis">
               <h2 className="lesson-section-heading mb-5 text-2xl font-bold">Materiais disponíveis</h2>
-              <ResourceList items={siblings} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} />
+              <ResourceList items={siblings} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} currentItemId={ctx.item.id} />
             </section>}
 
             {complement && <ProductComplementOffer complement={complement} />}
@@ -123,11 +123,11 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
               itemId={ctx.item.id}
               itemTitle={itemTitle}
               description={ctx.product.description}
-              previous={previous ? { href: withPreview(`/${store.slug}/item/${previous.id}`, preview), title: previous.title } : null}
-              next={next ? { href: withPreview(`/${store.slug}/item/${next.id}`, preview), title: next.title } : null}
+              previous={previous ? { href: withPreview(`/${store.slug}/item/${previous.id}`, preview, complementScenario), title: previous.title } : null}
+              next={next ? { href: withPreview(`/${store.slug}/item/${next.id}`, preview, complementScenario), title: next.title } : null}
             />
           </div>
-          <LessonSidebar complement={complement && <ProductComplementCard complement={complement} />} upgrade={<ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} productTitle={ctx.product.title} imageUrl={ctx.product.upgradeImageUrl || ctx.product.coverUrl} buttonText={ctx.product.upgradeButtonText} sectionName={lockedModules[0]?.title} supportUrl={supportHref(store, 'geral', customer?.email ?? null)} />} modules={modules} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
+          <LessonSidebar complement={complement && <ProductComplementCard complement={complement} />} upgrade={<ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} productTitle={ctx.product.title} imageUrl={ctx.product.upgradeImageUrl || ctx.product.coverUrl} buttonText={ctx.product.upgradeButtonText} sectionName={lockedModules[0]?.title} supportUrl={supportHref(store, 'geral', customer?.email ?? null)} />} modules={modules} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
         </div>
         {contextual && <ContextualComplementShelves complements={contextual} storeSlug={store.slug} preview={preview} requestedSlug={requestedComplement} complementScenario={complementScenario}/>}
       </main>

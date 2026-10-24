@@ -5,7 +5,7 @@ import { resourceLabel } from '@/lib/content/resource-label'
 import { ArrowRightIcon, FileIcon, LinkIcon } from './icons'
 import { withPreview } from '@/lib/membros/paths'
 
-export function ResourceList({ items, storeSlug, currentItemId, legacyPresentation = false, preview = false }: { items: Item[]; storeSlug: string; currentItemId?: string; legacyPresentation?: boolean; preview?: PreviewContext }) {
+export function ResourceList({ items, storeSlug, currentItemId, legacyPresentation = false, preview = false, complementScenario }: { items: Item[]; storeSlug: string; currentItemId?: string; legacyPresentation?: boolean; preview?: PreviewContext; complementScenario?: string }) {
   const resources = items.filter((item) => (previewIncludesDrafts(preview) || item.isPublished) && item.kind !== 'video' && isHttpUrl(item.url))
   if (resources.length === 0) return null
   const ordered = currentItemId
@@ -22,7 +22,7 @@ export function ResourceList({ items, storeSlug, currentItemId, legacyPresentati
         return (
           <li key={item.id} className="min-w-0">
             <a
-              href={withPreview(`/${storeSlug}/item/${item.id}/abrir`, preview)}
+              href={withPreview(`/${storeSlug}/item/${item.id}/abrir`, preview, complementScenario)}
               target={isLink ? '_blank' : undefined}
               rel={isLink ? 'noopener noreferrer' : undefined}
               aria-label={`${action}${legacyPresentation ? ' ' : ': '}${item.title}${isLink ? ' (abre em nova aba)' : ''}`}

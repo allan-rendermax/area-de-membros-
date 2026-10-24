@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
 import { assessProductReadiness } from '../../src/lib/access/product-readiness-core.mjs'
 import { normalizarOferta, validarOfertas } from './cadastro-identidade.mjs'
 
@@ -96,7 +97,10 @@ async function rows(db, table, columns = '*', filters = {}) {
   for (let start = 0; ;) {
     let query = db.from(table).select(columns)
     for (const [field, value] of Object.entries(filters)) query = query.eq(field, value)
-    query = table === 'offer_products' ? query.order('offer_id').order('product_id') : query.order('id')
+    const orderColumns = table === 'product_complements'
+      ? ['store_id', 'parent_product_id', 'complement_product_id']
+      : table === 'offer_products' ? ['offer_id', 'product_id'] : ['id']
+    for (const column of orderColumns) query = query.order(column)
     const { data, error } = await query.range(start, start + pageSize - 1)
     if (error) throw new Error(`Falha na consulta de ${table}. Confira o esquema, as permissões e a conexão.`)
     if (!Array.isArray(data)) throw new Error(`Resposta inválida na consulta de ${table}.`)
@@ -271,12 +275,16 @@ function privateUrl(db, file) {
 
 async function upload(db, entry) {
   const urls = new Map()
+  // A failed/stale atomic save must never replace bytes referenced by the saved product.
+  // Keep staged paths unique across attempts; only successful persistence attaches them.
+  const version = entry.contextualComplementIds !== undefined || entry.plano.ficha.visibilidadeCatalogo !== undefined ? randomUUID() : null
   for (const file of entry.plano.arquivos) {
     const bucket = file.bucket ?? BUCKET
     if (![BUCKET, PRIVATE_BUCKET].includes(bucket)) throw new Error(`Bucket inválido para ${file.relativePath}.`)
-    const { error } = await db.storage.from(bucket).upload(file.storagePath, entry.bytes.get(file), { upsert: true, contentType: file.contentType })
+    const staged = version ? { ...file, storagePath: `${entry.plano.ficha.slug}/revisions/${version}/${file.storagePath.slice(file.storagePath.indexOf('/') + 1)}` } : file
+    const { error } = await db.storage.from(bucket).upload(staged.storagePath, entry.bytes.get(file), { upsert: !version, contentType: file.contentType })
     if (error) throw new Error(`Falha no upload de ${file.relativePath}. Reexecute para retomar.`)
-    urls.set(file, bucket === PRIVATE_BUCKET ? privateUrl(db, file) : publicUrl(db, file))
+    urls.set(file, bucket === PRIVATE_BUCKET ? privateUrl(db, staged) : publicUrl(db, staged))
   }
   return urls
 }
