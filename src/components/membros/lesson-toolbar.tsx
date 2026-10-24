@@ -12,6 +12,7 @@ export type LessonToolbarProps = {
   initialCompleted: boolean
   progressAvailable?: boolean
   preview?: boolean
+  sticky?: boolean
   productTitle: string
   moduleTitle: string
   itemId: string
@@ -32,7 +33,7 @@ function ToolbarIcon({ kind }: { kind: 'info' | 'previous' | 'next' | 'check' })
   </svg>
 }
 
-export function LessonToolbar({ storeSlug, initialCompleted, progressAvailable = true, preview = false, productTitle, moduleTitle, itemId, itemTitle, description, previous, next }: LessonToolbarProps) {
+export function LessonToolbar({ storeSlug, initialCompleted, progressAvailable = true, preview = false, sticky = true, productTitle, moduleTitle, itemId, itemTitle, description, previous, next }: LessonToolbarProps) {
   const router = useRouter()
   const [saved, setSaved] = useState<{ itemId: string; completed: boolean } | null>(null)
   const complete = saved?.itemId === itemId ? saved.completed : initialCompleted
@@ -86,7 +87,7 @@ export function LessonToolbar({ storeSlug, initialCompleted, progressAvailable =
   }
 
   return (
-    <div ref={wrapperRef} className="relative sm:sticky sm:bottom-4 z-20 mt-8 min-w-0 rounded-2xl border border-borda bg-superficie/95 px-3 py-3 text-texto shadow-[0_16px_40px_rgba(0,0,0,0.3)] backdrop-blur-sm sm:px-5">
+    <div ref={wrapperRef} className={`relative ${sticky ? 'sm:sticky sm:bottom-4' : ''} z-20 mt-8 min-w-0 rounded-2xl border border-borda bg-superficie/95 px-3 py-3 text-texto shadow-[0_16px_40px_rgba(0,0,0,0.3)] backdrop-blur-sm sm:px-5`}>
       {aboutOpen && (
         <section id={panelId} aria-label="Sobre este conteúdo" className="absolute bottom-full left-3 right-3 mb-2 max-h-[min(65dvh,24rem)] overflow-y-auto rounded-xl border border-borda bg-superficie p-5 shadow-2xl sm:left-5 sm:right-auto sm:w-[min(25rem,calc(100vw-2.5rem))]">
           <div className="flex items-start justify-between gap-4">

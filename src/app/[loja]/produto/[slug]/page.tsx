@@ -22,7 +22,6 @@ import { ProductComplementCard, ProductComplementOffer } from '@/components/memb
 import { loadContextualInput,contextualLegacyComplement } from '@/lib/data/contextual-page'
 import { projectProductComplements } from '@/lib/access/contextual-complements'
 import { ContextualComplementShelves } from '@/components/membros/contextual-complement-shelves'
-import { ContextualProductHeader } from '@/components/membros/contextual-product-header'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,18 +65,17 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
     <>
       <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} complementScenario={complementScenario} simulationHref={product.isPublished ? undefined : `/${store.slug}`} actions={<InstallAppButton />} legacyHome />
       <main className="lesson-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
-        {contextual && <ContextualProductHeader product={product} level={level} backHref={backHref} ownedCount={contextual.owned.length} optionalCount={contextual.optional.length}/>}
         <div id="seu-material" className="lesson-workspace-grid grid min-w-0 scroll-mt-28 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0">
-            {!contextual && <header className="lesson-heading flex min-w-0 items-start gap-4">
-              <Link href={withPreview(`/${store.slug}#materiais`, preview)} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
+            <header className="lesson-heading flex min-w-0 items-start gap-4">
+              <Link href={backHref} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
                 <p className="lesson-eyebrow text-xs font-bold uppercase tracking-[.16em] text-texto-suave">Seu material</p>
                 <h1 className="lesson-title mt-1 break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{product.title}</h1>
                 {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo não faz parte da sua versão atual.</p>}
                 {product.description && <p className="mt-3 max-w-2xl break-words text-sm leading-relaxed text-texto-suave sm:text-base">{product.description}</p>}
               </div>
-            </header>}
+            </header>
 
             <p className="mt-10 text-texto-suave">{lockedModules.length ? 'Nenhum conteúdo disponível no seu acesso atual.' : 'Nenhum conteúdo publicado ainda.'}</p>
             <LockedModules modules={lockedModules} />

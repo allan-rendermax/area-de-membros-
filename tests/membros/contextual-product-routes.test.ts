@@ -32,7 +32,7 @@ it('home groups owned complements and hides contextual offers from all general t
 it('composes contextual shelves on the first-item product path and direct item path',async()=>{
   const p=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arq',slug:'atlas'})} as never))
   const i=renderToStaticMarkup(await ItemPage({...query(),params:Promise.resolve({loja:'arq',id:item.id})} as never))
-  for(const html of [p,i]){expect(html).toContain('Seus complementos');expect(html).toContain('Conhecer optional');expect(html).toContain('Abrir meus materiais')}
+  for(const html of [p,i]){expect(html).toContain('Seus complementos');expect(html).toContain('Conhecer optional');expect(html).toContain('lesson-heading');expect(html).not.toContain('Abrir meus materiais')}
 })
 it('keeps acquired materials available when relations fail and omits offers',async()=>{
   state.relationsAvailable=false

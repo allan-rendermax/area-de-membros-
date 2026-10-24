@@ -7,12 +7,4 @@
 .shelves { margin-top:3rem; display:grid; gap:2.5rem; scroll-margin-top:7rem; }
 .status { margin-top:.4rem; font-size:.75rem; line-height:1.5; color:var(--color-texto-suave); }
 .acquired { color:#98d2ac; }
-.header { display:grid; grid-template-columns:minmax(0,1fr) 210px; align-items:center; gap:3rem; padding:2rem 0 3rem; }
-.heading { font-family:var(--arq-display,inherit); text-transform:uppercase; font-size:clamp(2.2rem,4vw,3.6rem); font-weight:800; line-height:1.03; max-width:24ch; margin:1.2rem 0; overflow-wrap:anywhere; }
-.art { width:210px; justify-self:center; }
-.back { display:inline-block; min-height:44px; font-size:.85rem; color:var(--color-texto-suave); }
-.cta { display:inline-flex; align-items:center; min-height:44px; margin-top:1.5rem; padding:.7rem 1.2rem; border-radius:.45rem; background:#ffda35; color:#151719; font-weight:700; }
-.tabs { display:flex; flex-wrap:wrap; gap:1.5rem; padding:.75rem 0; border-bottom:1px solid var(--color-borda); margin-bottom:2rem; font-size:.85rem; }
-.tabs a { display:inline-flex; align-items:center; min-height:44px; }
-@media(max-width:639px){ .header{grid-template-columns:minmax(0,1fr) 88px;gap:1rem;padding-top:.75rem;} .art{width:88px;align-self:start;margin-top:3rem;} .heading{font-size:2rem;} .tabs{gap:1rem;} }
 @media(prefers-reduced-motion:reduce){.group a,.card a,.card button{transition:none!important;transform:none!important;}}
