@@ -1,0 +1,134 @@
+[
+  {
+    "slug": "planta-certa",
+    "title": "Guia da Planta Certa para Jardins Tropicais",
+    "source": "C:\\Users\\arqal\\.codex\\generated_images\\01a16e7a-2d36-70f1-89f7-477d5d4ae3e6\\exec-418917f9-90bb-4edd-a271-612689427522.png",
+    "field": "cover_url",
+    "output": "artifacts/complementos-contextuais-20261024/capas/finais/planta-certa-2x3.webp",
+    "width": 1024,
+    "height": 1536,
+    "bytes": 446952,
+    "sha256": "9e4c76372136a8023153eb77dbf04bc9a99c85299aa1461b7186ce69f0c4f50f"
+  },
+  {
+    "slug": "orcamento-jardins",
+    "title": "Orçamento de Jardins na Prática",
+    "source": "C:\\Users\\arqal\\.codex\\generated_images\\01a16e7a-2d36-70f1-89f7-477d5d4ae3e6\\exec-ce611bc9-36e4-453f-baa1-7ee20ae3ff68.png",
+    "field": "cover_url",
+    "output": "artifacts/complementos-contextuais-20261024/capas/finais/orcamento-jardins-2x3.webp",
+    "width": 1024,
+    "height": 1536,
+    "bytes": 383848,
+    "sha256": "4f6f415451b19a146f7c704ae236224e20792070ac440f70b6783cf97ce8eedc"
+  },
+  {
+    "slug": "mestres-paisagismo",
+    "title": "Biblioteca Visual dos Mestres do Paisagismo",
+    "source": "C:\\Users\\arqal\\.codex\\generated_images\\01a16e7a-2d36-70f1-89f7-477d5d4ae3e6\\exec-be64fbee-00d9-459a-8a3d-81877f50af6d.png",
+    "field": "cover_url",
+    "output": "artifacts/complementos-contextuais-20261024/capas/finais/mestres-paisagismo-2x3.webp",
+    "width": 1024,
+    "height": 1536,
+    "bytes": 455344,
+    "sha256": "27cd9715ce2f4a4cd992b3bca94c1e3d707f7d8e5d83187ac62dd5147b13d409"
+  },
+  {
+    "slug": "gestao-obras",
+    "title": "Kit Gestão de Obras",
+    "source": "C:\\Users\\arqal\\.codex\\generated_images\\01a16e7a-2d36-70f1-89f7-477d5d4ae3e6\\exec-b1df4cab-688d-493d-97f7-8d7fbac91d90.png",
+    "field": "cover_url",
+    "output": "artifacts/complementos-contextuais-20261024/capas/finais/gestao-obras-2x3.webp",
+    "width": 1024,
+    "height": 1536,
+    "bytes": 187216,
+    "sha256": "3015fa0e1f86c02740e0341f30cb82558d88d447c9054e917f933c59e215c9af"
+  },
+  {
+    "slug": "orcamento-obras",
+    "title": "Orçamento de Obras na Prática",
+    "source": "C:\\Users\\arqal\\.codex\\generated_images\\01a16e7a-2d36-70f1-89f7-477d5d4ae3e6\\exec-37424736-89fe-42d9-b62f-fec4faa6bcc1.png",
+    "field": "cover_url",
+    "output": "artifacts/complementos-contextuais-20261024/capas/finais/orcamento-obras-2x3.webp",
+    "width": 1024,
+    "height": 1536,
+    "bytes": 199772,
+    "sha256": "df6a05755b9e1f66ae8e705a398910937040ab8598f8e137d30ce000a0645771"
+  },
+  {
+    "slug": "captacao-clientes",
+    "title": "Kit Captação e Atendimento de Clientes",
+    "source": "C:\\Users\\arqal\\.codex\\generated_images\\01a16e7a-2d36-70f1-89f7-477d5d4ae3e6\\exec-3ce13bfd-e7cc-4b01-98c1-1fcf54589b03.png",
+    "field": "cover_url",
+    "output": "artifacts/complementos-contextuais-20261024/capas/finais/captacao-clientes-2x3.webp",
+    "width": 1024,
+    "height": 1536,
+    "bytes": 198640,
+    "sha256": "a33df7966d8c2526b0db20157f1daa2516b697688bb22d87314982b34b8c9db2"
+  },
+  {
+    "slug": "planta-certa",
+    "source": "C:/Users/arqal/OneDrive/Desktop/Ideias Low Ticket/ARQUITETURA/Atlas Visual de Paisagismo Tropical/Mockups/Order Bumps 1x1/guia-da-planta-certa.jpg",
+    "previousUrl": null,
+    "field": "purchase_image_url",
+    "output": "artifacts/complementos-contextuais-20261024/capas/finais/planta-certa-1x1.webp",
+    "width": 1024,
+    "height": 1024,
+    "bytes": 280186,
+    "sha256": "81ebca1006f409a42bf7f544148e676cf5a90081c93ad62b10a767740cb2d2da"
+  },
+  {
+    "slug": "orcamento-jardins",
+    "source": "C:/Users/arqal/OneDrive/Desktop/Ideias Low Ticket/ARQUITETURA/Atlas Visual de Paisagismo Tropical/Mockups/Order Bumps 1x1/orcamento-de-jardins-na-pratica.jpg",
+    "previousUrl": null,
+    "field": "purchase_image_url",
+    "output": "artifacts/complementos-contextuais-20261024/capas/finais/orcamento-jardins-1x1.webp",
+    "width": 1024,
+    "height": 1024,
+    "bytes": 227022,
+    "sha256": "f6963676bc8e1870ff06bd7006f0cd217a49ff1d4c8ac1a37dbf4784228f66a6"
+  },
+  {
+    "slug": "mestres-paisagismo",
+    "source": "C:/Users/arqal/OneDrive/Desktop/Ideias Low Ticket/ARQUITETURA/Atlas Visual de Paisagismo Tropical/Mockups/Order Bumps 1x1/biblioteca-visual-dos-mestres-do-paisagismo.jpg",
+    "previousUrl": null,
+    "field": "purchase_image_url",
+    "output": "artifacts/complementos-contextuais-20261024/capas/finais/mestres-paisagismo-1x1.webp",
+    "width": 1024,
+    "height": 1024,
+    "bytes": 310822,
+    "sha256": "b3f83390600e50883fe9d9702d1410e800c1a8a75148c90ce16c241c38067147"
+  },
+  {
+    "slug": "gestao-obras",
+    "source": "artifacts/complementos-contextuais-20261024/capas/originais/gestao-obras-square.webp",
+    "previousUrl": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/product-mockups/kit-gestao-de-obras-1887b760b7bd8e87.webp",
+    "field": "purchase_image_url",
+    "output": "artifacts/complementos-contextuais-20261024/capas/finais/gestao-obras-1x1.webp",
+    "width": 1024,
+    "height": 1024,
+    "bytes": 161824,
+    "sha256": "e326edd159cd46eb57d771d55b965d05ae1b81c1445823a2e77f2d9f2ec87422"
+  },
+  {
+    "slug": "orcamento-obras",
+    "source": "artifacts/complementos-contextuais-20261024/capas/originais/orcamento-obras-square.webp",
+    "previousUrl": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/product-mockups/orcamento-de-obras-na-pratica-456221a1f2c2f10e.webp",
+    "field": "purchase_image_url",
+    "output": "artifacts/complementos-contextuais-20261024/capas/finais/orcamento-obras-1x1.webp",
+    "width": 1024,
+    "height": 1024,
+    "bytes": 163662,
+    "sha256": "88987d3eb6052fac1c3115801b02c0c80291b683a41c1f448cfe76c20f84c58d"
+  },
+  {
+    "slug": "captacao-clientes",
+    "source": "artifacts/complementos-contextuais-20261024/capas/originais/captacao-clientes-square.webp",
+    "previousUrl": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/product-mockups/kit-captacao-e-atendimento-de-clientes-4c29afe1e18eba38.webp",
+    "field": "purchase_image_url",
+    "output": "artifacts/complementos-contextuais-20261024/capas/finais/captacao-clientes-1x1.webp",
+    "width": 1024,
+    "height": 1024,
+    "bytes": 149940,
+    "sha256": "c72a188dcc996173bb1f9711c5fb8ba3c8891fa8d417c3dcac743c984e6f837a"
+  }
+]

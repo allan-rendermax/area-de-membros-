@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "Home grouped, acquired expansion, discovery preserved",
+    "Square offer, Escape and focus restoration",
+    "First/direct item composition; mobile 390/320 without overflow",
+    "All purchased removes offers; complete content",
+    "Standalone, refunded/unpublished parent and removed relation retain access",
+    "Relation failure preserves purchases without offers",
+    "Old purchase URL resolves inside owned parent",
+    "No purchase cannot open item; query alone does not grant",
+    "Blocked customer denied",
+    "Admin preview scenario preserved; admin editor rendered"
+  ],
+  "errors": []
+}

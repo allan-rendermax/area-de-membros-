@@ -1,0 +1,6 @@
+{
+  "postgres": "PostgreSQL 18.4 on x86_64-windows, compiled by msvc-19.44.35226, 64-bit",
+  "staleEditor": "passed: blocked then 40001; winner and relations intact",
+  "concurrentChain": "passed: blocked then rejected",
+  "connections": 2
+}

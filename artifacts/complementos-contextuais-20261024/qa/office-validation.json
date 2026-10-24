@@ -1,0 +1,19 @@
+[
+  {
+    "name": "01 - Planilha de Orçamento.xlsx",
+    "sha256": "99502d05ceb9d9c72cd6f0b1c16b16f7410ef5e36856e37aefc39deebb82be41",
+    "bytes": 12285,
+    "sheets": [
+      "Quantitativo de Especies",
+      "Cronograma Implantacao",
+      "Orcamento"
+    ],
+    "formulaCount": 43
+  },
+  {
+    "name": "05 - Contrato de Serviço Paisagístico.docx",
+    "sha256": "09382289f48e3c38a203e7e1860dfe5c96a52c9f358483a9bf3ec8eb84c11d11",
+    "bytes": 11875,
+    "paragraphs": 27
+  }
+]

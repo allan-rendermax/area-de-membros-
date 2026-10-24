@@ -1,0 +1,92 @@
+{
+  "products": [
+    {
+      "id": null,
+      "slug": "guia-da-planta-certa-para-jardins-tropicais",
+      "title": "Guia da Planta Certa para Jardins Tropicais",
+      "parentId": "8fcf6642-e713-486b-8e29-5058d3b85cef",
+      "parentSlug": "atlas-visual-de-paisagismo-tropical",
+      "sortOrder": 0,
+      "catalogVisibility": "contextual",
+      "coverPath": "capas/finais/planta-certa-2x3.webp",
+      "purchaseImagePath": "capas/finais/planta-certa-1x1.webp",
+      "commercialStatus": "confirm Payt product code and checkout before creating draft",
+      "publicationStatus": "not applied",
+      "contentStatus": "local final materials verified; upload pending"
+    },
+    {
+      "id": null,
+      "slug": "orcamento-de-jardins-na-pratica",
+      "title": "Orçamento de Jardins na Prática",
+      "parentId": "8fcf6642-e713-486b-8e29-5058d3b85cef",
+      "parentSlug": "atlas-visual-de-paisagismo-tropical",
+      "sortOrder": 1,
+      "catalogVisibility": "contextual",
+      "coverPath": "capas/finais/orcamento-jardins-2x3.webp",
+      "purchaseImagePath": "capas/finais/orcamento-jardins-1x1.webp",
+      "commercialStatus": "confirm Payt product code and checkout before creating draft",
+      "publicationStatus": "not applied",
+      "contentStatus": "local final materials verified; upload pending"
+    },
+    {
+      "id": null,
+      "slug": "biblioteca-visual-dos-mestres-do-paisagismo",
+      "title": "Biblioteca Visual dos Mestres do Paisagismo",
+      "parentId": "8fcf6642-e713-486b-8e29-5058d3b85cef",
+      "parentSlug": "atlas-visual-de-paisagismo-tropical",
+      "sortOrder": 2,
+      "catalogVisibility": "contextual",
+      "coverPath": "capas/finais/mestres-paisagismo-2x3.webp",
+      "purchaseImagePath": "capas/finais/mestres-paisagismo-1x1.webp",
+      "commercialStatus": "confirm Payt product code and checkout before creating draft",
+      "publicationStatus": "not applied",
+      "contentStatus": "local final materials verified; upload pending"
+    },
+    {
+      "id": "608ed6ad-8488-4eb5-a98a-02ca07c495a4",
+      "slug": "kit-gestao-de-obras",
+      "title": "Kit Gestão de Obras",
+      "parentId": "4b2fb132-d4ae-4462-8032-915f702be1bb",
+      "parentSlug": "atlas-visual-das-patologias-na-construcao-civil-completo",
+      "sortOrder": 0,
+      "catalogVisibility": "contextual",
+      "coverPath": "capas/finais/gestao-obras-2x3.webp",
+      "purchaseImagePath": "capas/finais/gestao-obras-1x1.webp",
+      "commercialStatus": "preserve existing offers and aliases",
+      "publicationStatus": "not applied",
+      "contentStatus": "existing published delivery: renew remote verification at activation"
+    },
+    {
+      "id": "78bff9d8-29c8-47dc-9898-237e29dccfe2",
+      "slug": "orcamento-de-obras-na-pratica",
+      "title": "Orçamento de Obras na Prática",
+      "parentId": "4b2fb132-d4ae-4462-8032-915f702be1bb",
+      "parentSlug": "atlas-visual-das-patologias-na-construcao-civil-completo",
+      "sortOrder": 1,
+      "catalogVisibility": "contextual",
+      "coverPath": "capas/finais/orcamento-obras-2x3.webp",
+      "purchaseImagePath": "capas/finais/orcamento-obras-1x1.webp",
+      "commercialStatus": "preserve existing offers and aliases",
+      "publicationStatus": "not applied",
+      "contentStatus": "existing published delivery: renew remote verification at activation"
+    },
+    {
+      "id": "4a06645d-c5a4-4ed7-b001-c7690fab7ed6",
+      "slug": "kit-captacao-e-atendimento-de-clientes",
+      "title": "Kit Captação e Atendimento de Clientes",
+      "parentId": "4b2fb132-d4ae-4462-8032-915f702be1bb",
+      "parentSlug": "atlas-visual-das-patologias-na-construcao-civil-completo",
+      "sortOrder": 2,
+      "catalogVisibility": "contextual",
+      "coverPath": "capas/finais/captacao-clientes-2x3.webp",
+      "purchaseImagePath": "capas/finais/captacao-clientes-1x1.webp",
+      "commercialStatus": "preserve existing offers and aliases",
+      "publicationStatus": "not applied",
+      "contentStatus": "existing published delivery: renew remote verification at activation"
+    }
+  ],
+  "artwork": "6 portrait + 6 square, checked",
+  "landscapePdf": "5 final PDFs checked and optimized, originals preserved",
+  "commercialMapping": "Patologias preserved; Paisagismo bump mapping pending",
+  "activated": false
+}

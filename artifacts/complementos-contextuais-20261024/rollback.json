@@ -1,0 +1,20 @@
+{
+  "status": "prepared, not executed",
+  "requires": "fresh before/after snapshot and revision checks",
+  "restore": [
+    "stores.member_library_mode",
+    "products.catalog_visibility",
+    "product_complements",
+    "products.cover_url",
+    "products.purchase_image_url"
+  ],
+  "preserve": [
+    "orders",
+    "offers",
+    "offer_products",
+    "products already sold",
+    "delivery files",
+    "additive migrations"
+  ],
+  "beforeSnapshot": "antes.json"
+}

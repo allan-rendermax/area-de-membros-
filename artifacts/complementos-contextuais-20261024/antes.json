@@ -1,0 +1,102 @@
+{
+  "capturedAt": "2026-10-24T16:33:21.491Z",
+  "stage": "preparation inventory; must refresh immediately before activation",
+  "store": {
+    "id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+    "slug": "arquitetura",
+    "name": "Arquitetura"
+  },
+  "memberLibraryMode": "legacy (schema default after migration)",
+  "products": [
+    {
+      "id": "78bff9d8-29c8-47dc-9898-237e29dccfe2",
+      "store_id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+      "slug": "orcamento-de-obras-na-pratica",
+      "title": "Orçamento de Obras na Prática",
+      "cover_url": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/products/orcamento-de-obras-na-pratica/capa-b8ca73d8216a3315.webp",
+      "purchase_image_url": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/product-mockups/orcamento-de-obras-na-pratica-456221a1f2c2f10e.webp",
+      "checkout_url": "https://checkout.payt.com.br/9374ef3d53a00c33de62be93467ec04d",
+      "student_checkout_url": null,
+      "complementary_product_id": null,
+      "is_published": true,
+      "content_mode": "sections",
+      "sort_order": 11,
+      "updated_at": "2026-09-25T20:59:23.442+00:00"
+    },
+    {
+      "id": "608ed6ad-8488-4eb5-a98a-02ca07c495a4",
+      "store_id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+      "slug": "kit-gestao-de-obras",
+      "title": "Kit Gestão de Obras",
+      "cover_url": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/products/kit-gestao-de-obras/capa-f5b7e69d63de5635.webp",
+      "purchase_image_url": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/product-mockups/kit-gestao-de-obras-1887b760b7bd8e87.webp",
+      "checkout_url": "https://checkout.payt.com.br/53b7855a87c62719593f7a159bc075a0",
+      "student_checkout_url": null,
+      "complementary_product_id": null,
+      "is_published": true,
+      "content_mode": "sections",
+      "sort_order": 12,
+      "updated_at": "2026-09-25T20:59:23.509+00:00"
+    },
+    {
+      "id": "4b2fb132-d4ae-4462-8032-915f702be1bb",
+      "store_id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+      "slug": "atlas-visual-das-patologias-na-construcao-civil-completo",
+      "title": "Atlas Visual das Patologias na Construção Civil",
+      "cover_url": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/products/atlas-visual-das-patologias-na-construcao-civil-completo/capa-5f1ab2ccc0d3b8bd.webp",
+      "purchase_image_url": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/product-mockups/atlas-visual-das-patologias-na-construcao-civil-completo-6f3a6ec29dfdb391.webp",
+      "checkout_url": null,
+      "student_checkout_url": null,
+      "complementary_product_id": "e2bb230f-dc38-4af6-866b-1f80d0a098db",
+      "is_published": true,
+      "content_mode": "versions",
+      "sort_order": 1,
+      "updated_at": "2026-09-25T13:48:33.15+00:00"
+    },
+    {
+      "id": "e2bb230f-dc38-4af6-866b-1f80d0a098db",
+      "store_id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+      "slug": "protocolo-anti-retrabalho",
+      "title": "Protocolo Anti-Retrabalho",
+      "cover_url": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/protocolo-anti-retrabalho/capa.webp",
+      "purchase_image_url": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/protocolo-anti-retrabalho/logo-1x1.webp",
+      "checkout_url": "https://checkout.payt.com.br/f2b5337a076c0be3ccd09fdcfc651601",
+      "student_checkout_url": null,
+      "complementary_product_id": null,
+      "is_published": true,
+      "content_mode": "sections",
+      "sort_order": 4,
+      "updated_at": "2026-09-26T18:13:45.156+00:00"
+    },
+    {
+      "id": "4a06645d-c5a4-4ed7-b001-c7690fab7ed6",
+      "store_id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+      "slug": "kit-captacao-e-atendimento-de-clientes",
+      "title": "Kit Captação e Atendimento de Clientes",
+      "cover_url": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/products/kit-captacao-e-atendimento-de-clientes/capa-62e81e9f2635b454.webp",
+      "purchase_image_url": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/product-mockups/kit-captacao-e-atendimento-de-clientes-4c29afe1e18eba38.webp",
+      "checkout_url": "https://checkout.payt.com.br/4d29550d257b717e7a57a469b728d8ca",
+      "student_checkout_url": null,
+      "complementary_product_id": null,
+      "is_published": true,
+      "content_mode": "sections",
+      "sort_order": 10,
+      "updated_at": "2026-09-25T20:59:23.341+00:00"
+    },
+    {
+      "id": "8fcf6642-e713-486b-8e29-5058d3b85cef",
+      "store_id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+      "slug": "atlas-visual-de-paisagismo-tropical",
+      "title": "Atlas Visual de Paisagismo Tropical",
+      "cover_url": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/atlas-visual-de-paisagismo-tropical/capa.webp?download=capa.webp",
+      "purchase_image_url": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/product-mockups/atlas-visual-de-paisagismo-tropical-5ffcda85efc42b4d.webp",
+      "checkout_url": "https://checkout.payt.com.br/0557f6df3b9311a33eaa942c0f73c0a0",
+      "student_checkout_url": null,
+      "complementary_product_id": null,
+      "is_published": true,
+      "content_mode": "versions",
+      "sort_order": 5,
+      "updated_at": "2026-10-23T19:54:13.313838+00:00"
+    }
+  ]
+}
