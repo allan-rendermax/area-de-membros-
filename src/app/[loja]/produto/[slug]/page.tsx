@@ -19,6 +19,10 @@ import { requireStorePreview } from '@/lib/membros/preview'
 import { withPreview } from '@/lib/membros/paths'
 import { loadProductComplement } from '@/lib/data/product-complement'
 import { ProductComplementCard, ProductComplementOffer } from '@/components/membros/product-complement'
+import { loadContextualInput,contextualLegacyComplement } from '@/lib/data/contextual-page'
+import { projectProductComplements } from '@/lib/access/contextual-complements'
+import { ContextualComplementShelves } from '@/components/membros/contextual-complement-shelves'
+import { ContextualProductHeader } from '@/components/membros/contextual-product-header'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,8 +37,10 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
     customer ? loadGrantedProductLevels(store.id, customer) : Promise.resolve(null),
   ])
   if (!product || (!editorial && !product.isPublished)) notFound()
-  const level = preview ? previewAccessLevel(preview) : levels?.get(product.id)
-  if (!level) redirect(withPreview(`/${store.slug}?comprar=${product.slug}`, preview))
+  const complementScenario=typeof query.complementos==='string'?query.complementos:undefined
+  const contextualInput=store.memberLibraryMode==='grouped'?await loadContextualInput(store.id,new Set(levels?.keys()),preview,complementScenario):undefined
+  const level = preview ? (contextualInput && !contextualInput.granted.has(product.id)?undefined:previewAccessLevel(preview)) : levels?.get(product.id)
+  if (!level) redirect(withPreview(`/${store.slug}?comprar=${product.slug}`, preview,complementScenario))
 
   const publishedModules = (await listModulesWithItems(product.id, { publishedOnly: !editorial }))
     .filter((module) => editorial || module.isPublished)
@@ -48,19 +54,22 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
   if (firstItem) {
     return renderItemContent({
       ctx: { item: firstItem, module: modules[0], product },
-      store, customer, level, preview, blocked, productModules: publishedModules,
+      store, customer, level, preview, blocked, productModules: publishedModules, contextualInput, complementScenario, requestedComplement:typeof query.complemento==='string'?query.complemento:undefined,
     })
   }
   const support = supportHref(store, 'geral', customer?.email ?? null)
-  const complement = await loadProductComplement(product, store.slug, customer, preview)
+  const contextual=contextualInput?projectProductComplements(contextualInput,product.id):null
+  const complement = contextualInput?contextualLegacyComplement(contextualInput,product,store.slug,preview):await loadProductComplement(product, store.slug, customer, preview)
+  const backHref=withPreview(contextual?.backParent?`/${store.slug}/produto/${contextual.backParent.slug}`:`/${store.slug}#materiais`,preview,complementScenario)
 
   return (
     <>
-      <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} simulationHref={product.isPublished ? undefined : `/${store.slug}`} actions={<InstallAppButton />} legacyHome />
+      <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} complementScenario={complementScenario} simulationHref={product.isPublished ? undefined : `/${store.slug}`} actions={<InstallAppButton />} legacyHome />
       <main className="lesson-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
-        <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
+        {contextual && <ContextualProductHeader product={product} level={level} backHref={backHref} ownedCount={contextual.owned.length} optionalCount={contextual.optional.length}/>}
+        <div id="seu-material" className="lesson-workspace-grid grid min-w-0 scroll-mt-28 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0">
-            <header className="lesson-heading flex min-w-0 items-start gap-4">
+            {!contextual && <header className="lesson-heading flex min-w-0 items-start gap-4">
               <Link href={withPreview(`/${store.slug}#materiais`, preview)} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
                 <p className="lesson-eyebrow text-xs font-bold uppercase tracking-[.16em] text-texto-suave">Seu material</p>
@@ -68,7 +77,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
                 {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo não faz parte da sua versão atual.</p>}
                 {product.description && <p className="mt-3 max-w-2xl break-words text-sm leading-relaxed text-texto-suave sm:text-base">{product.description}</p>}
               </div>
-            </header>
+            </header>}
 
             <p className="mt-10 text-texto-suave">{lockedModules.length ? 'Nenhum conteúdo disponível no seu acesso atual.' : 'Nenhum conteúdo publicado ainda.'}</p>
             <LockedModules modules={lockedModules} />
@@ -77,6 +86,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
           </div>
           {complement && <aside className="min-w-0" aria-label="Conteúdos do produto"><div className="rounded-2xl border border-borda bg-superficie p-5 sm:p-6"><h2 className="text-2xl font-bold">Conteúdos</h2><div className="mt-5"><ProductComplementCard complement={complement} /></div></div></aside>}
         </div>
+        {contextual && <ContextualComplementShelves complements={contextual} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} requestedSlug={typeof query.complemento==='string'?query.complemento:undefined}/>}
       </main>
       <CommunityWhatsapp url={store.communityWhatsappUrl} />
       <WhatsAppFloating href={support} />

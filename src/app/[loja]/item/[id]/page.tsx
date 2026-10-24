@@ -9,6 +9,7 @@ import { loadGrantedProductLevels } from '@/lib/data/access'
 import { getItemWithContext } from '@/lib/data/products'
 import { requireStoreSession } from '@/lib/membros/session'
 import { requireStorePreview } from '@/lib/membros/preview'
+import { loadContextualInput } from '@/lib/data/contextual-page'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,12 +27,14 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
     customer ? loadGrantedProductLevels(store.id, customer) : Promise.resolve(null),
   ])
   if (!ctx || ctx.product.storeId !== store.id || (!editorial && (!ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished))) notFound()
-  const level = preview ? previewAccessLevel(preview) : levels?.get(ctx.product.id)
-  if (!level) redirect(withPreview(`/${store.slug}?comprar=${ctx.product.slug}`, preview))
-  if (!canAccessProductModule(level, ctx.module.requiredLevel, ctx.product.contentMode, editorial)) redirect(withPreview(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`, preview))
+  const complementScenario=typeof query.complementos==='string'?query.complementos:undefined
+  const contextualInput=store.memberLibraryMode==='grouped'?await loadContextualInput(store.id,new Set(levels?.keys()),preview,complementScenario):undefined
+  const level = preview ? (contextualInput && !contextualInput.granted.has(ctx.product.id)?undefined:previewAccessLevel(preview)) : levels?.get(ctx.product.id)
+  if (!level) redirect(withPreview(`/${store.slug}?comprar=${ctx.product.slug}`, preview, complementScenario))
+  if (!canAccessProductModule(level, ctx.module.requiredLevel, ctx.product.contentMode, editorial)) redirect(withPreview(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`, preview, complementScenario))
 
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
   if (ctx.item.kind === 'video' && !embed) notFound()
   if (ctx.item.kind !== 'video' && !isHttpUrl(ctx.item.url)) notFound()
-  return renderItemContent({ ctx, store, customer, level, preview, blocked })
+  return renderItemContent({ ctx, store, customer, level, preview, blocked,contextualInput,complementScenario,requestedComplement:typeof query.complemento==='string'?query.complemento:undefined })
 }

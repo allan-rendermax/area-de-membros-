@@ -38,7 +38,7 @@ export function ProductFormEditor({ product, products = [], tracks, storeId, sto
     onChange={url => { setDraft(current => ({ ...current, [imageProperties[slot]]: url || null })); setDirty(true) }}
     onPending={(key, pending) => { if (pending) pendingSlots.current.add(key); else pendingSlots.current.delete(key); setUploading(pendingSlots.current.size > 0) }} />
 
-  return <form ref={preserveFormFields} action={action} onSubmit={event => { if (saving || pendingSlots.current.size) event.preventDefault() }}
+  return <form ref={preserveFormFields} action={action} onSubmit={event => { if (busy || pendingSlots.current.size) event.preventDefault() }}
     onChange={event => {
       setDirty(true)
       const target = event.target

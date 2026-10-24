@@ -96,16 +96,18 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
   if (fields.ordem !== undefined && (!/^-?\d+$/.test(fields.ordem) || !Number.isInteger(ordem) || ordem < -2147483648 || ordem > 2147483647)) {
     throw new Error('produto.txt: ordem deve ser inteiro PostgreSQL válido.')
   }
-  const base = { nome: fields.nome, tag: fields.tag, loja, slug, trilha: fields.trilha || '', checkout, destaque, ordem, descricao: fields.descricao || '', ...(fields.complemento !== undefined ? { complemento: fields.complemento } : {}) }
+  let complementos
+  let visibilidadeCatalogo
   if (fields.complementos !== undefined) {
     const list=fields.complementos==='nenhum'?[]:fields.complementos.split(',').map(value=>value.trim())
     if(list.some(value=>!SLUG.test(value) || value.length>60 || value===slug || value==='nenhum') || new Set(list).size!==list.length)throw new Error('produto.txt: complementos deve conter slugs distintos de outros produtos ou nenhum.')
-    base.complementos=list
+    complementos=list
   }
   if(fields.visibilidade_catalogo!==undefined){
     if(!['catalogo','contextual'].includes(fields.visibilidade_catalogo))throw new Error('produto.txt: visibilidade_catalogo deve ser catalogo ou contextual.')
-    base.visibilidadeCatalogo=fields.visibilidade_catalogo==='catalogo'?'catalog':'contextual'
+    visibilidadeCatalogo=fields.visibilidade_catalogo==='catalogo'?'catalog':'contextual'
   }
+  const base = { nome: fields.nome, tag: fields.tag, loja, slug, trilha: fields.trilha || '', checkout, destaque, ordem, descricao: fields.descricao || '', ...(fields.complemento !== undefined ? { complemento: fields.complemento } : {}), ...(complementos!==undefined?{complementos}:{}), ...(visibilidadeCatalogo!==undefined?{visibilidadeCatalogo}:{}) }
   if (fields.organizacao !== undefined) base.organizacao = fields.organizacao
   if (shared) {
     const ofertas = validarOfertas(['basico', 'completo', 'upgrade'].filter(level => fields[`codigo_checkout_${level}`]).map(level => ({

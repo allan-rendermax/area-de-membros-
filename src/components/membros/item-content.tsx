@@ -20,9 +20,13 @@ import { withPreview } from '@/lib/membros/paths'
 import { ProductComplementCard, ProductComplementOffer } from './product-complement'
 import { loadProductComplement } from '@/lib/data/product-complement'
 import { CommunityWhatsapp } from './community-whatsapp'
+import { projectProductComplements,type ContextualInput } from '@/lib/access/contextual-complements'
+import { contextualLegacyComplement } from '@/lib/data/contextual-page'
+import { ContextualProductHeader } from './contextual-product-header'
+import { ContextualComplementShelves } from './contextual-complement-shelves'
 
 // Both callers authorize the store, product and selected item before rendering.
-export async function renderItemContent({ ctx, store, customer, level, preview, blocked, productModules: suppliedModules }: {
+export async function renderItemContent({ ctx, store, customer, level, preview, blocked, productModules: suppliedModules,contextualInput,complementScenario,requestedComplement }: {
   ctx: { item: Item; module: Module; product: Product }
   store: Store
   customer: CustomerRow | null
@@ -30,10 +34,14 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
   preview: PreviewContext
   blocked: boolean
   productModules?: ModuleWithItems[]
+  contextualInput?: ContextualInput
+  complementScenario?: string
+  requestedComplement?: string
 }) {
   const editorial = previewIncludesDrafts(preview)
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
-  const complement = await loadProductComplement(ctx.product, store.slug, customer, preview)
+  const contextual=contextualInput?projectProductComplements(contextualInput,ctx.product.id):null
+  const complement = contextualInput?contextualLegacyComplement(contextualInput,ctx.product,store.slug,preview):await loadProductComplement(ctx.product, store.slug, customer, preview)
   const [completionResult, productModules] = await Promise.all([
     Promise.allSettled([customer ? listCompletedItemIds(customer.id, store.id, ctx.product.id) : Promise.resolve([])]),
     suppliedModules ?? listModulesWithItems(ctx.product.id, { publishedOnly: !editorial }),
@@ -64,23 +72,25 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
   const index = sequence.findIndex((item) => item.id === ctx.item.id)
   const previous = index > 0 ? sequence[index - 1] : null
   const next = index >= 0 && index < sequence.length - 1 ? sequence[index + 1] : null
-  const libraryHref = withPreview(`/${store.slug}#materiais`, preview)
+  const libraryHref = withPreview(contextual?.backParent?`/${store.slug}/produto/${contextual.backParent.slug}`:`/${store.slug}#materiais`, preview,complementScenario)
   const itemHref = withPreview(`/${store.slug}/item/${ctx.item.id}`, preview)
 
   return (
     <>
       {customer && !preview && embed && <RecordItemVisit key={customer.id} storeSlug={store.slug} itemId={ctx.item.id} />}
-      <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} simulationHref={ctx.product.isPublished ? `/${store.slug}/produto/${ctx.product.slug}` : `/${store.slug}`} active="materials" actions={<InstallAppButton />} />
+      <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} complementScenario={complementScenario} simulationHref={ctx.product.isPublished ? `/${store.slug}/produto/${ctx.product.slug}` : `/${store.slug}`} active="materials" actions={<InstallAppButton />} />
       <main className="lesson-workspace member-item-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
-        <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
+        {contextual && <ContextualProductHeader product={ctx.product} level={level} backHref={libraryHref} ownedCount={contextual.owned.length} optionalCount={contextual.optional.length}/>}
+        <div id="seu-material" className="lesson-workspace-grid grid min-w-0 scroll-mt-28 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0 order-2 lg:order-1">
-            <header className="lesson-heading flex min-w-0 items-start gap-4">
+            {!contextual && <header className="lesson-heading flex min-w-0 items-start gap-4">
               <Link href={libraryHref} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
                 <h1 className="lesson-title mt-1 text-balance break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{ctx.product.title}</h1>
                 {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo não faz parte da sua versão atual.</p>}
               </div>
-            </header>
+            </header>}
+            {contextual && blocked && <p role="status" className="mb-5 text-sm text-texto-suave">Este conteúdo não faz parte da sua versão atual.</p>}
 
             {embed && <div className="mt-7 aspect-video overflow-hidden rounded-xl border border-borda bg-fundo">
               <iframe
@@ -119,6 +129,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
           </div>
           <LessonSidebar complement={complement && <ProductComplementCard complement={complement} />} upgrade={<ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} productTitle={ctx.product.title} imageUrl={ctx.product.upgradeImageUrl || ctx.product.coverUrl} buttonText={ctx.product.upgradeButtonText} sectionName={lockedModules[0]?.title} supportUrl={supportHref(store, 'geral', customer?.email ?? null)} />} modules={modules} storeSlug={store.slug} preview={preview} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
         </div>
+        {contextual && <ContextualComplementShelves complements={contextual} storeSlug={store.slug} preview={preview} requestedSlug={requestedComplement} complementScenario={complementScenario}/>}
       </main>
       <CommunityWhatsapp url={store.communityWhatsappUrl} />
     </>

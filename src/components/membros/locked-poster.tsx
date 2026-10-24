@@ -1,6 +1,6 @@
 'use client'
 
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ShelfProduct } from '@/lib/access/access'
 import { isHttpUrl } from '@/lib/content/url'
@@ -12,7 +12,9 @@ import { LockIcon } from './icons'
 import { Modal } from './modal'
 import { POSTER_WIDTH } from './poster-card'
 
-export function LockedPoster({ product, initiallyOpen = false, previewOnly = false }: { product: ShelfProduct; initiallyOpen?: boolean; previewOnly?: boolean }) {
+function RefreshAccess(){const router=useRouter();return <button type="button" onClick={()=>router.refresh()} className="mt-4 min-h-11 w-full text-sm underline underline-offset-4">Já paguei · Conferir meu acesso</button>}
+
+export function LockedPoster({ product, initiallyOpen = false, previewOnly = false, queryParameter = 'comprar', contextual = false }: { product: ShelfProduct; initiallyOpen?: boolean; previewOnly?: boolean; queryParameter?: 'comprar'|'complemento'; contextual?: boolean }) {
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [open, setOpen] = useState(initiallyOpen)
@@ -22,7 +24,7 @@ export function LockedPoster({ product, initiallyOpen = false, previewOnly = fal
   const studentCheckoutUrl = product.studentCheckoutUrl && isHttpUrl(product.studentCheckoutUrl) ? product.studentCheckoutUrl : null
   const imageUrl = product.purchaseImageUrl && isHttpUrl(product.purchaseImageUrl) ? product.purchaseImageUrl : null
   const destination = preferredCheckoutUrl(product)
-  const requestedSlug = searchParams.get('comprar')
+  const requestedSlug = searchParams.get(queryParameter)
   const [previousRequestedSlug, setPreviousRequestedSlug] = useState(requestedSlug)
 
   if (requestedSlug !== previousRequestedSlug) {
@@ -40,12 +42,12 @@ export function LockedPoster({ product, initiallyOpen = false, previewOnly = fal
 
   const close = useCallback(() => {
     setOpen(false)
-    if (!searchParams.has('comprar')) return
+    if (!searchParams.has(queryParameter)) return
     const params = new URLSearchParams(searchParams.toString())
-    params.delete('comprar')
+    params.delete(queryParameter)
     const query = params.toString()
     window.history.replaceState(null, '', `${pathname}${query ? `?${query}` : ''}${window.location.hash}`)
-  }, [pathname, searchParams])
+  }, [pathname, searchParams, queryParameter])
 
   return (
     <>
@@ -56,7 +58,7 @@ export function LockedPoster({ product, initiallyOpen = false, previewOnly = fal
           event.currentTarget.focus({ preventScroll: true })
           setOpen(true)
         }}
-        aria-label={previewOnly ? 'Visualizar modal de produto bloqueado' : `${product.title} — bloqueado, ver detalhes`}
+        aria-label={previewOnly ? 'Visualizar modal de produto bloqueado' : contextual ? `Conhecer ${product.title}` : `${product.title} — bloqueado, ver detalhes`}
         aria-haspopup="dialog"
         className={previewOnly ? 'min-h-11 rounded-full border border-borda px-5 py-3 text-sm font-semibold hover:bg-superficie-2' : `member-poster ${POSTER_WIDTH} group block text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-destaque motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:scale-[1.04]`}
       >
@@ -81,6 +83,7 @@ export function LockedPoster({ product, initiallyOpen = false, previewOnly = fal
           className={`mt-7 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-destaque px-6 py-3.5 text-center font-bold shadow-md hover:bg-destaque-hover focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-destaque motion-safe:transition-transform motion-safe:duration-200 motion-safe:hover:scale-[1.03] ${theme === 'arquitetura' ? 'text-fundo' : 'text-white'}`}>
           {product.purchaseButtonText?.trim() || 'Quero acessar'}<span aria-hidden="true">→</span>
         </a> : <p className="mt-7 text-sm text-texto-suave">Este material ainda não está disponível para compra.</p>}
+        {contextual && <><RefreshAccess /><p className="mt-2 text-xs leading-relaxed text-texto-suave">O material aparece em seu acervo após a confirmação do pagamento. Se ainda estiver pendente, aguarde a confirmação ou procure o suporte.</p></>}
         <button type="button" onClick={close} className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full border border-borda text-texto-suave hover:bg-superficie-2 hover:text-texto focus-visible:outline-2 focus-visible:outline-destaque">
           <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 6 12 12M18 6 6 18" /></svg><span className="sr-only">Fechar</span>
         </button>

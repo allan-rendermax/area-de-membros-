@@ -1,6 +1,7 @@
 'use client'
 
 import { coverGradient } from '@/lib/content/cover'
+import { useState } from 'react'
 import { ContentImage } from './content-image'
 import { useMemberTheme } from './member-theme'
 
@@ -31,10 +32,12 @@ export function AutoCover({
   sizes?: string
 }) {
   const theme = useMemberTheme()
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
   return (
     <div className={`member-cover relative overflow-hidden rounded-md bg-superficie-2 ${ASPECT[aspect]} ${className}`}>
-      {imageUrl ? (
+      {imageUrl && imageUrl !== failedUrl ? (
         <ContentImage
+          onError={() => setFailedUrl(imageUrl)}
           src={imageUrl}
           sizes={sizes ?? SIZES[aspect]}
           eager={eager}

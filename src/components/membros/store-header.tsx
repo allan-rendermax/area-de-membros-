@@ -13,24 +13,26 @@ export function StoreHeader({
   legacyHome = false,
   preview = false,
   simulationHref,
+  complementScenario,
 }: {
-  store: Pick<Store, 'slug' | 'name' | 'logoUrl'>
+  store: Pick<Store, 'slug' | 'name' | 'logoUrl' | 'memberLibraryMode'>
   email: string
   actions?: React.ReactNode
   active?: 'home' | 'materials'
   legacyHome?: boolean
   preview?: PreviewContext
   simulationHref?: string
+  complementScenario?: string
 }) {
   const architecture = getMemberTheme(store.slug) === 'arquitetura'
   return (
     <header className="member-header sticky top-0 z-40 bg-gradient-to-b from-fundo to-fundo/85 backdrop-blur">
       {preview && <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-borda bg-superficie px-4 py-2 text-xs sm:px-8">
-        <PreviewControls preview={preview} simulationHref={simulationHref} />
+        <PreviewControls preview={preview} simulationHref={simulationHref} contextual={store.memberLibraryMode==='grouped'} complementScenario={complementScenario} />
         <Link href="/admin/produtos" className="inline-flex min-h-9 items-center font-semibold text-destaque underline underline-offset-4">Voltar ao painel</Link>
       </div>}
       <div className="flex items-center justify-between gap-4 px-4 py-3 sm:px-8">
-        <Link href={withPreview(`/${store.slug}`, preview)} className="flex min-w-0 items-center gap-3">
+        <Link href={withPreview(`/${store.slug}`, preview, complementScenario)} className="flex min-w-0 items-center gap-3">
           {store.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={store.logoUrl} alt="" className="h-8 w-auto" />
@@ -43,12 +45,12 @@ export function StoreHeader({
         </Link>
         {architecture && (
           <nav className="arq-nav mr-auto" aria-label="Navegação da arquitetura">
-            <Link href={withPreview(`/${store.slug}`, preview)} aria-current={active === 'home' ? 'page' : undefined}>Início</Link>
-            <Link href={withPreview(`/${store.slug}#materiais`, preview)} aria-current={active === 'materials' ? 'location' : undefined}>Meus materiais</Link>
+            <Link href={withPreview(`/${store.slug}`, preview, complementScenario)} aria-current={active === 'home' ? 'page' : undefined}>Início</Link>
+            <Link href={withPreview(`/${store.slug}#materiais`, preview, complementScenario)} aria-current={active === 'materials' ? 'location' : undefined}>Meus materiais</Link>
           </nav>
         )}
         <div className="flex items-center gap-3">
-          {architecture && !legacyHome && <Link href={withPreview(`/${store.slug}#materiais`, preview)} aria-current={active === 'materials' ? 'location' : undefined} className="inline-flex min-h-11 items-center text-xs font-semibold text-texto hover:text-destaque sm:hidden">Meus materiais</Link>}
+          {architecture && !legacyHome && <Link href={withPreview(`/${store.slug}#materiais`, preview, complementScenario)} aria-current={active === 'materials' ? 'location' : undefined} className="inline-flex min-h-11 items-center text-xs font-semibold text-texto hover:text-destaque sm:hidden">Meus materiais</Link>}
           {!preview && actions}
           {!preview && <details className="relative">
             <summary className={`${legacyHome ? '' : 'flex min-h-11 items-center '}cursor-pointer list-none rounded-full bg-superficie-2 px-3 py-1.5 text-sm text-texto-suave hover:text-texto`}>

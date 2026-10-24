@@ -21,6 +21,7 @@ import { withPreview } from '@/lib/membros/paths'
 import { listProducts } from '@/lib/data/products'
 import { arrangeComplementaryTracks, findRequestedComplement, selectComplementaryPairs } from '@/lib/access/product-complement'
 import { ComplementPoster, ComplementPurchasePrompt } from '@/components/membros/product-complement'
+import { renderContextualHome } from '@/components/membros/contextual-library-home'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +34,7 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
     customer ? loadStoreAccess(store.id, customer) : listProducts(store.id).then((products) => ({ products, levels: new Map<string, 'basic' | 'complete'>(), granted: new Set(preview === 'locked' ? [] : products.map((p) => p.id)) })),
     customer ? listRecentProductVisits(customer.id, store.id).catch(() => []) : Promise.resolve([]),
   ])
+  if(store.memberLibraryMode==='grouped')return renderContextualHome({store,customer,products,granted,levels,recentVisits,preview,query})
   const architecture = getMemberTheme(store.slug) === 'arquitetura'
   const shelf = buildShelf(products.map((product) => withMemberArtwork(product, store.slug)), granted, { includeDrafts: previewIncludesDrafts(preview) })
   const originalTracks = buildTracks(shelf, architecture
