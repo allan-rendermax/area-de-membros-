@@ -11,3 +11,5 @@ Registro completo das decisões do diário, em ordem. Não houve achado menor ad
 7. Tratar códigos/checkouts de Paisagismo, fichas importáveis e conferência remota de entrega como pré-requisitos de ativação. Consequência: os seis não podem ser declarados liberados ainda; nenhum código foi inventado. O PDF final de Mestres foi localizado e validado.
 8. Usar aplicativo real com serviços sintéticos locais para o navegador e PostgreSQL real separado para concorrência. Consequência: testes locais não comprovam entrega comercial real na Payt.
 9. Conservar branch e worktree da implementação para a etapa de publicação, seguindo o escopo local aprovado. Consequência: não há merge, push ou deploy nesta entrega. Artes originais e PDFs otimizados permanecem no worktree; finais WebP e relatórios estão versionados.
+
+A limpeza da pasta temporária da execução foi recusada pela política automática da ferramenta, sem justificativa específica adicional. A pasta foi preservada; os relatórios e a entrega não dependem dessa limpeza.

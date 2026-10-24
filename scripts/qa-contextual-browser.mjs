@@ -11,7 +11,9 @@ const state=async(scenario,extra={})=>{await fetch(fixture+'/state?'+new URLSear
 const go=async path=>{await page.goto(app+path,{waitUntil:'networkidle'})}
 const has=async text=>assert.ok((await page.locator('body').innerText()).includes(text),text)
 async function capture(name){
- await page.evaluate(async()=>{for(const img of document.images)img.loading='eager';await Promise.all([...document.images].map(img=>img.decode().catch(()=>{})))})
+ await page.evaluate(async()=>{window.scrollTo({top:0,behavior:'instant'});for(const img of document.images)img.loading='eager';await Promise.all([...document.images].map(img=>img.decode()));await document.fonts.ready;await new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)))})
+ // Allow Chrome to repaint image layers after scrolling before a full-page capture.
+ await page.waitForTimeout(300)
  await page.screenshot({path:output+'/'+name+'.png',fullPage:true})
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Page overflow')
 }
