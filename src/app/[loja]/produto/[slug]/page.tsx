@@ -1,4 +1,5 @@
-import { previewContext, previewIncludesDrafts, previewAccessLevel } from '@/lib/membros/preview-context'
+import { contextualPreviewLevel } from '@/lib/membros/contextual-preview'
+import { previewContext, previewIncludesDrafts } from '@/lib/membros/preview-context'
 import { renderItemContent } from '@/components/membros/item-content'
 import { CommunityWhatsapp } from '@/components/membros/community-whatsapp'
 import { InstallAppButton } from '@/components/membros/install-app-button'
@@ -38,7 +39,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
   if (!product || (!editorial && !product.isPublished)) notFound()
   const complementScenario=typeof query.complementos==='string'?query.complementos:undefined
   const contextualInput=store.memberLibraryMode==='grouped'?await loadContextualInput(store.id,new Set(levels?.keys()),preview,complementScenario):undefined
-  const level = preview ? (contextualInput && !contextualInput.granted.has(product.id)?undefined:previewAccessLevel(preview)) : levels?.get(product.id)
+  const level = preview ? contextualPreviewLevel(product, preview, contextualInput) : levels?.get(product.id)
   if (!level) redirect(withPreview(`/${store.slug}?comprar=${product.slug}`, preview,complementScenario))
 
   const publishedModules = (await listModulesWithItems(product.id, { publishedOnly: !editorial }))

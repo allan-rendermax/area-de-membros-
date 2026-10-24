@@ -12,6 +12,7 @@ import { loadStoreAccess, loadGrantedProductLevels } from '@/lib/data/access'
 import { listRecentProductVisits, recordItemAccess } from '@/lib/data/item-access'
 import { listCompletedItemIds } from '@/lib/data/member-progress'
 import { StoreHeader } from '@/components/membros/store-header'
+import { listContextualRelations } from '@/lib/data/contextual-complements'
 import type { Product, Item, Store, ModuleWithItems } from '@/lib/domain/types'
 
 vi.mock('next/navigation', () => ({
@@ -28,6 +29,7 @@ vi.mock('@/lib/data/products', () => ({ listProducts: vi.fn(), getProductBySlug:
 vi.mock('@/lib/data/access', () => ({ loadStoreAccess: vi.fn(), loadGrantedProductLevels: vi.fn() }))
 vi.mock('@/lib/data/item-access', () => ({ listRecentProductVisits: vi.fn(), recordItemAccess: vi.fn() }))
 vi.mock('@/lib/data/member-progress', () => ({ listCompletedItemIds: vi.fn() }))
+vi.mock('@/lib/data/contextual-complements', () => ({ listContextualRelations: vi.fn() }))
 vi.mock('@/lib/env', () => ({ env: { supabaseUrl: 'https://project.supabase.co' } }))
 
 const store: Store = { id: 'store', slug: 'arquitetura', name: 'Arquitetura', logoUrl: null, supportUrl: null, supportWhatsapp: null, loginImageUrl: null }
@@ -195,5 +197,39 @@ describe('simulação realista de acesso', () => {
   })
   it('rascunhos continuam indisponíveis fora da prévia editorial', async () => {
     await expect(ProductPage({ params, searchParams: Promise.resolve({ previa: '1', simular: 'complete' }) })).rejects.toThrow('notFound')
+  })
+})
+
+describe('compra contextual simulada independente do nível do principal', () => {
+  beforeEach(() => {
+    const bump = { ...product, isPublished: true, catalogVisibility: 'contextual' as const, contentMode: 'sections' as const, role: 'orderbump' as const }
+    const file = { ...item, isPublished: true, kind: 'arquivo' as const, title: 'Material do complemento', url: 'https://example.com/complemento.pdf' }
+    const complementModule = { ...moduleRow, isPublished: true, requiredLevel: 'complete' as const, items: [file] }
+    vi.mocked(getStore).mockResolvedValue({ ...store, memberLibraryMode: 'grouped' })
+    vi.mocked(getProductBySlug).mockResolvedValue(bump)
+    vi.mocked(getItemWithContext).mockResolvedValue({ product: bump, item: file, module: complementModule })
+    vi.mocked(listProducts).mockResolvedValue([{ ...product, id: 'principal', slug: 'principal', isPublished: true }, bump])
+    vi.mocked(listModulesWithItems).mockResolvedValue([complementModule])
+    vi.mocked(listContextualRelations).mockResolvedValue({ available: true, relations: [{ storeId: store.id, parentProductId: 'principal', complementProductId: bump.id, sortOrder: 0 }] })
+  })
+  it.each(['one', 'all', 'solo'])('abre produto, item e arquivo comprado em Básico + %s', async (scenario) => {
+    const query = { previa: '1', simular: 'basic', complementos: scenario }
+    for (const page of [ProductPage, ItemPage]) {
+      const html = renderToStaticMarkup(await page({ params, searchParams: Promise.resolve(query) }))
+      expect(html).toContain('Material do complemento')
+      expect(html).not.toContain('Nenhum conteúdo disponível')
+      expect(html).toContain('complementos=' + scenario)
+    }
+    await expect(openResource(new Request('https://app.example/arquitetura/item/' + item.id + '/abrir?' + new URLSearchParams(query)), { params })).rejects.toThrow('redirect:https://example.com/complemento.pdf')
+    expect(loadGrantedProductLevels).not.toHaveBeenCalled()
+    expect(recordItemAccess).not.toHaveBeenCalled()
+  })
+  it('preserva a versão Básico de complemento com versões e o cenário no bloqueio', async () => {
+    const ctx = await getItemWithContext(item.id)
+    vi.mocked(getItemWithContext).mockResolvedValue({ ...ctx!, product: { ...ctx!.product, contentMode: 'versions' } })
+    await expect(openResource(new Request('https://app.example/arquitetura/item/' + item.id + '/abrir?previa=1&simular=basic&complementos=solo'), { params })).rejects.toThrow('redirect:/arquitetura/produto/rascunho?bloqueado=1&previa=1&simular=basic&complementos=solo')
+  })
+  it('nega download não comprado na simulação e preserva o cenário', async () => {
+    await expect(openResource(new Request('https://app.example/arquitetura/item/' + item.id + '/abrir?previa=1&simular=complete&complementos=none'), { params })).rejects.toThrow('redirect:/arquitetura?comprar=rascunho&previa=1&simular=complete&complementos=none')
   })
 })

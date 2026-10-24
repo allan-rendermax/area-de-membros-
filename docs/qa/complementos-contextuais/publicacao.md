@@ -53,3 +53,9 @@ Renovar leitura e conferir revisões contra o snapshot posterior para não sobre
 
 `artifacts/complementos-contextuais-20261024/aplicacao.json` e `antes.json` preservam a preparação histórica; `depois.json` aponta para esta publicação. Snapshots atualizados, SQL aplicado, manifesto remoto e verificações ficam localmente em `artifacts/publicacao/complementos-contextuais/20261024/`. Não executar novamente a ativação nem usar inventário antigo para sobrescrever alterações posteriores. A reversão deve partir dos snapshots atualizados e de nova leitura.
 
+
+## Ajustes posteriores aprovados
+
+Cabeçalho interno restaurado ao formato compacto anterior, sem capa grande, CTA ou abas; ajuda e barra de ações estática abaixo das fileiras contextuais. Layout Netflix e capas preservados. Conferência visual em desktop e celular, sem overflow.
+
+Revisão de encerramento corrigiu a fidelidade das simulações administrativas de compra e download. As regras dos clientes e a integração comercial não mudaram. Ver [revisao.md](revisao.md) para o contrato da prévia e as regressões verificadas.

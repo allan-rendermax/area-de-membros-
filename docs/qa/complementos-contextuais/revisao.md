@@ -21,3 +21,9 @@ Agente separado, somente leitura, revisou a transação antes da execução e co
 Confirmou: seis relações na ordem correta; três produtos novos com módulos e sete itens; seis aliases liberando somente seu próprio complemento; ofertas, módulos, itens e vínculos antigos preservados; Protocolo preservado; 19 URLs correspondentes ao manifesto de uploads.
 
 Também revisou o relato de desvio na navegação avulsa: código não depende do principal para conceder acesso, navegação direta e clique após recarregar funcionaram; sem reprodução consistente, não recomendou alteração. Compras reais não foram simuladas nem declaradas como testadas.
+
+## Revisão geral de encerramento — 24/10/2026
+
+Revisão independente detectou duas inconsistências apenas na prévia administrativa: complemento adquirido em sections herdava o nível Básico do principal; download ignorava a aquisição simulada e perdia o cenário em redirects. A resolução contextual simulada agora é compartilhada por home, produto, item e download. Selecionar um complemento sections simula sua compra completa; versions continua respeitando a versão selecionada. Esse contrato é exclusivo da prévia e não concede direitos reais nem afirma cobertura de planos futuros de sections.
+
+Cinco testes adicionais cobrem one/all/solo com principal Básico, download sem complemento adquirido e bloqueio versions preservando solo. Falhas reproduzidas antes das correções e testes aprovados depois. Revisão final independente aprovou o delta, sem bloqueios.

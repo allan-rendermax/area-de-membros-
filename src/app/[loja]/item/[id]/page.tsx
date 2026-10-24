@@ -1,5 +1,6 @@
+import { contextualPreviewLevel } from '@/lib/membros/contextual-preview'
 import { withPreview } from '@/lib/membros/paths'
-import { previewContext, previewIncludesDrafts, previewAccessLevel } from '@/lib/membros/preview-context'
+import { previewContext, previewIncludesDrafts } from '@/lib/membros/preview-context'
 import { notFound, redirect } from 'next/navigation'
 import { renderItemContent } from '@/components/membros/item-content'
 import { toVideoEmbed } from '@/lib/content/video'
@@ -29,7 +30,7 @@ export default async function ItemPage({ params, searchParams }: PageProps<'/[lo
   if (!ctx || ctx.product.storeId !== store.id || (!editorial && (!ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished))) notFound()
   const complementScenario=typeof query.complementos==='string'?query.complementos:undefined
   const contextualInput=store.memberLibraryMode==='grouped'?await loadContextualInput(store.id,new Set(levels?.keys()),preview,complementScenario):undefined
-  const level = preview ? (contextualInput && !contextualInput.granted.has(ctx.product.id)?undefined:previewAccessLevel(preview)) : levels?.get(ctx.product.id)
+  const level = preview ? contextualPreviewLevel(ctx.product, preview, contextualInput) : levels?.get(ctx.product.id)
   if (!level) redirect(withPreview(`/${store.slug}?comprar=${ctx.product.slug}`, preview, complementScenario))
   if (!canAccessProductModule(level, ctx.module.requiredLevel, ctx.product.contentMode, editorial)) redirect(withPreview(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`, preview, complementScenario))
 

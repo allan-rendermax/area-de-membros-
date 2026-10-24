@@ -6,8 +6,8 @@ import { projectContextualLibrary } from '@/lib/access/contextual-complements'
 import { buildShelf,buildTracks } from '@/lib/access/access'
 import { arrangeComplementaryTracks,selectComplementaryPairs,findRequestedComplement } from '@/lib/access/product-complement'
 import { projectContextualResume,resolveContextualRequest } from '@/lib/membros/contextual-library'
-import { contextualPreviewRights } from '@/lib/membros/contextual-preview'
-import { previewIncludesDrafts,previewAccessLevel,type PreviewContext } from '@/lib/membros/preview-context'
+import { contextualPreviewRights,contextualPreviewLevel } from '@/lib/membros/contextual-preview'
+import { previewIncludesDrafts,type PreviewContext } from '@/lib/membros/preview-context'
 import { getMemberTheme,withMemberArtwork } from '@/lib/membros/theme'
 import { withPreview } from '@/lib/membros/paths'
 import { supportHref } from '@/lib/support/whatsapp'
@@ -45,7 +45,7 @@ export async function renderContextualHome({store,customer,products,granted,leve
   const architecture=getMemberTheme(store.slug)==='arquitetura'
   const tracks=arrangeComplementaryTracks(buildTracks(discoveryShelf,architecture?['Atlas Visuais','Softwares e IA','Prática Profissional','Protocolos Profissionais']:[]))
   const requestedLegacy=requested.kind==='legacy'?findRequestedComplement(tracks.flatMap(track=>track.products),legacyTargets,typeof query.comprar==='string'?query.comprar:null):null
-  const effectiveLevels=preview?new Map([...purchases].map(id=>[id,previewAccessLevel(preview) ?? 'complete'])):levels
+  const effectiveLevels=preview?new Map(products.filter(p=>purchases.has(p.id)).map(p=>[p.id,contextualPreviewLevel(p,preview,input) ?? 'complete'])):levels
   const continuing=projectContextualResume(input,projection,recentVisits,effectiveLevels,store.slug)
   const support=supportHref(store,'geral',customer?.email ?? null)
   return <>

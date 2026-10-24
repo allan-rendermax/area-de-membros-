@@ -73,3 +73,7 @@ Os três complementos de Paisagismo foram cadastrados e publicados após a confe
 A navegação em produção usa a prévia administrativa; não equivale a uma compra real. A primeira entrega resultante de pagamento real dos novos produtos ainda não foi observada. Não houve reprocessamento histórico nem recálculo de compras.
 
 Consulte [publicacao.md](publicacao.md) para aplicação, evidências e reversão.
+
+## Encerramento após revisão geral
+
+Versão final preserva o cabeçalho compacto aprovado e os controles após as capas. Cinco regressões adicionais verificam a prévia contextual; suíte final com 1.291 testes em 162 arquivos, build aprovado e lint sem erros (três avisos anteriores). Revisão independente final sem bloqueios. A conferência autenticada adicional em produção não foi repetida nesta última correção porque a conexão do Chrome deixou de responder; status do deploy é verificado pela API oficial. A limitação de compra real permanece descrita em publicacao.md.

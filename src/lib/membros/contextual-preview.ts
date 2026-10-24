@@ -1,5 +1,6 @@
 import type { Product,ContextualRelation } from '@/lib/domain/types'
-import { previewIncludesDrafts,type PreviewContext } from './preview-context'
+import type { ContextualInput } from '@/lib/access/contextual-complements'
+import { previewAccessLevel,previewIncludesDrafts,type PreviewContext } from './preview-context'
 export type ComplementScenario='none'|'one'|'all'|'solo'
 export function contextualPreviewRights(products:readonly Product[],relations:readonly ContextualRelation[],preview:PreviewContext,scenario?:string):Set<string> {
   if(!preview || preview==='locked')return new Set()
@@ -18,4 +19,14 @@ export function contextualPreviewRights(products:readonly Product[],relations:re
     }
   }
   return ids
+}
+
+// The level selector simulates the main product's version. Selected contextual
+// materials with sections simulate a complete purchase of their independent SKU.
+// Versioned complements retain the selected version. This never grants real access.
+export function contextualPreviewLevel(product: Product, preview: PreviewContext, input?: ContextualInput) {
+  const level = previewAccessLevel(preview)
+  if (!level || (input && !input.granted.has(product.id))) return undefined
+  const isComplement = input && (product.catalogVisibility === 'contextual' || input.relations.some(r => r.storeId === input.storeId && r.complementProductId === product.id))
+  return isComplement && product.contentMode !== 'versions' ? 'complete' : level
 }

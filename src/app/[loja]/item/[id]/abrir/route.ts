@@ -1,4 +1,6 @@
-import { previewContext, previewIncludesDrafts, previewAccessLevel } from '@/lib/membros/preview-context'
+import { contextualPreviewLevel } from '@/lib/membros/contextual-preview'
+import { loadContextualInput } from '@/lib/data/contextual-page'
+import { previewContext, previewIncludesDrafts } from '@/lib/membros/preview-context'
 import { withPreview } from '@/lib/membros/paths'
 import { after } from 'next/server'
 import { notFound, redirect } from 'next/navigation'
@@ -25,9 +27,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ loja
   ])
 
   if (!ctx || ctx.product.storeId !== store.id || (!editorial && (!ctx.product.isPublished || !ctx.module.isPublished || !ctx.item.isPublished))) notFound()
-  const level = preview ? previewAccessLevel(preview) : levels?.get(ctx.product.id)
-  if (!level) redirect(withPreview(`/${store.slug}?comprar=${ctx.product.slug}`, preview))
-  if (!canAccessProductModule(level, ctx.module.requiredLevel, ctx.product.contentMode, editorial)) redirect(withPreview(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`, preview))
+  const complementScenario = query.get('complementos') ?? undefined
+  const contextualInput = preview && store.memberLibraryMode === 'grouped' ? await loadContextualInput(store.id, new Set(), preview, complementScenario) : undefined
+  const level = preview ? contextualPreviewLevel(ctx.product, preview, contextualInput) : levels?.get(ctx.product.id)
+  if (!level) redirect(withPreview(`/${store.slug}?comprar=${ctx.product.slug}`, preview, complementScenario))
+  if (!canAccessProductModule(level, ctx.module.requiredLevel, ctx.product.contentMode, editorial)) redirect(withPreview(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`, preview, complementScenario))
 
   const destination = await resolveResourceDestination(ctx.item, env.supabaseUrl)
   if (!destination) notFound()
