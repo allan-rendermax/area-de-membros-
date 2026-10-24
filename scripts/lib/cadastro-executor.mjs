@@ -120,6 +120,8 @@ export function validarLote(planos) {
     const ficha = plano?.ficha
     if (!ficha?.loja || !ficha.slug || !Array.isArray(plano.arquivos) || !Array.isArray(plano.modulos)) throw new Error('Plano de produto inválido.')
     if (ficha.organizacao !== undefined && !['auto', 'versions', 'sections'].includes(ficha.organizacao)) throw new Error('Organização do produto inválida.')
+    if(ficha.complementos!==undefined && (!Array.isArray(ficha.complementos) || ficha.complementos.some(value=>typeof value!=='string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) || value===ficha.slug || value==='nenhum') || new Set(ficha.complementos).size!==ficha.complementos.length))throw new Error('Lista de complementos inválida.')
+    if(ficha.visibilidadeCatalogo!==undefined && !['catalog','contextual'].includes(ficha.visibilidadeCatalogo))throw new Error('Visibilidade inválida.')
     const offers = effectiveOffers(plano)
     validarOfertas(offers)
     const references = offers.filter(offer => offer.checkoutCode).map(offer => JSON.stringify([offer.codigo, offer.matchType, offer.checkoutCode]))
@@ -145,19 +147,34 @@ export function validarLote(planos) {
 async function preflight(db, planos, { allowIncomplete = false } = {}) {
   validarLote(planos)
   const prepared = []
+  const contextualGraphs = new Map()
   for (const plano of planos) {
     const { ficha } = plano
     // Consultas filtradas evitam o limite padrão de linhas do PostgREST.
     // Consultar role detecta migration ausente mesmo quando o slug não existe.
     const [stores, sameSlug, ...offerRows] = await Promise.all([
       rows(db, 'stores', 'id,slug', { slug: ficha.loja }),
-      rows(db, 'products', 'id,store_id,slug,role,upgrade_checkout_url,content_mode,is_published', { slug: ficha.slug }),
+      rows(db, 'products', 'id,store_id,slug,role,upgrade_checkout_url,content_mode,is_published,editorial_revision', { slug: ficha.slug }),
       ...effectiveOffers(plano).map(offer => rows(db, 'offers', 'id,store_id,group_id,payt_product_code,match_type,checkout_code,match_values', { payt_product_code: offer.codigo })),
     ])
     const store = stores.find(row => row.slug === ficha.loja)
     if (!store) throw new Error(`Loja não encontrada: ${ficha.loja}.`)
     if (sameSlug.some(row => row.store_id !== store.id)) throw new Error(`Slug ${ficha.slug} já pertence a outra loja; o storage seria compartilhado.`)
     const product = sameSlug.find(row => row.store_id === store.id) ?? null
+    let contextualComplementIds
+    if(ficha.complementos!==undefined){
+      if(!contextualGraphs.has(store.id))contextualGraphs.set(store.id,await rows(db,'product_complements','store_id,parent_product_id,complement_product_id,sort_order',{store_id:store.id}))
+      contextualComplementIds=[]
+      for(const slug of ficha.complementos){
+        const candidates=await rows(db,'products','id,store_id,slug',{slug,store_id:store.id})
+        const target=candidates.find(row=>row.store_id===store.id && row.slug===slug)
+        if(!target)throw new Error(`Complemento não encontrado nesta loja: ${slug}. Cadastre os alvos primeiro.`)
+        contextualComplementIds.push(target.id)
+      }
+      const parentId=product?.id ?? `new:${ficha.slug}`
+      const graph=contextualGraphs.get(store.id).filter(row=>row.parent_product_id!==parentId)
+      contextualGraphs.set(store.id,[...graph,...contextualComplementIds.map(id=>({parent_product_id:parentId,complement_product_id:id}))])
+    }
     let complementaryProductId
     if (ficha.complemento !== undefined) {
       if (ficha.complemento === 'nenhum') complementaryProductId = null
@@ -218,7 +235,11 @@ async function preflight(db, planos, { allowIncomplete = false } = {}) {
     }
     const readiness = readinessPreflight(plano, product, offers, links, modules, items)
     if (readiness.error && !allowIncomplete) throw new Error(readiness.error)
-    prepared.push({ plano, store, product, complementaryProductId, offers, modules, items, links, groupId: allExisting.find(row => row.group_id)?.group_id ?? null, ...readiness, bytes: new Map() })
+    prepared.push({ plano, store, product, complementaryProductId, contextualComplementIds, offers, modules, items, links, groupId: allExisting.find(row => row.group_id)?.group_id ?? null, ...readiness, bytes: new Map() })
+  }
+  for(const graph of contextualGraphs.values()){
+    const parents=new Set(graph.map(row=>row.parent_product_id))
+    if(graph.some(row=>parents.has(row.complement_product_id)))throw new Error('Complementos não podem formar cadeias ou ciclos.')
   }
   // Ler todo o lote antes da primeira mutação: uma falha na segunda pasta não envia a primeira.
   for (const entry of prepared) {
@@ -299,10 +320,24 @@ export async function executarPlanos(db, planos, { log = console.log } = {}) {
       cover_url: plano.imagens.capa ? urls.get(plano.imagens.capa) : null,
       banner_url: plano.imagens.banner ? urls.get(plano.imagens.banner) : null,
       ...(entry.complementaryProductId !== undefined ? { complementary_product_id: entry.complementaryProductId } : {}),
+      ...(ficha.visibilidadeCatalogo!==undefined?{catalog_visibility:ficha.visibilidadeCatalogo}:{}),
     }
-    const productId = product
-      ? (await write(db.from('products').update(data).eq('id', product.id), `produto ${ficha.nome}`), product.id)
-      : (await write(db.from('products').insert(data), `produto ${ficha.nome}`, true)).id
+    let productId
+    if(entry.contextualComplementIds!==undefined || ficha.visibilidadeCatalogo!==undefined){
+      const patch={...data};delete patch.store_id
+      if(product && !plano.imagens.capa)delete patch.cover_url
+      if(product && !plano.imagens.banner)delete patch.banner_url
+      const {data:saved,error}=await db.rpc('save_contextual_product',{
+        p_store_id:store.id,p_product_id:product?.id ?? null,p_expected_revision:product?product.editorial_revision:null,
+        p_patch:patch,p_complement_ids:entry.contextualComplementIds ?? null,
+      })
+      if(error || !saved?.[0]?.id)throw new Error(`Falha ao salvar produto e complementos. ${error?.code==='40001'?'Recarregue o cadastro.':error?.message ?? 'Confira o cadastro e tente novamente.'}`)
+      productId=saved[0].id
+    }else{
+      productId=product
+        ? (await write(db.from('products').update(data).eq('id', product.id), `produto ${ficha.nome}`), product.id)
+        : (await write(db.from('products').insert(data), `produto ${ficha.nome}`, true)).id
+    }
     log(`Produto ${product ? 'atualizado' : 'criado'}: ${ficha.nome}`)
     await content(db, productId, plano, urls, entry.modules, entry.items, log)
     let groupId = entry.groupId

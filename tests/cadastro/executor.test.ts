@@ -11,7 +11,7 @@ import { privateFilePath } from '../../src/lib/content/private-files'
 type Row = Record<string, any>
 class FakeDb {
   supabaseUrl = 'https://supabase.example'
-  rows: Record<string, Row[]> = { stores: [{ id: 'store-1', slug: 'loja' }, { id: 'store-2', slug: 'outra' }], products: [], offers: [], offer_groups: [], offer_products: [], modules: [], items: [] }
+  rows: Record<string, Row[]> = { stores: [{ id: 'store-1', slug: 'loja' }, { id: 'store-2', slug: 'outra' }], products: [], product_complements: [], offers: [], offer_groups: [], offer_products: [], modules: [], items: [] }
   uploads: { bucket: string; path: string; options: Row; bytes: number }[] = []
   writes = 0
   failTable = ''
@@ -73,6 +73,27 @@ async function plan(overrides: Row = {}) {
 }
 
 describe('executor do cadastro', () => {
+  it('refuses missing or foreign contextual targets before any upload or write', async()=>{
+    for(const target of [undefined,{id:'target',slug:'guia',store_id:'store-2'}]) {
+      const db=new FakeDb();if(target)db.rows.products.push(target)
+      await expect(executarPlanos(db,[await plan({complementos:['guia']})],{log:()=>{}})).rejects.toThrow(/complemento/i)
+      expect(db.writes).toBe(0);expect(db.uploads).toHaveLength(0)
+    }
+  })
+  it('rejects chains across the projected batch before writes',async()=>{
+    const db=new FakeDb();db.rows.products=[{id:'a',slug:'a',store_id:'store-1'},{id:'b',slug:'b',store_id:'store-1'},{id:'c',slug:'c',store_id:'store-1'}]
+    await expect(executarPlanos(db,[await plan({slug:'a',id:'A',complementos:['b']}),await plan({slug:'b',id:'B',complementos:['c']})],{log:()=>{}})).rejects.toThrow(/complemento|cadeia/i)
+    expect(db.writes).toBe(0)
+  })
+  it('sends contextual edits through the atomic RPC and stops before content on conflict',async()=>{
+    const db=new FakeDb();db.rows.products=[{id:'p',slug:'kit',store_id:'store-1',editorial_revision:4},{id:'target',slug:'guia',store_id:'store-1'}]
+    const calls:Row[]=[]
+    Object.assign(db,{rpc:async(name:string,args:Row)=>{calls.push({name,...args});return {data:null,error:{message:'Recarregue'}}}})
+    await expect(executarPlanos(db,[await plan({complementos:['guia'],visibilidadeCatalogo:'contextual'})],{log:()=>{}})).rejects.toThrow(/Recarregue/)
+    expect(calls).toHaveLength(1)
+    expect(calls[0]).toMatchObject({name:'save_contextual_product',p_product_id:'p',p_expected_revision:4,p_complement_ids:['target'],p_patch:{catalog_visibility:'contextual'}})
+    expect(db.rows.modules).toHaveLength(0);expect(db.rows.products[0]).not.toHaveProperty('title')
+  })
   it('agrupa planos compartilhados, reexecuta por identidade e acrescenta aliases sem duplicar', async () => {
     const db = new FakeDb()
     const p = await plan()

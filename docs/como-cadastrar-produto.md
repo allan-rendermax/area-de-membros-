@@ -112,3 +112,18 @@ O campo `checkout_upgrade` continua sendo exclusivamente o link do botão de pag
 O importador cria um grupo comum para os novos planos, seleciona a oferta pela identidade completa e preserva os UUIDs ao reexecutar. Na reimportação, mantenha referências e todos os aliases salvos; novos aliases podem ser acrescentados. Referência alterada com alias de outro plano, mistura com modo legado, sobreposição ou código de outro produto/loja interrompem o lote antes do primeiro upload. Planos antigos não são convertidos; seus grupos existentes são preservados. Códigos distintos antigos continuam aceitos.
 
 A ficha por pasta suporta esses dois ou três planos de checkout para o mesmo produto. Para upsell por `upsell_code`, combos, planos com nomes livres ou mais planos, use **Admin → Ofertas**. Não há suporte a `planos.json`; entradas desconhecidas na pasta continuam recusadas.
+# Complementos contextuais
+
+Após aplicar as migrations `20261024020000` e `20261024021000`, a ficha aceita as chaves abaixo, antes de `descricao:`:
+
+```text
+complementos: guia, orcamento, biblioteca
+visibilidade_catalogo: contextual
+```
+
+Os slugs de complementos precisam existir na mesma loja. Cadastre os alvos primeiro e depois associe o principal. A ordem da lista é a ordem da fileira. Omitir uma chave preserva sua configuração; `complementos: nenhum` limpa somente a lista contextual. `visibilidade_catalogo: catalogo` volta ao catálogo geral. O campo singular `complemento:` continua independente e compatível.
+
+As relações não concedem acesso. `contextual` retira ofertas das trilhas gerais na loja com biblioteca agrupada, mas mantém acesso avulso às compras. Configure o modo da biblioteca no admin da loja depois de conferir os produtos. Complementos não podem ser principais de outros complementos.
+
+A simulação CLI valida arquivos e sintaxe local; existência remota, concorrência e grafo são validados no preflight antes de uploads e novamente na gravação atômica. Em conflito de revisão, releia a ficha/banco antes de tentar de novo. Produto e relações são atômicos; uploads, conteúdo e ofertas do lote não constituem uma única transação. Imagens ausentes são preservadas ao atualizar relações de um produto existente.
+

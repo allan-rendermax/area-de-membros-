@@ -31,6 +31,7 @@ async function env() {
 
 function printPlan(plano) {
   const { ficha } = plano
+  console.log(`  Complementos: ${ficha.complementos===undefined?'preservar':ficha.complementos.length?ficha.complementos.join(', '):'limpar lista contextual'}; visibilidade: ${ficha.visibilidadeCatalogo ?? 'preservar'}.`)
   console.log(`${ficha.nome} — ${ficha.loja}/${ficha.slug} (${ficha.tag})`)
   const readiness = avaliarPlanoLocal(plano)
   if (!ficha.organizacao || ficha.organizacao === 'auto') {

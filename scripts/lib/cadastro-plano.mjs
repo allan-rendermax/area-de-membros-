@@ -41,6 +41,8 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
   const lines = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n')
   const allowed = new Set(['nome', 'id', 'id_basico', 'id_completo', 'id_upgrade', 'tag', 'loja', 'slug', 'trilha', 'checkout', 'checkout_upgrade', 'destaque', 'ordem', 'complemento', 'descricao', 'organizacao'])
   allowed.add('produto_payt')
+  allowed.add('complementos')
+  allowed.add('visibilidade_catalogo')
   for (const level of ['basico', 'completo', 'upgrade']) {
     allowed.add(`codigo_checkout_${level}`)
     allowed.add(`links_checkout_${level}`)
@@ -95,6 +97,15 @@ export function lerFicha(text, { defaultStoreSlug } = {}) {
     throw new Error('produto.txt: ordem deve ser inteiro PostgreSQL válido.')
   }
   const base = { nome: fields.nome, tag: fields.tag, loja, slug, trilha: fields.trilha || '', checkout, destaque, ordem, descricao: fields.descricao || '', ...(fields.complemento !== undefined ? { complemento: fields.complemento } : {}) }
+  if (fields.complementos !== undefined) {
+    const list=fields.complementos==='nenhum'?[]:fields.complementos.split(',').map(value=>value.trim())
+    if(list.some(value=>!SLUG.test(value) || value.length>60 || value===slug || value==='nenhum') || new Set(list).size!==list.length)throw new Error('produto.txt: complementos deve conter slugs distintos de outros produtos ou nenhum.')
+    base.complementos=list
+  }
+  if(fields.visibilidade_catalogo!==undefined){
+    if(!['catalogo','contextual'].includes(fields.visibilidade_catalogo))throw new Error('produto.txt: visibilidade_catalogo deve ser catalogo ou contextual.')
+    base.visibilidadeCatalogo=fields.visibilidade_catalogo==='catalogo'?'catalog':'contextual'
+  }
   if (fields.organizacao !== undefined) base.organizacao = fields.organizacao
   if (shared) {
     const ofertas = validarOfertas(['basico', 'completo', 'upgrade'].filter(level => fields[`codigo_checkout_${level}`]).map(level => ({
