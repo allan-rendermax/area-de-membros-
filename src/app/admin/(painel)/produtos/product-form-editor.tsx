@@ -12,16 +12,18 @@ import { salvarProdutoComEstado } from './actions'
 import { LockedProductFields } from './locked-product-fields'
 import { UpgradeFields } from './upgrade-fields'
 import type { ProductFormProps } from './product-form'
+import { ContextualComplementFields } from './contextual-complement-fields'
 
 const fields = { title: 'title', description: 'description', checkout_url: 'checkoutUrl', student_checkout_url: 'studentCheckoutUrl', purchase_title: 'purchaseTitle', purchase_description: 'purchaseDescription', purchase_button_text: 'purchaseButtonText', upgrade_checkout_url: 'upgradeCheckoutUrl', upgrade_button_text: 'upgradeButtonText' } as const
 const imageProperties = { cover: 'coverUrl', banner: 'bannerUrl', purchase: 'purchaseImageUrl', upgrade: 'upgradeImageUrl' } as const
 
-export function ProductFormEditor({ product, products = [], tracks, storeId, storeSlug = '', supportUrl, upgradeSectionName }: ProductFormProps) {
+export function ProductFormEditor({ product, products = [], tracks, storeId, storeSlug = '', supportUrl, upgradeSectionName, contextualRelations = [], relationsAvailable = true }: ProductFormProps) {
   const [dirty, setDirty] = useState(false)
+  const [revision,setRevision] = useState(product?.editorialRevision ?? 0)
   const [state, action, saving] = useActionState(async (previous: typeof initialProductFormState, form: FormData) => {
     try {
       const result = await salvarProdutoComEstado(previous, form)
-      if (result.status === 'saved') setDirty(false)
+      if (result.status === 'saved') { setDirty(false); if(result.editorialRevision !== undefined)setRevision(result.editorialRevision) }
       return result
     } catch (error) { unstable_rethrow(error); return productFormError(error) }
   }, initialProductFormState)
@@ -30,7 +32,7 @@ export function ProductFormEditor({ product, products = [], tracks, storeId, sto
   const [checks, setChecks] = useState({ is_featured: product?.isFeatured ?? false, is_published: product?.isPublished ?? false })
   const [uploading, setUploading] = useState(false)
   const pendingSlots = useRef(new Set<ProductImageSlot>())
-  const busy = saving || uploading
+  const busy = saving || uploading || !relationsAvailable
   const fieldError = (name: string) => state.fieldErrors[name] ? <p id={`${name}-error`} role="alert" className="text-sm text-red-600">{state.fieldErrors[name]}</p> : null
   const imageInput = (slot: ProductImageSlot, label: string, aspect: 'poster' | 'banner' | 'square' = 'square') => <ProductImageInput slot={slot} label={label} aspect={aspect} storeId={storeId} productId={product?.id ?? null} currentUrl={product?.[imageProperties[slot]]} title={draft.title || 'Novo produto'} disabled={saving} fieldError={state.fieldErrors[IMAGE_FIELDS[slot]]}
     onChange={url => { setDraft(current => ({ ...current, [imageProperties[slot]]: url || null })); setDirty(true) }}
@@ -71,6 +73,8 @@ export function ProductFormEditor({ product, products = [], tracks, storeId, sto
         </div>
       </div>
     </fieldset>
+    {!relationsAvailable && <p role="alert" className={ui.notice}>Não foi possível carregar as associações. Recarregue antes de salvar para preservar a organização atual.</p>}
+    <ContextualComplementFields product={product} products={products} relations={contextualRelations} revision={revision} disabled={saving || !relationsAvailable} onDirty={()=>setDirty(true)} />
     <LockedProductFields product={product} draft={draft} storeSlug={storeSlug} imageInput={imageInput('purchase', 'Imagem do modal (opcional, até 2 MB)')} fieldErrors={state.fieldErrors} disabled={saving} />
     <UpgradeFields product={product} draft={draft} storeSlug={storeSlug} supportUrl={supportUrl} sectionName={upgradeSectionName} imageInput={imageInput('upgrade', 'Mockup do upgrade (quadrado 1:1, até 2 MB)')} fieldErrors={state.fieldErrors} disabled={saving} />
     <fieldset disabled={saving} className="space-y-4 border-t border-borda pt-5"><legend className="px-2 text-xl font-bold">Publicação</legend>

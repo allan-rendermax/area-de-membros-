@@ -12,6 +12,7 @@ import { supportHref } from '@/lib/support/whatsapp'
 import { ContentEditor } from '../content-editor'
 import { ProductForm } from '../product-form'
 import { DeleteProductSection } from '../delete-product-form'
+import { listContextualRelations } from '@/lib/data/contextual-complements'
 
 export default async function ProdutoAdminPage({ params, searchParams }: PageProps<'/admin/produtos/[id]'>) {
   await requireAdmin()
@@ -24,6 +25,7 @@ export default async function ProdutoAdminPage({ params, searchParams }: PagePro
   const [modules, offers] = product ? await Promise.all([listModulesWithItems(product.id, { publishedOnly: false }), listOffers(store.id)]) : [[], []]
   const tracks = showContent ? [] : await listTracks(store.id)
   const products = showContent ? [] : await listProducts(store.id)
+  const contextual = showContent ? {relations:[],available:true} : await listContextualRelations(store.id)
 
   return (
     <div className="flex flex-col gap-4">
@@ -41,7 +43,7 @@ export default async function ProdutoAdminPage({ params, searchParams }: PagePro
       {typeof msg === 'string' && <p role="status" className={ui.notice}>{msg}</p>}
       {product && <ProductReadinessNotice product={product} modules={modules} offers={offers} />}
       {product && showContent ? <ContentEditor productId={product.id} productTitle={product.title} contentMode={product.contentMode} modules={modules} /> : <>
-        <ProductForm product={product} products={products} tracks={tracks} storeId={store.id} storeSlug={store.slug} supportUrl={supportHref(store, 'geral', null)} upgradeSectionName={sectionTitle(modules.find((module) => module.requiredLevel === 'complete')?.title ?? '', 'complete', product?.contentMode)} />
+        <ProductForm product={product} products={products} contextualRelations={contextual.relations} relationsAvailable={contextual.available} tracks={tracks} storeId={store.id} storeSlug={store.slug} supportUrl={supportHref(store, 'geral', null)} upgradeSectionName={sectionTitle(modules.find((module) => module.requiredLevel === 'complete')?.title ?? '', 'complete', product?.contentMode)} />
         {product && <DeleteProductSection key={product.id} product={{ id: product.id, title: product.title }} storeId={store.id} />}
       </>}
     </div>

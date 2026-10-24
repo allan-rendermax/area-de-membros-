@@ -38,6 +38,7 @@ function requiredId(form: FormData, name: string): string {
 }
 
 export type StoreInput = {
+  memberLibraryMode?: 'legacy' | 'grouped'
   id: string | null
   slug: string
   name: string
@@ -49,6 +50,8 @@ export type StoreInput = {
 }
 
 export function parseStoreForm(form: FormData): StoreInput {
+  const memberLibraryMode = text(form, 'member_library_mode')
+  if (form.has('member_library_mode') && !['legacy','grouped'].includes(memberLibraryMode)) throw new FormError('Organização da biblioteca inválida.')
   const name = text(form, 'name')
   if (!name) throw new FormError('Informe o nome da loja.')
   const slug = text(form, 'slug') || slugify(name)
@@ -70,10 +73,14 @@ export function parseStoreForm(form: FormData): StoreInput {
     communityWhatsappUrl,
     supportUrl: optionalUrl(form, 'support_url', 'Link de suporte'),
     loginImageUrl: optionalUrl(form, 'login_image_url', 'Imagem do login'),
+    ...(form.has('member_library_mode') ? {memberLibraryMode: memberLibraryMode as 'legacy'|'grouped'} : {}),
   }
 }
 
 export type ProductInput = {
+  catalogVisibility?: 'catalog' | 'contextual'
+  contextualComplementIds?: string[]
+  expectedEditorialRevision?: number
   id: string | null
   storeId: string
   slug: string
@@ -100,6 +107,7 @@ export type ProductInput = {
 }
 
 export function parseProductForm(form: FormData, storeId: string): ProductInput {
+  const editorial = parseEditorialFields(form)
   const title = text(form, 'title')
   if (!title) throw new FormError('Informe o título do produto.')
   const slug = text(form, 'slug') || slugify(title)
@@ -123,6 +131,7 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
   return {
     id: optionalId(form, 'id'),
     storeId,
+    ...editorial,
     slug,
     title,
     track: text(form, 'track'),
@@ -145,6 +154,29 @@ export function parseProductForm(form: FormData, storeId: string): ProductInput 
     sortOrder: Number.isFinite(sortOrder) ? Math.trunc(sortOrder) : 0,
     isPublished: checked(form, 'is_published'),
   }
+}
+
+function parseEditorialFields(form: FormData): Pick<ProductInput,'catalogVisibility'|'contextualComplementIds'|'expectedEditorialRevision'> {
+  const result: Pick<ProductInput,'catalogVisibility'|'contextualComplementIds'|'expectedEditorialRevision'> = {}
+  if (form.has('catalog_visibility')) {
+    const value=text(form,'catalog_visibility')
+    if(value!=='catalog' && value!=='contextual')throw new FormError('Visibilidade inválida.','catalog_visibility')
+    result.catalogVisibility=value
+  }
+  if (form.has('contextual_complement_ids')) {
+    let ids:unknown
+    try {ids=JSON.parse(text(form,'contextual_complement_ids'))}catch{throw new FormError('Lista de complementos inválida.')}
+    if(!Array.isArray(ids) || ids.some(id=>typeof id!=='string' || !isUuid(id) || id===text(form,'id')) || new Set(ids).size!==ids.length)throw new FormError('Lista de complementos inválida.')
+    result.contextualComplementIds=ids
+  }
+  const raw=text(form,'editorial_revision')
+  if(raw) {
+    const revision=Number(raw)
+    if(!/^\d+$/.test(raw) || !Number.isSafeInteger(revision))throw new FormError('Revisão inválida. Recarregue a página.')
+    result.expectedEditorialRevision=revision
+  }
+  if(text(form,'id') && Object.keys(result).length && result.expectedEditorialRevision===undefined)throw new FormError('Recarregue a página para obter a revisão atual.')
+  return result
 }
 
 export type ModuleInput = { id: string | null; productId: string; title: string; isPublished: boolean; requiredLevel?: AccessLevel }

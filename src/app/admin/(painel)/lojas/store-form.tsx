@@ -9,6 +9,7 @@ export function StoreForm({ store }: { store: Store | null }) {
       <input type="hidden" name="logo_url" value={store?.logoUrl ?? ''} />
       <input type="hidden" name="login_image_url" value={store?.loginImageUrl ?? ''} />
       <label className={ui.label}>Nome<input name="name" required defaultValue={store?.name} className={ui.input} /></label>
+      <label className={ui.label}>Organização da biblioteca<select name="member_library_mode" defaultValue={store?.memberLibraryMode ?? 'legacy'} className={ui.input}><option value="legacy">Atual</option><option value="grouped">Agrupar complementos adquiridos</option></select><span className="text-sm text-texto-suave">Ative após configurar as associações e a visibilidade dos produtos.</span></label>
       <label className={ui.label}>
         Endereço (vira seusite.com/endereco; vazio = gerado do nome)
         <input name="slug" defaultValue={store?.slug} pattern="[a-z0-9]+(-[a-z0-9]+)*" className={ui.input} />

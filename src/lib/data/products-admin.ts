@@ -34,10 +34,8 @@ export async function validateProductComplement(input: Pick<ProductInput, 'id' |
   }
 }
 
-export async function saveProduct(input: ProductInput): Promise<string> {
-  await validateProductComplement(input)
-  const db = createAdminClient()
-  const row = {
+function productRow(input: ProductInput) {
+  return {
     store_id: input.storeId,
     slug: input.slug,
     title: input.title,
@@ -57,11 +55,33 @@ export async function saveProduct(input: ProductInput): Promise<string> {
     role: input.role,
     student_checkout_url: input.studentCheckoutUrl ?? null,
     ...(input.complementaryProductId !== undefined ? { complementary_product_id: input.complementaryProductId } : {}),
+    ...(input.catalogVisibility !== undefined ? {catalog_visibility:input.catalogVisibility} : {}),
     is_featured: input.isFeatured,
     sort_order: input.sortOrder,
     is_published: input.isPublished,
     updated_at: now(),
   }
+}
+
+export async function saveProductEditorial(input: ProductInput): Promise<{id:string;editorialRevision:number}> {
+  await validateProductComplement(input)
+  const row=productRow(input)
+  const patch=Object.fromEntries(Object.entries(row).filter(([key])=>key!=='store_id' && key!=='updated_at'))
+  const {data,error}=await createAdminClient().rpc('save_contextual_product',{
+    p_store_id:input.storeId,p_product_id:input.id,p_expected_revision:input.expectedEditorialRevision ?? null,
+    p_patch:patch,p_complement_ids:input.contextualComplementIds ?? null,
+  })
+  if(error)throw friendly(error,'Já existe um produto com este endereço nesta loja.')
+  const saved=data?.[0]
+  if(!saved)throw new Error('Não foi possível confirmar o salvamento.')
+  return {id:saved.id as string,editorialRevision:Number(saved.editorial_revision)}
+}
+
+export async function saveProduct(input: ProductInput): Promise<string> {
+  if(input.expectedEditorialRevision!==undefined || input.contextualComplementIds!==undefined || input.catalogVisibility!==undefined) return (await saveProductEditorial(input)).id
+  await validateProductComplement(input)
+  const db = createAdminClient()
+  const row = productRow(input)
   const { data, error } = input.id
     ? await db.from('products').update(row).eq('id', input.id).eq('store_id', input.storeId).select('id').single()
     : await db.from('products').insert(row).select('id').single()

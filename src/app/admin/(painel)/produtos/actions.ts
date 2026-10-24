@@ -14,7 +14,7 @@ import { requireAdmin } from '@/lib/auth/require-admin'
 import { isUuid } from '@/lib/content/url'
 import { getProductById } from '@/lib/data/products'
 import { deleteProduct } from '@/lib/data/product-deletion'
-import { createItemUpload, deleteItem, deleteModule, moveItem, moveModule, saveItem, saveModule, saveProduct, validateProductComplement } from '@/lib/data/products-admin'
+import { createItemUpload, deleteItem, deleteModule, moveItem, moveModule, saveItem, saveModule, saveProduct, saveProductEditorial, validateProductComplement } from '@/lib/data/products-admin'
 
 function field(form: FormData, name: string): string {
   return String(form.get(name) ?? '')
@@ -103,6 +103,7 @@ export async function salvarProduto(formData: FormData): Promise<ProductFormStat
   await requireAdmin()
   const store = await getAdminStore()
   let productId: string
+  let editorialRevision: number | undefined
   try {
     assertAdminStoreContext(formData, store.id)
     for (const value of formData.values()) {
@@ -126,7 +127,13 @@ export async function salvarProduto(formData: FormData): Promise<ProductFormStat
       } catch (error) { throw new FormError(errorText(error), IMAGE_FIELDS[slot]) }
     }
     await assertProductPublicationReady({ productId: existing?.id, storeId: store.id, isPublished: input.isPublished, mode: input.contentMode })
-    productId = await saveProduct(input)
+    if (formData.has('contextual_complement_ids') || formData.has('catalog_visibility') || formData.has('editorial_revision')) {
+      const saved = await saveProductEditorial(input)
+      productId = saved.id
+      editorialRevision = saved.editorialRevision
+    } else {
+      productId = await saveProduct(input)
+    }
   } catch (error) {
     return productFormError(error)
   }
@@ -134,7 +141,7 @@ export async function salvarProduto(formData: FormData): Promise<ProductFormStat
   if (field(formData, 'id')) {
     revalidatePath(`/admin/produtos/${productId}`)
     revalidatePath(`/${store.slug}`, 'layout')
-    return { status: 'saved', fieldErrors: {}, message: 'Produto salvo.' }
+    return { status: 'saved', fieldErrors: {}, message: 'Produto salvo.', ...(editorialRevision !== undefined ? {editorialRevision} : {}) }
   }
   done(store.slug, productId, 'geral', 'Produto salvo.')
 }

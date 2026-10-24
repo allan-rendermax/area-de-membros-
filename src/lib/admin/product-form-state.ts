@@ -1,4 +1,5 @@
 export type ProductFormState = {
+  editorialRevision?: number
   status: 'idle' | 'error' | 'saved'
   fieldErrors: Record<string, string>
   message: string | null

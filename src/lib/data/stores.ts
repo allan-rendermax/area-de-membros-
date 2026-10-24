@@ -73,6 +73,7 @@ export async function saveStore(input: StoreInput): Promise<string> {
     support_url: input.supportUrl,
     login_image_url: input.loginImageUrl,
     community_whatsapp_url: input.communityWhatsappUrl,
+    ...(input.memberLibraryMode !== undefined ? {member_library_mode: input.memberLibraryMode} : {}),
   }
   const db = createAdminClient()
   const { data, error } = input.id
