@@ -71,6 +71,8 @@ const parent = {
 }
 
 const product = {
+  catalogVisibility: 'catalog',
+  editorialRevision: 0,
   id: productRow.id,
   storeId: productRow.store_id,
   slug: productRow.slug,

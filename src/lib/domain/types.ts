@@ -9,6 +9,7 @@ export const STATUS_RANK: Record<OrderStatus, number> = {
 }
 
 export type Store = {
+  memberLibraryMode?: 'legacy' | 'grouped'
   id: string
   slug: string
   name: string
@@ -38,6 +39,8 @@ export type ProductRole = 'front' | 'orderbump' | 'upsell'
 export type AccessLevel = 'basic' | 'complete'
 
 export type Product = {
+  catalogVisibility?: 'catalog' | 'contextual'
+  editorialRevision?: number
   id: string
   storeId: string
   slug: string
@@ -62,6 +65,10 @@ export type Product = {
   sortOrder: number
   isPublished: boolean
 }
+
+export type CatalogVisibility = 'catalog' | 'contextual'
+export type MemberLibraryMode = 'legacy' | 'grouped'
+export type ContextualRelation = { storeId: string; parentProductId: string; complementProductId: string; sortOrder: number }
 
 export type Module = {
   id: string

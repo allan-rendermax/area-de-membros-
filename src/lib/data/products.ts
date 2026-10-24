@@ -2,11 +2,13 @@ import type { AccessLevel, ContentMode, OfferMatchType, Item, ItemKind, Module, 
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const PRODUCT_COLUMNS =
-  'id, store_id, slug, title, track, description, cover_url, banner_url, checkout_url, upgrade_checkout_url, content_mode, upgrade_image_url, upgrade_button_text, purchase_title, purchase_description, purchase_image_url, purchase_button_text, student_checkout_url, role, complementary_product_id, is_featured, sort_order, is_published'
+  'id, store_id, slug, title, track, description, cover_url, banner_url, checkout_url, upgrade_checkout_url, content_mode, upgrade_image_url, upgrade_button_text, purchase_title, purchase_description, purchase_image_url, purchase_button_text, student_checkout_url, role, complementary_product_id, is_featured, sort_order, is_published, catalog_visibility, editorial_revision'
 export const MODULE_COLUMNS = 'id, product_id, title, required_level, sort_order, is_published'
 export const ITEM_COLUMNS = 'id, module_id, title, kind, url, cover_url, sort_order, is_published'
 
 export type DbProduct = {
+  catalog_visibility?: 'catalog' | 'contextual'
+  editorial_revision?: number
   id: string
   store_id: string
   slug: string
@@ -47,6 +49,8 @@ export type DbItem = {
 
 export function toProduct(row: DbProduct): Product {
   return {
+    catalogVisibility: row.catalog_visibility ?? 'catalog',
+    editorialRevision: Number(row.editorial_revision ?? 0),
     id: row.id,
     storeId: row.store_id,
     slug: row.slug,

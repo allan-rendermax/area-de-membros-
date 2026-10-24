@@ -5,9 +5,10 @@ import { env } from '@/lib/env'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PUBLIC_STORES_REVALIDATE, PUBLIC_STORES_TAG } from './store-cache'
 
-export const STORE_COLUMNS = 'id, slug, name, logo_url, support_url, support_whatsapp, login_image_url, community_whatsapp_url'
+export const STORE_COLUMNS = 'id, slug, name, logo_url, support_url, support_whatsapp, login_image_url, community_whatsapp_url, member_library_mode'
 
 type DbStore = {
+  member_library_mode?: 'legacy' | 'grouped'
   id: string
   slug: string
   name: string
@@ -20,6 +21,7 @@ type DbStore = {
 
 export function toStore(row: DbStore): Store {
   return {
+    memberLibraryMode: row.member_library_mode ?? 'legacy',
     id: row.id,
     slug: row.slug,
     name: row.name,
