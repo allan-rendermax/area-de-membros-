@@ -1,6 +1,6 @@
 # Revisão independente e correções
 
-Revisão independente por agente separado, em modo somente leitura, sobre `635eb54..3962639`. Foram encontrados três problemas importantes e nenhum crítico ou menor. A revisão considerou aquele commit ainda não pronto para integração. O implementador reproduziu e corrigiu os três problemas numa única rodada; não houve uma segunda revisão independente.
+Revisão independente por agente separado, em modo somente leitura, sobre `635eb54..3962639`. Foram encontrados três problemas importantes e nenhum crítico ou menor. A revisão considerou aquele commit ainda não pronto para integração. O implementador reproduziu e corrigiu os três problemas numa única rodada; a publicação recebeu posteriormente uma revisão independente adicional, registrada abaixo.
 
 | Achado | Correção | Verificação |
 |---|---|---|
@@ -12,4 +12,12 @@ Após as correções: 44/44 testes focados, suíte inteira com 1.286/1.286 teste
 
 Uploads contextuais recusados podem deixar arquivos novos sem referência, sem substituir os anteriores. Não há remoção automática após resposta ambígua: a gravação pode ter ocorrido e a resposta ter se perdido. Uma limpeza posterior exige conferir referências salvas. A operação completa de módulos e ofertas continua usando o fluxo existente; a atomicidade nova cobre campos do produto e lista de complementos.
 
-Não avaliado como produção: cumprimento comercial dos três novos complementos Paisagismo, ativação/reversão real ou auditoria editorial integral dos PDFs. Essas limitações permanecem explícitas no plano de publicação.
+Na revisão inicial, comércio e ativação real ainda não estavam avaliados. A revisão adicional abaixo cobre a publicação. Reversão real, auditoria editorial integral dos PDFs e entrega após pagamento real não foram executadas.
+
+## Revisão independente da publicação — 24/10/2026
+
+Agente separado, somente leitura, revisou a transação antes da execução e comparou independentemente os snapshots antes/depois. Nenhum bloqueio. Ajuste menor de limpeza de tabela temporária ON COMMIT DROP aplicado antes da execução.
+
+Confirmou: seis relações na ordem correta; três produtos novos com módulos e sete itens; seis aliases liberando somente seu próprio complemento; ofertas, módulos, itens e vínculos antigos preservados; Protocolo preservado; 19 URLs correspondentes ao manifesto de uploads.
+
+Também revisou o relato de desvio na navegação avulsa: código não depende do principal para conceder acesso, navegação direta e clique após recarregar funcionaram; sem reprodução consistente, não recomendou alteração. Compras reais não foram simuladas nem declaradas como testadas.

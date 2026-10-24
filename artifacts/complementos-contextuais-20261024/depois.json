@@ -1,5 +1,11 @@
 {
-  "status": "not executed",
-  "productionChanged": false,
-  "reason": "implementation and review stage"
+  "status": "published",
+  "productionChanged": true,
+  "date": "2026-10-24",
+  "applicationCommit": "5407f60af7dfab3b3b04b67c55aeb00de75fe5c4",
+  "report": "docs/qa/complementos-contextuais/publicacao.md",
+  "memberLibraryMode": "grouped",
+  "contextualComplements": 6,
+  "newProducts": 3,
+  "realPurchaseObserved": false
 }

@@ -1,6 +1,6 @@
 # Complementos contextuais — implementação e homologação
 
-Implementação em `codex/complementos-netflix`, baseada no deploy verificado `635eb541765bf3d8d8f0d2fff9cdf04047b8864a`. Nenhuma migração, compra, mensagem ou configuração foi aplicada em produção.
+Implementação em `codex/complementos-netflix`, baseada no deploy verificado `635eb541765bf3d8d8f0d2fff9cdf04047b8864a`. Publicação autorizada e concluída em 24/10/2026; veja [publicacao.md](publicacao.md) para códigos Payt, checkouts, ativação e limites de verificação. Não houve compra artificial nem disparo manual de mensagens.
 
 ## Resultado funcional
 
@@ -47,7 +47,7 @@ Seis novas capas 1024×1536 WebP, 187–456 KB, títulos conferidos em tamanho n
 
 Cinco PDFs de Paisagismo: 242,60 → 194,05 MiB. Originais preservados; estrutura, texto, links e renderização de todas as páginas comparados pelo otimizador. Neste lote, pixels idênticos a 120 dpi em todas as páginas. Inspeção visual de capa e páginas de consulta registrada em `qa/material-validation.json`. Isso não equivale a uma auditoria editorial integral do conteúdo.
 
-Biblioteca dos Mestres localizada concluída: 35 páginas, 74 links e 66 marcadores no PDF. A pendência anterior de produção do PDF foi resolvida. Arquivos ainda não foram enviados ao armazenamento de entrega.
+Biblioteca dos Mestres localizada concluída: 35 páginas, 74 links e 66 marcadores no PDF. A pendência anterior de produção do PDF foi resolvida. Os sete arquivos de entrega e as 12 capas foram enviados e conferidos por hash durante a publicação.
 
 ## Cobertura dos critérios de aceite
 
@@ -61,16 +61,15 @@ Biblioteca dos Mestres localizada concluída: 35 páginas, 74 links e 66 marcado
 | 6. Complemento compartilhado | Testes de projeção com seleção determinística do principal |
 | 7. Admin/importador e atomicidade | SQL, ações, parser/executor, transporte Supabase e duas conexões PostgreSQL |
 | 8. Legado/Protocolo/versions/prévias | Regressões de conteúdo/upsell e navegação simulada; cliente bloqueado negado |
-| 9. Isolamento | Schema aditivo com defaults, testes de lojas/direitos; nenhuma escrita em produção |
-| 10. Eventos de venda | Suíte existente de parser/processamento/idempotência/reembolso; pendente confirmação dos IDs reais de Paisagismo e observação de entrega real |
+| 9. Isolamento | Schema aditivo com defaults, testes de lojas/direitos; snapshot confirma outras lojas e produtos preservados |
+| 10. Eventos de venda | Suíte existente de parser/processamento/idempotência/reembolso; IDs reais confirmados na Payt; pendente observação de entrega após pagamento real |
 | 11. Artes | Doze WebP com dimensões/hashes; inspeção de títulos/miniaturas; modal quadrado no browser |
-| 12. Testes integrados | 1.286 testes, banco real local, 11 grupos browser; produção não exercitada |
+| 12. Testes integrados | 1.286 testes, banco real local, 11 grupos browser; produção conferida em prévia administrativa e sessão anônima |
 
-## Limites para ativação
+## Publicação e limites
 
-Os três complementos de Paisagismo ainda não constam no catálogo da área de membros inventariado. Seus códigos Payt/checkouts precisam ser reconciliados no cadastro real antes da liberação. Os testes genéricos não substituem essa identificação comercial.
+Os três complementos de Paisagismo foram cadastrados e publicados após a conferência dos códigos, bumps e checkouts na Payt. Patologias conserva seus produtos, ofertas e entregas existentes. Snapshots e revisão independente confirmam preservação dos dados anteriores.
 
-Patologias conserva produtos e ofertas existentes, incluindo aliases históricos. A revisão de seus arquivos remotos de entrega e a renovação dos snapshots serão feitas na janela de publicação. Não houve reimportação comercial nem recálculo de compras.
+A navegação em produção usa a prévia administrativa; não equivale a uma compra real. A primeira entrega resultante de pagamento real dos novos produtos ainda não foi observada. Não houve reprocessamento histórico nem recálculo de compras.
 
-Consulte [publicacao.md](publicacao.md) para aplicação e reversão.
-
+Consulte [publicacao.md](publicacao.md) para aplicação, evidências e reversão.

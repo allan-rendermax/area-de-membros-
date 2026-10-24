@@ -1,6 +1,26 @@
 # Aplicação e reversão — Paisagismo e Patologias
 
-Pacote preparado localmente. Publicação/ativação não executada. Base remota verificada: `635eb541765bf3d8d8f0d2fff9cdf04047b8864a`. Antes da execução, conferir se o deploy mudou e integrar alterações posteriores.
+Publicado em 24/10/2026, após autorização explícita nesta conversa. Código `5407f60af7dfab3b3b04b67c55aeb00de75fe5c4`, deployment Vercel `dpl_BN9YsyXmh4ua9XdF3exqVCZ6QvgP` READY, em https://members.grupoelevamax.com/arquitetura. As duas migrations aditivas e a ativação transacional foram aplicadas; Arquitetura está em `grouped`. Outras lojas mantiveram seus valores.
+
+## Conferência comercial e resultado
+
+| Complemento Paisagismo | Produto Payt | Bump | Checkout avulso | Link |
+|---|---|---|---|---|
+| Guia da Planta Certa | 4E2O9Y | RVKQNL | 4755BA | https://payt.site/bbC2VnW |
+| Orçamento de Jardins | RWWEBM | 4ZAWPL | LJPPW3 | https://payt.site/GOCko7K |
+| Biblioteca dos Mestres | RD6OKZ | 453QJR | R6GGYY | https://payt.site/JBCaJWw |
+
+Identificadores conferidos no painel Payt. Três checkouts avulsos criados a R$19,90, com Pix e cartão, modelo Digital e sem banners personalizados; as capas aprovadas permanecem na área de membros. Preço-base dos produtos e bumps existentes preservados. Checkout Completo do principal mantém os três bumps.
+
+Postback existente RW9NZY: os 19 produtos anteriores foram preservados e os três produtos de Paisagismo acrescentados. Reabertura confirmou 22 produtos; endpoint, eventos e demais opções permaneceram iguais. Cada complemento possui dois aliases por código (produto/bump), concedendo somente seu próprio acesso completo.
+
+Publicados três produtos, três módulos e sete materiais de Paisagismo; seis relações e seis visibilidades contextuais. As 12 capas e sete arquivos enviados foram relidos e conferidos por SHA-256. Arquivos de entrega estão no bucket privado. Para os PDFs de aproximadamente 98 MiB, o limite global de arquivo passou de 50 para 128 MB; buckets públicos `covers` e `arquivos` ficaram explicitamente limitados aos 50 MiB anteriores. Não houve alteração de cobrança, spend cap ou permissões.
+
+Snapshot posterior e revisão independente confirmaram ofertas, direitos, módulos e itens antigos inalterados; relação singular Protocolo preservada. As três pastas existentes de Patologias foram abertas sem login e seus guias renderizados.
+
+Produção: ofertas internas de ambos os principais; home sem ofertas dos seis; cenário avulso abrindo os cinco materiais de Orçamento de Jardins e navegando para o próximo; endpoint privado gerando URL temporária; acesso sem sessão redirecionando ao login. O navegador bloqueou a abertura automática do download, portanto não se afirma download completo pela interface. Os bytes remotos já haviam sido conferidos no upload. Uma navegação inconsistente durante a ativação não se reproduziu após recarregar; leitura independente não encontrou erro na regra de acesso e nenhum patch foi feito.
+
+Não houve compra artificial, replay histórico ou disparo manual de mensagens. A leitura de pedidos às 17:24 UTC encontrou zero vendas dos novos códigos: Payt → liberação após pagamento real ainda não foi observado ponta a ponta.
 
 ## Destinos
 
@@ -31,5 +51,5 @@ Renovar leitura e conferir revisões contra o snapshot posterior para não sobre
 
 ## Arquivos do pacote
 
-`artifacts/complementos-contextuais-20261024/aplicacao.json` lista alvos e assets; `antes.json` é inventário de preparação, marcado para renovação; `depois.json` informa que nenhuma aplicação ocorreu; `rollback.json` guarda campos a restaurar. Não são autorização nem comandos para aplicar um snapshot antigo.
+`artifacts/complementos-contextuais-20261024/aplicacao.json` e `antes.json` preservam a preparação histórica; `depois.json` aponta para esta publicação. Snapshots atualizados, SQL aplicado, manifesto remoto e verificações ficam localmente em `artifacts/publicacao/complementos-contextuais/20261024/`. Não executar novamente a ativação nem usar inventário antigo para sobrescrever alterações posteriores. A reversão deve partir dos snapshots atualizados e de nova leitura.
 
