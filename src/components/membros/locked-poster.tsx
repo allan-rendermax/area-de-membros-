@@ -62,7 +62,7 @@ export function LockedPoster({ product, initiallyOpen = false, previewOnly = fal
       >
         {previewOnly ? 'Visualizar modal de produto bloqueado' : <>
         <div className="relative">
-          <AutoCover seed={product.id} title={product.title} imageUrl={product.coverUrl} aspect="poster" className="grayscale opacity-70" />
+          <AutoCover seed={product.id} title={product.title} imageUrl={product.coverUrl} aspect="poster" className="grayscale opacity-70 group-hover:grayscale-[.35] group-hover:opacity-95 group-focus-visible:grayscale-[.35] group-focus-visible:opacity-95 motion-safe:transition-[filter,opacity] motion-safe:duration-[450ms] motion-safe:ease-out" />
           <span className="absolute top-3 right-3 grid h-10 w-10 place-items-center rounded-full border border-white/30 bg-fundo/85 text-texto shadow-md">
             <LockIcon className="h-5 w-5" />
           </span>
