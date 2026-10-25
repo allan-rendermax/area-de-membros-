@@ -111,10 +111,13 @@ export async function setCustomerBlocked(id: string, blocked: boolean): Promise<
   if (error) throw error
 }
 
-export async function changeCustomerEmail(id: string, newEmail: string): Promise<void> {
+export async function changeCustomerEmail(id: string, newEmail: string, expectedEmail?: string): Promise<void> {
   const db = createAdminClient()
   const current = await getCustomer(id)
   if (!current) throw new Error('Cliente não encontrado')
+  if (expectedEmail !== undefined && current.email !== expectedEmail) {
+    throw new Error('O email do cliente mudou. Consulte novamente antes de confirmar a correção.')
+  }
   if (current.email === newEmail) return
   if (await findCustomerByEmail(newEmail)) throw new Error('Já existe um cliente com este email')
   const previousEmailHash = hashEmail(current.email, env.loginGuardSecret)
