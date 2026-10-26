@@ -13,6 +13,7 @@ import { listRecentProductVisits, recordItemAccess } from '@/lib/data/item-acces
 import { listCompletedItemIds } from '@/lib/data/member-progress'
 import { StoreHeader } from '@/components/membros/store-header'
 import { listContextualRelations } from '@/lib/data/contextual-complements'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { Product, Item, Store, ModuleWithItems } from '@/lib/domain/types'
 
 vi.mock('next/navigation', () => ({
@@ -31,6 +32,7 @@ vi.mock('@/lib/data/item-access', () => ({ listRecentProductVisits: vi.fn(), rec
 vi.mock('@/lib/data/member-progress', () => ({ listCompletedItemIds: vi.fn() }))
 vi.mock('@/lib/data/contextual-complements', () => ({ listContextualRelations: vi.fn() }))
 vi.mock('@/lib/env', () => ({ env: { supabaseUrl: 'https://project.supabase.co' } }))
+vi.mock('@/lib/supabase/admin', () => ({ createAdminClient: vi.fn() }))
 
 const store: Store = { id: 'store', slug: 'arquitetura', name: 'Arquitetura', logoUrl: null, supportUrl: null, supportWhatsapp: null, loginImageUrl: null }
 const product: Product = { id: 'product', storeId: store.id, slug: 'rascunho', title: 'Produto em criação', description: '', track: '', coverUrl: null, bannerUrl: null, checkoutUrl: null, role: 'front', sortOrder: 0, isFeatured: true, isPublished: false }
@@ -108,7 +110,22 @@ describe('prévia administrativa sem conta de aluno', () => {
 
   it('abre recurso em rascunho sem registrar download', async () => {
     vi.mocked(getItemWithContext).mockResolvedValue({ item: { ...item, kind: 'link', url: 'https://example.com/material' }, module: moduleRow, product })
-    await expect(openResource(request, { params })).rejects.toThrow('redirect:https://example.com/material')
+    const response = await openResource(request, { params })
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://example.com/material')
+    expect(recordItemAccess).not.toHaveBeenCalled()
+  })
+
+  it('preserva a prévia e a simulação na recuperação de download indisponível', async () => {
+    const createSignedUrl = vi.fn().mockResolvedValue({ data: null, error: new Error('temporary') })
+    vi.mocked(createAdminClient).mockReturnValue({ storage: { from: vi.fn(() => ({ createSignedUrl })) } } as never)
+    vi.mocked(getItemWithContext).mockResolvedValue({ item: { ...item, kind: 'arquivo', isPublished: true, url: 'https://project.supabase.co/storage/v1/object/authenticated/arquivos-restritos/a.pdf' }, module: { ...moduleRow, isPublished: true }, product: { ...product, isPublished: true } })
+    const response = await openResource(new Request(`https://app.example/arquitetura/item/${item.id}/abrir?previa=1&simular=complete&complementos=solo`), { params })
+    expect(response.status).toBe(503)
+    const html = await response.text()
+    expect(html).toContain(`/arquitetura/item/${item.id}/abrir?previa=1&amp;simular=complete&amp;complementos=solo`)
+    expect(html).toContain(`/arquitetura/item/${item.id}?previa=1&amp;simular=complete&amp;complementos=solo`)
+    expect(requireStoreSession).not.toHaveBeenCalled()
     expect(recordItemAccess).not.toHaveBeenCalled()
   })
 
@@ -220,7 +237,9 @@ describe('compra contextual simulada independente do nível do principal', () =>
       expect(html).not.toContain('Nenhum conteúdo disponível')
       expect(html).toContain('complementos=' + scenario)
     }
-    await expect(openResource(new Request('https://app.example/arquitetura/item/' + item.id + '/abrir?' + new URLSearchParams(query)), { params })).rejects.toThrow('redirect:https://example.com/complemento.pdf')
+    const response = await openResource(new Request('https://app.example/arquitetura/item/' + item.id + '/abrir?' + new URLSearchParams(query)), { params })
+    expect(response.status).toBe(307)
+    expect(response.headers.get('location')).toBe('https://example.com/complemento.pdf')
     expect(loadGrantedProductLevels).not.toHaveBeenCalled()
     expect(recordItemAccess).not.toHaveBeenCalled()
   })

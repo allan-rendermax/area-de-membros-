@@ -50,8 +50,16 @@ describe('lista e navegação de recursos', () => {
   it('preserva os rótulos originais na lista do produto', () => {
     const html = renderToStaticMarkup(createElement(ResourceList, { items: [file, link], storeSlug: 'loja-a', legacyPresentation: true }))
     expect(html).toContain('Arquivo')
-    expect(html).toContain(`aria-label="Baixar ${file.title}"`)
+    expect(html).toContain(`aria-label="Baixar ${file.title} (abre em nova aba)"`)
     expect(html).not.toContain('Baixar PDF')
     expect(html).not.toContain('>PDF</span>')
+  })
+
+  it('mantém a página do material disponível para tentar baixar novamente', () => {
+    const html = renderToStaticMarkup(createElement(ResourceList, { items: [file], storeSlug: 'loja-a' }))
+    expect(html).toContain('target="_blank"')
+    expect(html).toContain('rel="noopener noreferrer"')
+    expect(html).toContain('volte a esta página e tente novamente')
+    expect(html).toContain('copie o link desta página')
   })
 })
