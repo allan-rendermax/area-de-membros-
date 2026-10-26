@@ -1,5 +1,5 @@
 export type Actor = { userId: number; chatId: number }
-export type Button = { text: string; callback_data: string }
+export type Button = { text: string; callback_data: string; style?: 'success' | 'danger' | 'primary' }
 export type ActionState = 'ready' | 'awaiting_email' | 'confirm' | 'processing' | 'done' | 'uncertain' | 'cancelled'
 export type SupportAction = Actor & {
   id: string; kind: 'resend' | 'correct'; customerId: string; storeId: string
@@ -14,7 +14,7 @@ export type CustomerLookup = {
   delivery: string
   suggestions: { id: string; email: string; name: string }[]
 }
-export type ActionResult = { state: 'done' | 'uncertain'; text: string; logId?: string; correctionConfirmed?: boolean }
+export type ActionResult = { state: 'done' | 'uncertain'; text: string; logId?: string; correctionConfirmed?: boolean; sent?: boolean }
 export interface SupportRepository {
   acceptUpdate(id: number): Promise<boolean>
   createAction(action: Omit<SupportAction, 'id' | 'promptId' | 'newEmail' | 'logId' | 'result'>): Promise<SupportAction>
@@ -25,7 +25,7 @@ export interface SupportRepository {
 }
 export type SupportDeps = {
   failures?: (offset: number) => Promise<import('./monitoring').FailureList>
-  allowedUsers: number[]; now: () => Date; repo: SupportRepository
-  io: { send(chatId: number, text: string, buttons?: Button[][], forceReply?: boolean): Promise<number>; ack(id: string): Promise<void> }
-  ops: { lookup(email: string): Promise<CustomerLookup>; lookupId(id: string): Promise<CustomerLookup | null>; execute(action: SupportAction): Promise<ActionResult> }
+  allowedUsers: number[]; owners?: number[]; now: () => Date; repo: SupportRepository
+  io: { send(chatId: number, text: string, buttons?: Button[][], forceReply?: boolean): Promise<number>; edit(chatId: number, messageId: number, text: string, buttons?: Button[][]): Promise<void>; ack(id: string): Promise<void> }
+  ops: { lookup(email: string): Promise<CustomerLookup>; lookupId(id: string): Promise<CustomerLookup | null>; actionCustomer(id: string): Promise<Pick<CustomerLookup, 'customer' | 'storeId' | 'products'> | null>; execute(action: SupportAction): Promise<ActionResult> }
 }

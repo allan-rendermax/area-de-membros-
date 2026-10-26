@@ -84,16 +84,37 @@ describe('clientes HTTP e status', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('https://api.telegram.org/bot123:private-token/getMe')))
     await expect(createTelegramClient(config.token).send(123, 'test')).rejects.toThrow('telegram_request_failed')
   })
-  it('envia botões sem interpretar dados do cliente como HTML', async () => {
+  it('envia HTML já formatado e preserva botões', async () => {
     const fetch = vi.fn().mockResolvedValue(Response.json({ ok: true, result: { message_id: 1 } })); vi.stubGlobal('fetch', fetch)
-    await createTelegramClient(config.token).send(123, '<cliente>', [[{ text: 'Ação', callback_data: 'open:uuid' }]])
+    await createTelegramClient(config.token).send(123, '<b>&lt;cliente&gt;</b>', [[{ text: 'Ação', callback_data: 'resend:uuid' }]])
     const payload = JSON.parse(fetch.mock.calls[0][1].body)
-    expect(payload.text).toBe('<cliente>'); expect(payload.parse_mode).toBeUndefined()
+    expect(payload.text).toBe('<b>&lt;cliente&gt;</b>'); expect(payload.parse_mode).toBe('HTML')
   })
   it('falha do provedor não vira entrega confirmada', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('private body', { status: 403 })))
     expect(await readProviderEmail('provider-id', 'private-key')).toBeNull()
     expect(deliveryLabel('sent')).toContain('aguardando'); expect(deliveryLabel('delivered')).toContain('servidor')
     expect(deliveryLabel('bounced')).toContain('devolvido')
+  })
+})
+
+describe('edição de mensagens', () => {
+  it('edita com HTML, remove botões e desliga preview', async () => {
+    const fetch = vi.fn().mockResolvedValue(Response.json({ ok: true, result: { message_id: 7 } })); vi.stubGlobal('fetch', fetch)
+    await createTelegramClient(config.token).edit(123, 7, '<b>Texto</b>')
+    expect(fetch.mock.calls[0][0]).toContain('/editMessageText')
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ chat_id:123, message_id:7, parse_mode:'HTML', reply_markup:{inline_keyboard:[]}, link_preview_options:{is_disabled:true} })
+  })
+  it('message is not modified é sucesso sem mensagem nova', async () => {
+    const fetch = vi.fn().mockResolvedValue(Response.json({ok:false,description:'Bad Request: message is not modified'}, {status:400})); vi.stubGlobal('fetch',fetch)
+    await expect(createTelegramClient(config.token).edit(123,7,'Texto')).resolves.toBeUndefined()
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+  it('outra falha de edição envia nova mensagem preservando botões', async () => {
+    const fetch = vi.fn().mockResolvedValueOnce(Response.json({ok:false,description:'cannot edit'}, {status:400})).mockResolvedValueOnce(Response.json({ok:true,result:{message_id:8}})); vi.stubGlobal('fetch',fetch)
+    const buttons = [[{text:'Confirmar',callback_data:'confirm:id',style:'success' as const}]]
+    await createTelegramClient(config.token).edit(123,7,'Texto',buttons)
+    expect(fetch.mock.calls[1][0]).toContain('/sendMessage')
+    expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({text:'Texto',parse_mode:'HTML',reply_markup:{inline_keyboard:buttons}})
   })
 })

@@ -56,3 +56,9 @@ describe('operações de suporte', () => {
     expect(data.changeEmail).not.toHaveBeenCalled(); expect(data.send).toHaveBeenCalledWith('customer', 'store', 'old@example.test')
   })
 })
+
+it('consulta leve para ação l? cadastro e produtos sem provedor ou pedidos', async () => {
+  const result = await ops().actionCustomer('customer')
+  expect(result).toMatchObject({customer:{email:'old@example.test'},storeId:'store',products:[{id:'product',title:'Atlas',level:'complete'}]})
+  expect(data.delivery).not.toHaveBeenCalled(); expect(data.orders).not.toHaveBeenCalled()
+})

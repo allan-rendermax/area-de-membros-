@@ -14,7 +14,7 @@ async function call(method, payload = {}) {
   if (!token || !/^\d+:[A-Za-z0-9_-]+$/.test(token)) throw new Error('Preencha TELEGRAM_BOT_TOKEN em .env.telegram.local.')
   let response
   try {
-    const r = await fetch(`https://api.telegram.org/bot${token}/${method}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(15000) })
+    const r = await fetch(`https://api.telegram.org/bot${token}/${method}`, { method: 'POST', ...(payload instanceof FormData ? { body: payload } : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }), signal: AbortSignal.timeout(15000) })
     response = await r.json()
     if (!r.ok || response.ok !== true) throw new Error('telegram_error')
   } catch { throw new Error(`Falha na chamada Telegram ${method}. Confira token e conectividade.`) }
@@ -25,10 +25,33 @@ async function info() {
   if (expectedUsername && bot.username.toLowerCase() !== expectedUsername.toLowerCase()) throw new Error('O token pertence a outro bot. Confira TELEGRAM_BOT_USERNAME.')
   console.log(JSON.stringify({ bot: '@' + bot.username, id: bot.id }))
 }
+async function profile() {
+  const args = process.argv.slice(3)
+  if (args.length && (args.length !== 2 || args[0] !== '--photo' || !args[1])) throw new Error('Use profile ou activate com --photo <arquivo.jpg> opcional.')
+  let photo
+  if (args.length) {
+    try { photo = await readFile(args[1]) }
+    catch { throw new Error('Não foi possível ler a foto do bot.') }
+  }
+  await call('setMyCommands', { commands: [{ command: 'start', description: '👋 Início e ajuda' }, { command: 'falhas', description: '⚠️ Clientes com falha de e-mail' }, { command: 'equipe', description: '👥 Gerenciar equipe (proprietário)' }, { command: 'id', description: '🆔 Ver meu ID do Telegram' }] })
+  await call('setMyShortDescription', { short_description: 'Suporte ElevaMAX: consulte compras, reenvie acessos e corrija e-mails de clientes. Uso restrito à equipe.' })
+  await call('setMyDescription', { description: '🔒 Bot privado da equipe de suporte ElevaMAX.\n\nEnvie o e-mail do cliente para ver compras, produtos liberados e o último aviso de acesso. Reenvio e correção só acontecem depois da sua confirmação.\n\nNão é da equipe? Envie /id e passe o número ao responsável.' })
+  if (photo) {
+    const form = new FormData()
+    form.append('photo', JSON.stringify({ type: 'static', photo: 'attach://avatar' }))
+    form.append('avatar', new Blob([photo], { type: 'image/jpeg' }), 'avatar.jpg')
+    await call('setMyProfilePhoto', form)
+  }
+}
 async function main() {
   const mode = process.argv[2] || 'info'
-  if (!['info', 'users', 'activate'].includes(mode)) throw new Error('Use info, users ou activate.')
+  if (!['info', 'users', 'activate', 'profile'].includes(mode)) throw new Error('Use info, users, activate ou profile.')
   await info()
+  if (mode === 'profile') {
+    await profile()
+    console.log(JSON.stringify({ profile: true }))
+    return
+  }
   if (mode === 'info') {
     const webhook = await call('getWebhookInfo')
     console.log(JSON.stringify({ webhook: webhook.url, pending: webhook.pending_update_count, lastErrorAt: webhook.last_error_date ?? null }))
@@ -61,7 +84,7 @@ async function main() {
     const r = await fetch(`${supabaseUrl}/rest/v1/${table}?select=*&limit=0`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(10000) })
     if (!r.ok) throw new Error('A migração privada do bot ainda não foi confirmada no banco.')
   }
-  await call('setMyCommands', { commands: [{ command: 'start', description: 'Iniciar suporte privado' }, { command: 'help', description: 'Como consultar e corrigir acessos' }, { command: 'falhas', description: 'Clientes com falha de e-mail de acesso' }, { command: 'id', description: 'Meu ID para autorização de suporte' }, { command: 'equipe', description: 'Gerenciar equipe (proprietário)' }] })
+  await profile()
   await call('setWebhook', { url, secret_token: secret, allowed_updates: ['message', 'callback_query'], max_connections: 1, drop_pending_updates: false })
   const webhook = await call('getWebhookInfo')
   if (webhook.url !== url) throw new Error('Não foi possível confirmar o endereço do webhook.')

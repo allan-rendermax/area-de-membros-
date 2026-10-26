@@ -23,8 +23,8 @@ export async function POST(request: Request) {
     // Recheck before starting support work, including confirmations from an older message.
     if (!(await isSupportUser(userId, config!))) return
     const ops = await createPlatformOperations(config!.storeSlug)
-    await handleTelegramUpdate(input, { io, ops, repo, allowedUsers: [userId], now: () => new Date(), failures: offset => listFailures(config!.storeSlug, offset) })
+    await handleTelegramUpdate(input, { io, ops, repo, allowedUsers: [userId], owners: teamOwners(), now: () => new Date(), failures: offset => listFailures(config!.storeSlug, offset) })
   }, async userId => {
-    await createTelegramClient(config!.token).send(userId, `Seu ID do Telegram: ${userId}\nEnvie esse número ao responsável da empresa para solicitar liberação. Seu acesso aos clientes ainda não está autorizado.`)
+    await createTelegramClient(config!.token).send(userId, `🆔 Seu ID do Telegram: <code>${userId}</code>\nEnvie esse número ao responsável da empresa para solicitar liberação. Seu acesso aos clientes ainda não está autorizado.`)
   }, userId => isSupportUser(userId, config!))
 }

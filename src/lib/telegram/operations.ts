@@ -26,6 +26,10 @@ export function createSupportOperations(scope: Scope, data: OperationData): Supp
   return {
     async lookup(email) { return lookupCustomer(await data.findCustomer(email), email) },
     async lookupId(id) { const c = await data.getCustomer(id); return c ? lookupCustomer(c) : null },
+    async actionCustomer(id) {
+      const customer = await data.getCustomer(id)
+      return customer ? { customer, storeId: scope.storeId, products: await data.access(customer) } : null
+    },
     async execute(a: SupportAction): Promise<ActionResult> {
       if (a.storeId !== scope.storeId) return refused('Esta ação pertence a outra loja. Consulte novamente.')
       const c = await data.getCustomer(a.customerId)
@@ -53,7 +57,7 @@ export function createSupportOperations(scope: Scope, data: OperationData): Supp
       try {
         const sent = await data.send(c.id, scope.storeId, expected)
         if (!sent.ok) throw new Error('send_unverified')
-        return { state: 'done', text: `${corrected ? 'E-mail corrigido e acesso preservado.\n' : ''}Envio para ${expected} aceito pelo provedor. Use “Conferir cadastro e envio” para verificar a entrega.`, logId: sent.logId, correctionConfirmed: corrected }
+        return { state: 'done', text: `${corrected ? 'E-mail corrigido e acesso preservado.\n' : ''}Envio para ${expected} aceito pelo provedor. Use “Ver cliente atualizado” para verificar a entrega.`, logId: sent.logId, correctionConfirmed: corrected, sent: true }
       } catch {
         return { state: 'uncertain', text: `${corrected ? `E-mail corrigido para ${expected} e acesso preservado.\n` : ''}Não foi possível confirmar o envio. Confira o registro no admin/provedor antes de repetir.`, correctionConfirmed: corrected }
       }
