@@ -15,9 +15,9 @@ describe('resolver destino privado autorizado', () => {
     vi.mocked(createAdminClient).mockReturnValue({ storage: { from: vi.fn(() => ({ createSignedUrl })) } } as unknown as ReturnType<typeof createAdminClient>)
   })
 
-  it('assina caminho canônico por 60 segundos para download', async () => {
+  it('assina caminho canônico por 15 minutos para download', async () => {
     expect(await resolveResourceDestination(file, supabaseUrl)).toContain('token=abc')
-    expect(createSignedUrl).toHaveBeenCalledWith('pasta/modelo.pdf', 60, { download: true })
+    expect(createSignedUrl).toHaveBeenCalledWith('pasta/modelo.pdf', 900, { download: true })
   })
 
   it('falha fechado quando assinatura falha', async () => {

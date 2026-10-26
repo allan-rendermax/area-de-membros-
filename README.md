@@ -2,6 +2,8 @@
 
 **Comece por [Estado atual](docs/estado-atual.md)** para consultar entregas, evidências de publicação e pendências. Os relatórios datados em `docs/` preservam o histórico de cada rodada.
 
+Correção de downloads e integração do Speed Insights: [escopo, validação e operação de 26/10/2026](docs/downloads-speed-insights-2026-10-26.md), com evidências anteriores à publicação.
+
 Referências visuais: [docs/design/referencias](docs/design/referencias/).
 
 Verificação local: `npm test`, `npm run lint` e `npm run build`. Antes de alterar código Next.js, leia `AGENTS.md` e a documentação instalada em `node_modules/next/dist/docs/`.
