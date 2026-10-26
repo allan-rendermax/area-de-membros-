@@ -8,6 +8,15 @@ const update = { update_id: 1, message: { message_id: 1, from: { id: 123 }, chat
 const request = (data: unknown, secret = config.secret) => new Request('https://example.test/api/webhooks/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': secret }, body: JSON.stringify(data) })
 beforeEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals() })
 describe('webhook privado', () => {
+  it('informa somente o próprio ID ao visitante no privado sem acessar clientes', async () => {
+    const input = structuredClone(update); input.message.from.id = 999; input.message.chat.id = 999; input.message.text = '/id'
+    const process = vi.fn(), identify = vi.fn()
+    await postTelegramWebhook(request(input), config, process, identify)
+    expect(identify).toHaveBeenCalledWith(999); expect(process).not.toHaveBeenCalled()
+    identify.mockClear(); input.message.chat.type = 'group'
+    await postTelegramWebhook(request(input), config, process, identify)
+    expect(identify).not.toHaveBeenCalled()
+  })
   it('configuração incompleta não ativa bot', () => {
     vi.stubEnv('TELEGRAM_BOT_TOKEN', '')
     expect(getTelegramConfig()).toBeNull()

@@ -2,7 +2,7 @@ import { timingSafeEqual } from 'node:crypto'
 import type { TelegramConfig } from './config'
 import { telegramUpdateSchema } from './handler'
 
-export async function postTelegramWebhook(request: Request, config: TelegramConfig | null, process: (input: unknown) => Promise<void>): Promise<Response> {
+export async function postTelegramWebhook(request: Request, config: TelegramConfig | null, process: (input: unknown) => Promise<void>, identify?: (userId: number) => Promise<void>): Promise<Response> {
   if (!config) return Response.json({ error: 'bot desativado' }, { status: 503 })
   const supplied = request.headers.get('x-telegram-bot-api-secret-token') ?? ''
   const a = Buffer.from(supplied), b = Buffer.from(config.secret)
@@ -19,7 +19,13 @@ export async function postTelegramWebhook(request: Request, config: TelegramConf
   const { message, callback_query: cb } = parsed.data
   const msg = cb?.message ?? message, user = cb?.from ?? msg?.from
   // Check before constructing dependencies: strangers never trigger customer queries.
-  if (!msg || !user || msg.chat.type !== 'private' || msg.chat.id !== user.id || !config.allowedUsers.includes(user.id)) return Response.json({ ok: true })
+  if (!msg || !user || msg.chat.type !== 'private' || msg.chat.id !== user.id) return Response.json({ ok: true })
+  if (!config.allowedUsers.includes(user.id)) {
+    if (!cb && /^\/(start|id)(?:\s|$)/.test(msg.text?.trim() ?? '') && identify) {
+      try { await identify(user.id) } catch { return Response.json({ error: 'falha temporária' }, { status: 500 }) }
+    }
+    return Response.json({ ok: true })
+  }
   try { await process(parsed.data); return Response.json({ ok: true }) }
   catch { return Response.json({ error: 'falha temporária' }, { status: 500 }) }
 }

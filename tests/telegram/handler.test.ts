@@ -37,6 +37,16 @@ beforeEach(() => {
 })
 
 describe('suporte Telegram', () => {
+  it('mostra menu de falhas e restringe a lista a operadores autorizados', async () => {
+    deps.failures = vi.fn(async () => ({ total: 0, rows: [], updatedAt: null, unknown: 0 }))
+    await handleTelegramUpdate(message('/start'), deps)
+    expect(button('Clientes com falha')).toBe('failures:0')
+    await handleTelegramUpdate(callback('failures:0', 999), deps)
+    expect(deps.failures).not.toHaveBeenCalled()
+    await handleTelegramUpdate(callback('failures:0'), deps)
+    expect(deps.failures).toHaveBeenCalledWith(0)
+    expect(messages.at(-1)?.text).toContain('0 clientes')
+  })
   it('recusa operador desconhecido antes de consultar clientes', async () => {
     await handleTelegramUpdate(message('old@example.com', undefined, 999), deps)
     expect(deps.ops.lookup).not.toHaveBeenCalled(); expect(deps.repo.acceptUpdate).toBeDefined()

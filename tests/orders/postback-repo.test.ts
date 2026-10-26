@@ -120,6 +120,7 @@ describe('registro de avisos por cliente, loja e produtos', () => {
     expect(insert).toHaveBeenCalledWith({
       store_id: 'store-1', customer_id: 'cus-1', to_email: 'joao@example.com', kind: 'produto_novo',
       product_ids: ['product-1', 'product-2'], status: 'falhou', error: 'notify indisponível',
+      access_notice: true,
     })
   })
 

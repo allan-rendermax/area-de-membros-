@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { isValidEmail, normalizeEmail } from '@/lib/domain/email'
+import { failureMessage, menu } from './monitoring'
 import type { Actor, Button, CustomerLookup, SupportAction, SupportDeps } from './types'
 
 const chat = z.object({ id: z.number().int().safe(), type: z.string() })
@@ -34,10 +35,19 @@ async function showLookup(value: CustomerLookup, actor: Actor, deps: SupportDeps
     const correct = await deps.repo.createAction({ ...base, kind: 'correct' })
     buttons.unshift([{ text: 'Reenviar acesso', callback_data: `open:${resend.id}` }, { text: 'Corrigir e-mail', callback_data: `open:${correct.id}` }])
   }
-  await deps.io.send(actor.chatId, text.slice(0, 3900), buttons)
+  await deps.io.send(actor.chatId, text.slice(0, 3900), [...buttons, ...menu])
 }
 
 async function onCallback(data: string, actor: Actor, deps: SupportDeps) {
+  const failedPage = data.match(/^failures:(\d{1,6})$/)
+  if (failedPage && deps.failures) {
+    try {
+      const offset = Number(failedPage[1])
+      const page = failureMessage(await deps.failures(offset), offset)
+      await deps.io.send(actor.chatId, page.text.slice(0, 3900), page.buttons)
+    } catch { await deps.io.send(actor.chatId, 'Não foi possível consultar a lista agora. Tente novamente.', menu) }
+    return
+  }
   const view = data.match(new RegExp(`^view:(${uuid})$`))
   if (view) {
     const lookup = await deps.ops.lookupId(view[1]); if (lookup) await showLookup(lookup, actor, deps)
@@ -69,7 +79,7 @@ async function onCallback(data: string, actor: Actor, deps: SupportDeps) {
   let result
   try { result = await deps.ops.execute(claimed) }
   catch { result = { state: 'uncertain' as const, text: 'Resultado incerto. Confira o cadastro e o envio no admin antes de repetir a ação.' } }
-  await deps.repo.transition(action.id, actor, ['processing'], { state: result.state, result: result.text, logId: result.logId ?? null })
+  await deps.repo.transition(action.id, actor, ['processing'], { state: result.state, result: result.text, logId: result.logId ?? null, correctionConfirmed: result.correctionConfirmed ?? false })
   await deps.io.send(actor.chatId, result.text, [[{ text: 'Conferir cadastro e envio', callback_data: `view:${claimed.customerId}` }]])
 }
 
@@ -87,7 +97,9 @@ export async function handleTelegramUpdate(input: unknown, deps: SupportDeps): P
     return
   }
   const text = msg.text?.trim() ?? ''
-  if (/^\/(start|help)(?:\s|$)/.test(text)) { await deps.io.send(actor.chatId, help); return }
+  if (/^\/id(?:\s|$)/.test(text)) { await deps.io.send(actor.chatId, `Seu ID do Telegram: ${actor.userId}`, menu); return }
+  if (/^\/(start|help)(?:\s|$)/.test(text)) { await deps.io.send(actor.chatId, help, menu); return }
+  if (/^\/falhas(?:\s|$)/.test(text)) { await onCallback('failures:0', actor, deps); return }
   const found = emails(text)
   if (msg.reply_to_message) {
     const action = await deps.repo.findReply(actor, msg.reply_to_message.message_id)

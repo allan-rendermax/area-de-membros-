@@ -36,6 +36,8 @@ export function createSupportRepository(): SupportRepository {
       if (patch.promptId !== undefined) values.prompt_id = patch.promptId
       if (patch.logId !== undefined) values.log_id = patch.logId
       if (patch.result !== undefined) values.result = patch.result
+      if (patch.correctionConfirmed !== undefined) values.correction_confirmed = patch.correctionConfirmed
+      if (patch.state === 'done' || patch.state === 'uncertain') values.finished_at = new Date().toISOString()
       const { data, error } = await db.from('telegram_support_actions').update(values).eq('id', id).eq('user_id', who.userId).eq('chat_id', who.chatId).in('state', from).select('*').maybeSingle()
       if (error) throw new Error('telegram_action_update_failed')
       return data ? action(data as Row) : null

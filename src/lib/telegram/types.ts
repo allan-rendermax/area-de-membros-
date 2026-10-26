@@ -14,16 +14,17 @@ export type CustomerLookup = {
   delivery: string
   suggestions: { id: string; email: string; name: string }[]
 }
-export type ActionResult = { state: 'done' | 'uncertain'; text: string; logId?: string }
+export type ActionResult = { state: 'done' | 'uncertain'; text: string; logId?: string; correctionConfirmed?: boolean }
 export interface SupportRepository {
   acceptUpdate(id: number): Promise<boolean>
   createAction(action: Omit<SupportAction, 'id' | 'promptId' | 'newEmail' | 'logId' | 'result'>): Promise<SupportAction>
   getAction(id: string, actor: Actor): Promise<SupportAction | null>
-  transition(id: string, actor: Actor, from: ActionState[], patch: Partial<Pick<SupportAction, 'state' | 'newEmail' | 'promptId' | 'logId' | 'result'>>): Promise<SupportAction | null>
+  transition(id: string, actor: Actor, from: ActionState[], patch: Partial<Pick<SupportAction, 'state' | 'newEmail' | 'promptId' | 'logId' | 'result'>> & { correctionConfirmed?: boolean }): Promise<SupportAction | null>
   findReply(actor: Actor, promptId: number): Promise<SupportAction | null>
   claim(id: string, actor: Actor): Promise<SupportAction | null>
 }
 export type SupportDeps = {
+  failures?: (offset: number) => Promise<import('./monitoring').FailureList>
   allowedUsers: number[]; now: () => Date; repo: SupportRepository
   io: { send(chatId: number, text: string, buttons?: Button[][], forceReply?: boolean): Promise<number>; ack(id: string): Promise<void> }
   ops: { lookup(email: string): Promise<CustomerLookup>; lookupId(id: string): Promise<CustomerLookup | null>; execute(action: SupportAction): Promise<ActionResult> }

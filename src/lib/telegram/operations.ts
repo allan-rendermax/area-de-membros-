@@ -53,9 +53,9 @@ export function createSupportOperations(scope: Scope, data: OperationData): Supp
       try {
         const sent = await data.send(c.id, scope.storeId, expected)
         if (!sent.ok) throw new Error('send_unverified')
-        return { state: 'done', text: `${corrected ? 'E-mail corrigido e acesso preservado.\n' : ''}Envio para ${expected} aceito pelo provedor. Use “Conferir cadastro e envio” para verificar a entrega.`, logId: sent.logId }
+        return { state: 'done', text: `${corrected ? 'E-mail corrigido e acesso preservado.\n' : ''}Envio para ${expected} aceito pelo provedor. Use “Conferir cadastro e envio” para verificar a entrega.`, logId: sent.logId, correctionConfirmed: corrected }
       } catch {
-        return { state: 'uncertain', text: `${corrected ? `E-mail corrigido para ${expected} e acesso preservado.\n` : ''}Não foi possível confirmar o envio. Confira o registro no admin/provedor antes de repetir.` }
+        return { state: 'uncertain', text: `${corrected ? `E-mail corrigido para ${expected} e acesso preservado.\n` : ''}Não foi possível confirmar o envio. Confira o registro no admin/provedor antes de repetir.`, correctionConfirmed: corrected }
       }
     },
   }
