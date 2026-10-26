@@ -162,3 +162,7 @@ C:\Users\arqal\.codex\worktrees\compra-acesso-ui\Area de membros\src\app\admin\(
 
 
 ```
+
+### TypeScript follow-up
+
+Carousel children is now an optional ReactNode (the conventional component contract) so React createElement third-argument children typechecks. No rendering change. `npx tsc --noEmit`: exit 0, empty output. Focused tests rerun: 3 files / 6 tests passed. `npm run lint`: exit 0, same 3 preexisting warnings and 0 errors. `git diff --check` and strict UTF-8: PASS.

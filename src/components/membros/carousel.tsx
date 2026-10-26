@@ -5,7 +5,7 @@ import { useMemberTheme } from './member-theme'
 
 const arrowClassName = 'pointer-events-auto flex size-12 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/70 bg-[#17191c] text-white shadow-[0_0_0_1px_rgba(0,0,0,0.8),0_4px_14px_rgba(0,0,0,0.6)] hover:border-white hover:bg-[#2b2f35] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-safe:transition-colors'
 
-export function Carousel({ title, children, controls = 'always' }: { title: string; children: React.ReactNode; controls?: 'always' | 'overflow' }) {
+export function Carousel({ title, children, controls = 'always' }: { title: string; children?: React.ReactNode; controls?: 'always' | 'overflow' }) {
   const track = useRef<HTMLDivElement>(null)
   const [overflow, setOverflow] = useState(false)
   useEffect(() => {
