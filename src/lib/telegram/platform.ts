@@ -23,9 +23,12 @@ export async function createPlatformOperations(storeSlug: string) {
     async search(email) {
       const local = email.split('@')[0].replace(/[^a-z0-9]/gi, '').slice(0, 6)
       if (local.length < 4) return []
-      const { data, error } = await db.from('customers').select('id,email,name').ilike('email', `${local}%`).limit(5)
-      if (error) throw new Error('telegram_search_failed')
-      return data ?? []
+      for (const prefix of [...new Set([local, local.slice(0, 4)])]) {
+        const { data, error } = await db.from('customers').select('id,email,name').ilike('email', `${prefix}%`).order('email').limit(5)
+        if (error) throw new Error('telegram_search_failed')
+        if (data?.length) return data
+      }
+      return []
     },
     async authEmail(id) {
       const { data, error } = await db.auth.admin.getUserById(id)

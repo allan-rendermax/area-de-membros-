@@ -37,6 +37,26 @@ beforeEach(() => {
 })
 
 describe('suporte Telegram', () => {
+  it('mostra o endereço consultado quando não há cadastro exato', async () => {
+    vi.mocked(deps.ops.lookup).mockResolvedValue({ ...snapshot, customer: null, suggestions: [] })
+    await handleTelegramUpdate(message('keilaste@yahoo.com.br'), deps)
+    expect(messages[0].text).toContain('keilaste@yahoo.com.br')
+    expect(deps.ops.execute).not.toHaveBeenCalled()
+  })
+  it('avisa falha da consulta e continua os demais e-mails sem declarar cadastro ausente', async () => {
+    vi.mocked(deps.ops.lookup).mockRejectedValueOnce(new Error('temporary')).mockResolvedValueOnce(snapshot)
+    await handleTelegramUpdate(message('first@example.com second@example.com'), deps)
+    expect(messages[0].text).toContain('Não consegui concluir a consulta de first@example.com')
+    expect(messages[0].text).not.toContain('Não encontrei')
+    expect(messages[1].text).toContain('Atlas')
+    expect(deps.ops.execute).not.toHaveBeenCalled()
+  })
+  it('avisa quando a resposta da consulta falha, sem repetir envio de acesso', async () => {
+    vi.mocked(deps.io.send).mockRejectedValueOnce(new Error('timeout'))
+    await handleTelegramUpdate(message('old@example.com'), deps)
+    expect(messages[0].text).toContain('Não consegui concluir')
+    expect(deps.ops.execute).not.toHaveBeenCalled()
+  })
   it('mostra menu de falhas e restringe a lista a operadores autorizados', async () => {
     deps.failures = vi.fn(async () => ({ total: 0, rows: [], updatedAt: null, unknown: 0 }))
     await handleTelegramUpdate(message('/start'), deps)

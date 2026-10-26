@@ -19,10 +19,10 @@ function emails(text: string): string[] {
 function cancel(id: string): Button { return { text: 'Cancelar', callback_data: `cancel:${id}` } }
 function expired(a: SupportAction, deps: SupportDeps) { return new Date(a.expiresAt).getTime() <= deps.now().getTime() }
 
-async function showLookup(value: CustomerLookup, actor: Actor, deps: SupportDeps) {
+async function showLookup(value: CustomerLookup, actor: Actor, deps: SupportDeps, queriedEmail = '') {
   const { customer: c } = value
   if (!c) {
-    await deps.io.send(actor.chatId, 'Não encontrei cadastro com esse e-mail.' + (value.suggestions.length ? '\nEncontrei endereços parecidos. Escolha o cadastro para conferir:' : ''), value.suggestions.map(s => [{ text: s.email, callback_data: `view:${s.id}` }]))
+    await deps.io.send(actor.chatId, `Não encontrei cadastro exato para:\n${queriedEmail.slice(0, 254)}\nConfira se o endereço é o mesmo usado na compra.` + (value.suggestions.length ? '\n\nEncontrei cadastros parecidos. Escolha para conferir; nenhuma correção ou envio foi feito:' : ''), value.suggestions.map(s => [{ text: s.email, callback_data: `view:${s.id}` }]))
     return
   }
   const orders = value.orders.slice(0, 8).map(o => `${o.transaction}: ${o.status}`).join('\n') || 'Nenhum pedido nesta loja.'
@@ -115,5 +115,17 @@ export async function handleTelegramUpdate(input: unknown, deps: SupportDeps): P
   }
   if (!found.length) { await deps.io.send(actor.chatId, help); return }
   if (found.length > 5) { await deps.io.send(actor.chatId, 'Envie no máximo cinco e-mails por mensagem.'); return }
-  for (const email of found) await showLookup(await deps.ops.lookup(email), actor, deps)
+  for (const email of found) {
+    let stage = 'lookup'
+    try {
+      const result = await deps.ops.lookup(email)
+      // Metadata only: never log buyer emails or raw provider responses.
+      console.info('telegram_lookup_result', { updateId: update.update_id, found: Boolean(result.customer), suggestions: result.suggestions.length })
+      stage = 'reply'
+      await showLookup(result, actor, deps, email)
+    } catch {
+      console.error('telegram_lookup_failed', { updateId: update.update_id, stage })
+      await deps.io.send(actor.chatId, `Não consegui concluir a consulta de ${email.slice(0, 254)} agora. Isso não significa que o cadastro esteja ausente. Envie esse e-mail novamente para tentar outra vez.`, menu)
+    }
+  }
 }
