@@ -23,14 +23,14 @@ it('keeps navigation outside collapsed module details even without resources',()
 
 it('replaces only the redundant singleton list while retaining multiple modules and progress',()=>{
  const item={id:'item',moduleId:'m',title:'Material',kind:'arquivo',url:'https://example.test/material.pdf',isPublished:true}
- const module={id:'m',productId:'atlas',title:'Seus materiais',requiredLevel:'basic',isPublished:true,items:[item]}
+ const moduleRow={id:'m',productId:'atlas',title:'Seus materiais',requiredLevel:'basic',isPublished:true,items:[item]}
  const document=new Window().document
- document.body.innerHTML=renderToStaticMarkup(createElement(LessonSidebar,{modules:[module] as never,storeSlug:'arq',purchaseNavigation:navigation,currentItemId:'item'}))
+ document.body.innerHTML=renderToStaticMarkup(createElement(LessonSidebar,{modules:[moduleRow] as never,storeSlug:'arq',purchaseNavigation:navigation,currentItemId:'item'}))
  expect(document.querySelectorAll('.lesson-module')).toHaveLength(0)
- document.body.innerHTML=renderToStaticMarkup(createElement(LessonSidebar,{modules:[module,{...module,id:'second',items:[{...item,id:'other'}]}] as never,storeSlug:'arq',purchaseNavigation:navigation,currentItemId:'item',completedItemIds:['item']}))
+ document.body.innerHTML=renderToStaticMarkup(createElement(LessonSidebar,{modules:[moduleRow,{...moduleRow,id:'second',items:[{...item,id:'other'}]}] as never,storeSlug:'arq',purchaseNavigation:navigation,currentItemId:'item',completedItemIds:['item']}))
  expect(document.querySelectorAll('.lesson-module')).toHaveLength(2)
  expect(document.body.textContent).toContain('Concluído')
- document.body.innerHTML=renderToStaticMarkup(createElement(LessonSidebar,{modules:[module] as never,storeSlug:'arq'}))
+ document.body.innerHTML=renderToStaticMarkup(createElement(LessonSidebar,{modules:[moduleRow] as never,storeSlug:'arq'}))
  expect(document.querySelectorAll('.lesson-module')).toHaveLength(1)
  expect(document.querySelector('nav')).toBeNull()
 })
