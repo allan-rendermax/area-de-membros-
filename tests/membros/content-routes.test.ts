@@ -408,7 +408,7 @@ describe('rota de item', () => {
 
   it('volta diretamente ao acervo sem reabrir a página intermediária', async () => {
     const doc = await renderedItem()
-    expect(doc.querySelector('a[aria-label="Voltar ao acervo"]')?.getAttribute('href')).toBe('/loja-a#materiais')
+    expect(doc.querySelector('a[aria-label="Voltar aos meus materiais"]')?.getAttribute('href')).toBe('/loja-a#materiais')
     expect(doc.querySelector('header a[href="/loja-a/produto/produto-a"]')).toBeNull()
   })
 
@@ -565,7 +565,7 @@ describe('rota de item', () => {
     vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [file] }])
     const html = renderToStaticMarkup(await ItemPage(itemProps()))
     expect(html).toContain(product.title)
-    expect(html).toContain('Acesse seu conteúdo')
+    expect(html).toContain('Abrir material')
     expect(html).toContain(`href="/${store.slug}/item/${file.id}/abrir"`)
     expect(html).not.toContain(file.url)
     expect(redirect).not.toHaveBeenCalled()

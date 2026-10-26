@@ -19,7 +19,7 @@ it('renders accessible acquired shortcuts outside the parent link',()=>{
 it('does not create empty shelves and separates purchased from optional materials',()=>{
   const html=renderToStaticMarkup(createElement(ContextualComplementShelves,{complements:{owned:[atlas],optional:[guia],backParent:null},storeSlug:'arq',preview:false}))
   const doc=new Window().document;doc.body.innerHTML=html
-  expect(doc.querySelector('[aria-label="Seus complementos"] a')?.getAttribute('href')).toBe('/arq/produto/atlas')
+  expect(doc.querySelector('[aria-label="Seus complementos adquiridos"] a')?.getAttribute('href')).toBe('/arq/produto/atlas')
   expect(doc.querySelector('[aria-label="Complemente seu material"]')?.textContent).toContain('Vendido separadamente')
   expect(doc.querySelector('[aria-label="Complemente seu material"] img')?.getAttribute('src')).toContain('guia-portrait')
   expect(renderToStaticMarkup(createElement(ContextualComplementShelves,{complements:{owned:[],optional:[],backParent:null},storeSlug:'arq',preview:false}))).toBe('')

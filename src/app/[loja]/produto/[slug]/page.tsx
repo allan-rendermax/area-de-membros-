@@ -1,3 +1,6 @@
+import { buildPurchaseNavigation } from '@/lib/membros/purchase-navigation'
+import { LessonSidebar } from '@/components/membros/lesson-sidebar'
+import { PurchaseNavigationLinks } from '@/components/membros/purchase-navigation'
 import { contextualPreviewLevel } from '@/lib/membros/contextual-preview'
 import { previewContext, previewIncludesDrafts } from '@/lib/membros/preview-context'
 import { renderItemContent } from '@/components/membros/item-content'
@@ -60,6 +63,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
   const support = supportHref(store, 'geral', customer?.email ?? null)
   const contextual=contextualInput?projectProductComplements(contextualInput,product.id):null
   const complement = contextualInput?contextualLegacyComplement(contextualInput,product,store.slug,preview):await loadProductComplement(product, store.slug, customer, preview)
+  const purchaseNavigation=contextualInput?buildPurchaseNavigation(contextualInput,product.id,store.slug,preview,complementScenario):null
   const backHref=withPreview(contextual?.backParent?`/${store.slug}/produto/${contextual.backParent.slug}`:`/${store.slug}#materiais`,preview,complementScenario)
 
   return (
@@ -69,21 +73,23 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
         <div id="seu-material" className="lesson-workspace-grid grid min-w-0 scroll-mt-28 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0">
             <header className="lesson-heading flex min-w-0 items-start gap-4">
-              <Link href={backHref} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
+              <Link href={backHref} aria-label={purchaseNavigation?.backParent ? `Voltar para ${purchaseNavigation.backParent.title}` : "Voltar aos meus materiais"} className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
-                <p className="lesson-eyebrow text-xs font-bold uppercase tracking-[.16em] text-texto-suave">Seu material</p>
+                <Link href={backHref} className="mb-2 inline-flex min-h-6 text-xs text-texto-suave underline underline-offset-4">{purchaseNavigation?.backParent ? `Voltar para ${purchaseNavigation.backParent.title}` : "Voltar aos meus materiais"}</Link>
                 <h1 className="lesson-title mt-1 break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{product.title}</h1>
                 {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo não faz parte da sua versão atual.</p>}
                 {product.description && <p className="mt-3 max-w-2xl break-words text-sm leading-relaxed text-texto-suave sm:text-base">{product.description}</p>}
               </div>
             </header>
 
+            {purchaseNavigation && <div className="mt-5 lg:hidden"><h2 className="text-base font-semibold">Conteúdos da compra</h2><PurchaseNavigationLinks navigation={purchaseNavigation} /></div>}
             <p className="mt-10 text-texto-suave">{lockedModules.length ? 'Nenhum conteúdo disponível no seu acesso atual.' : 'Nenhum conteúdo publicado ainda.'}</p>
             <LockedModules modules={lockedModules} />
             {complement && <ProductComplementOffer complement={complement} />}
             <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={productHref} productTitle={product.title} imageUrl={product.upgradeImageUrl || product.coverUrl} buttonText={product.upgradeButtonText} supportUrl={support} />
           </div>
-          {complement && <aside className="min-w-0" aria-label="Conteúdos do produto"><div className="rounded-2xl border border-borda bg-superficie p-5 sm:p-6"><h2 className="text-2xl font-bold">Conteúdos</h2><div className="mt-5"><ProductComplementCard complement={complement} /></div></div></aside>}
+          {purchaseNavigation && <div className="hidden min-w-0 lg:block"><LessonSidebar modules={[]} storeSlug={store.slug} purchaseNavigation={purchaseNavigation} /></div>}
+          {!purchaseNavigation && complement && <aside className="min-w-0" aria-label="Conteúdos do produto"><div className="rounded-2xl border border-borda bg-superficie p-5 sm:p-6"><h2 className="text-2xl font-bold">Conteúdos</h2><div className="mt-5"><ProductComplementCard complement={complement} /></div></div></aside>}
         </div>
         {contextual && <ContextualComplementShelves complements={contextual} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} requestedSlug={typeof query.complemento==='string'?query.complemento:undefined}/>}
       </main>

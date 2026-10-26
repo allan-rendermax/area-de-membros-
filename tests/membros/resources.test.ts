@@ -37,7 +37,7 @@ describe('lista e navegação de recursos', () => {
     expect(html).not.toContain(link.url)
     expect(html).not.toContain('href="/loja-a/item/bad/abrir"')
     expect(html).not.toContain('Baixar PDF')
-    expect(html).toContain('PDF')
+    expect(html).toContain('Material digital')
     expect(html).not.toContain('hidden shrink-0 text-sm font-semibold text-destaque')
   })
 

@@ -4,7 +4,7 @@ import VitrinePage from '@/app/[loja]/page'
 import ProdutoPage from '@/app/[loja]/produto/[slug]/page'
 import ItemPage from '@/app/[loja]/item/[id]/page'
 import { product,relation } from '../fixtures/contextual-products'
-const state=vi.hoisted(()=>({granted:['atlas','guia'],relationsAvailable:true}))
+const state=vi.hoisted(()=>({granted:['atlas','guia'],relationsAvailable:true,noItems:false}))
 const products=[product('atlas'),product('guia',{catalogVisibility:'contextual'}),product('optional',{catalogVisibility:'contextual'}),product('next')]
 const relations=[relation('atlas','guia'),relation('atlas','optional')]
 const store={id:'s1',slug:'arq',name:'Arq',memberLibraryMode:'grouped' as const,logoUrl:null,supportUrl:null,supportWhatsapp:null,loginImageUrl:null}
@@ -14,14 +14,14 @@ const moduleRow={id:'m',productId:'atlas',title:'Material',sortOrder:0,isPublish
 vi.mock('next/navigation',()=>({usePathname:()=>'/arq',useSearchParams:()=>new URLSearchParams(),useRouter:()=>({refresh:()=>{}}),redirect:(url:string)=>{throw new Error(`redirect:${url}`)},notFound:()=>{throw new Error('not-found')}}))
 vi.mock('@/lib/membros/session',()=>({requireStoreSession:async()=>({store,customer})}))
 vi.mock('@/lib/data/access',()=>({loadGrantedProductLevels:async()=>new Map(state.granted.map(id=>[id,'complete'])),loadStoreAccess:async()=>({products,granted:new Set(state.granted),levels:new Map(state.granted.map(id=>[id,'complete']))})}))
-vi.mock('@/lib/data/products',()=>({listProducts:async()=>products,getProductBySlug:async(_store:string,slug:string)=>products.find(p=>p.slug===slug),listModulesWithItems:async()=>[moduleRow],getItemWithContext:async()=>({item,module:moduleRow,product:products[0]})}))
+vi.mock('@/lib/data/products',()=>({listProducts:async()=>products,getProductBySlug:async(_store:string,slug:string)=>products.find(p=>p.slug===slug),listModulesWithItems:async()=>state.noItems?[]:[moduleRow],getItemWithContext:async()=>({item,module:moduleRow,product:products[0]})}))
 vi.mock('@/lib/data/contextual-complements',()=>({listContextualRelations:async()=>({relations:state.relationsAvailable?relations:[],available:state.relationsAvailable})}))
 vi.mock('@/lib/data/product-complement',()=>({loadProductComplement:async()=>null}))
 vi.mock('@/lib/data/item-access',()=>({listRecentProductVisits:async()=>[]}))
 vi.mock('@/lib/data/member-progress',()=>({listCompletedItemIds:async()=>[]}))
 vi.mock('@/app/[loja]/progresso/actions',()=>({saveCompletion:vi.fn()}))
 vi.mock('@/app/[loja]/historico/actions',()=>({recordVisit:vi.fn()}))
-beforeEach(()=>{state.granted=['atlas','guia'];state.relationsAvailable=true})
+beforeEach(()=>{state.granted=['atlas','guia'];state.relationsAvailable=true;state.noItems=false})
 const query=(q={})=>({params:Promise.resolve({loja:'arq'}),searchParams:Promise.resolve(q)})
 it('home groups owned complements and hides contextual offers from all general tracks',async()=>{
   const html=renderToStaticMarkup(await VitrinePage(query() as never))
@@ -57,3 +57,13 @@ it('preserves requested legacy upsell prompt in grouped mode',async()=>{
  }finally{products.pop();products[0].complementaryProductId=null}
 })
 
+
+it('keeps acquired navigation and named parent return on the empty complement route',async()=>{
+ state.noItems=true
+ const html=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arq',slug:'guia'})} as never))
+ expect(html).toContain('Voltar para atlas')
+ expect(html).toContain('Conteúdos da compra')
+ expect(html).toContain('Nenhum conteúdo publicado ainda.')
+ expect(html).toContain('aria-current="page"')
+ expect(html).not.toContain('Adquirido · Acessar material</small></a><a href="/arq/produto/optional')
+})

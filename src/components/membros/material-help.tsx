@@ -1,7 +1,7 @@
 import { isHttpUrl } from '@/lib/content/url'
 import { SUPPORT_EMAIL } from '@/lib/support/contact'
 
-export function MaterialHelp({ href, context = 'material' }: { href: string | null; context?: 'login' | 'material' }): React.JSX.Element {
+export function MaterialHelp({ href, context = 'material', purchaseNavigation = false }: { purchaseNavigation?: boolean; href: string | null; context?: 'login' | 'material' }): React.JSX.Element {
   const contact = href && isHttpUrl(href) ? href : null
   const isWhatsapp = contact ? ['wa.me', 'api.whatsapp.com', 'www.whatsapp.com'].includes(new URL(contact).hostname) : false
   return (
@@ -15,6 +15,7 @@ export function MaterialHelp({ href, context = 'material' }: { href: string | nu
           </>
         ) : (
           <>
+            {purchaseNavigation && <p>Use “Conteúdos da compra” para alternar entre o material principal e os complementos adquiridos.</p>}
             <p>Depois de baixar, procure o arquivo na pasta Downloads do seu dispositivo.</p>
             <p>Alguns formatos precisam de um aplicativo compatível para abrir. Se o arquivo não abrir, confira se o aplicativo aceita esse formato.</p>
             <p>Se o acesso ou download falhar, use um dos contatos de suporte abaixo.</p>

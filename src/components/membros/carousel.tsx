@@ -1,12 +1,25 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMemberTheme } from './member-theme'
 
 const arrowClassName = 'pointer-events-auto flex size-12 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/70 bg-[#17191c] text-white shadow-[0_0_0_1px_rgba(0,0,0,0.8),0_4px_14px_rgba(0,0,0,0.6)] hover:border-white hover:bg-[#2b2f35] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-safe:transition-colors'
 
-export function Carousel({ title, children }: { title: string; children: React.ReactNode }) {
+export function Carousel({ title, children, controls = 'always' }: { title: string; children: React.ReactNode; controls?: 'always' | 'overflow' }) {
   const track = useRef<HTMLDivElement>(null)
+  const [overflow, setOverflow] = useState(false)
+  useEffect(() => {
+    if (controls !== 'overflow' || !track.current) return
+    const element = track.current
+    const measure = () => setOverflow(element.scrollWidth > element.clientWidth + 1)
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    for (const child of element.children) observer.observe(child)
+    window.addEventListener('resize', measure)
+    measure()
+    return () => { observer.disconnect(); window.removeEventListener('resize', measure) }
+  }, [controls, children])
+  const showControls = controls === 'always' || overflow
   const theme = useMemberTheme()
   const scroll = (direction: 1 | -1) => {
     const el = track.current
@@ -20,7 +33,7 @@ export function Carousel({ title, children }: { title: string; children: React.R
       <div ref={track} className="sem-barra flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pt-1 pb-4 sm:scroll-px-8 sm:gap-4 sm:px-8">
         {children}
       </div>
-      <div className="pointer-events-none absolute top-10 bottom-4 left-2 z-10 hidden w-12 items-center justify-center sm:flex">
+      {showControls && <><div className="pointer-events-none absolute top-10 bottom-4 left-2 z-10 hidden w-12 items-center justify-center sm:flex">
         <button
           type="button"
           aria-label={`Voltar em ${title}`}
@@ -43,7 +56,7 @@ export function Carousel({ title, children }: { title: string; children: React.R
             <path d="m10 6 6 6-6 6" />
           </svg>
         </button>
-      </div>
+      </div></>}
     </section>
   )
 }
