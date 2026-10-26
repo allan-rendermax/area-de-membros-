@@ -8,6 +8,22 @@ const update = { update_id: 1, message: { message_id: 1, from: { id: 123 }, chat
 const request = (data: unknown, secret = config.secret) => new Request('https://example.test/api/webhooks/telegram', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': secret }, body: JSON.stringify(data) })
 beforeEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals() })
 describe('webhook privado', () => {
+  it('usa autorização dinâmica em cada update e revogação vence a lista antiga', async () => {
+    const process = vi.fn(), authorize = vi.fn().mockResolvedValue(false)
+    await postTelegramWebhook(request(update), config, process, undefined, authorize)
+    expect(process).not.toHaveBeenCalled()
+    authorize.mockResolvedValue(true)
+    const other = structuredClone(update); other.message.from.id = 456; other.message.chat.id = 456
+    await postTelegramWebhook(request(other), config, process, undefined, authorize)
+    expect(process).toHaveBeenCalledWith(other)
+  })
+  it('não consulta permissões com segredo errado e falha fechada quando o banco cai', async () => {
+    const process = vi.fn(), authorize = vi.fn().mockRejectedValue(new Error('offline'))
+    await postTelegramWebhook(request(update, 'wrong'), config, process, undefined, authorize)
+    expect(authorize).not.toHaveBeenCalled()
+    const response = await postTelegramWebhook(request(update), config, process, undefined, authorize)
+    expect(response.status).toBe(503); expect(process).not.toHaveBeenCalled()
+  })
   it('informa somente o próprio ID ao visitante no privado sem acessar clientes', async () => {
     const input = structuredClone(update); input.message.from.id = 999; input.message.chat.id = 999; input.message.text = '/id'
     const process = vi.fn(), identify = vi.fn()
@@ -20,6 +36,12 @@ describe('webhook privado', () => {
   it('configuração incompleta não ativa bot', () => {
     vi.stubEnv('TELEGRAM_BOT_TOKEN', '')
     expect(getTelegramConfig()).toBeNull()
+  })
+  it('permite configuração somente com proprietário, sem lista legada', () => {
+    vi.stubEnv('TELEGRAM_BOT_TOKEN', config.token); vi.stubEnv('TELEGRAM_WEBHOOK_SECRET', config.secret)
+    vi.stubEnv('TELEGRAM_ADMIN_USER_IDS', ''); vi.stubEnv('TELEGRAM_OWNER_USER_IDS', '123')
+    vi.stubEnv('TELEGRAM_SUPPORT_STORE_SLUG', 'arquitetura')
+    expect(getTelegramConfig()).toEqual(config)
   })
   it('exige IDs numéricos e segredo suficientemente longo', () => {
     vi.stubEnv('TELEGRAM_SUPPORT_STORE_SLUG', 'arquitetura')

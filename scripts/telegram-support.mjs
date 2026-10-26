@@ -61,7 +61,7 @@ async function main() {
     const r = await fetch(`${supabaseUrl}/rest/v1/${table}?select=*&limit=0`, { headers: { apikey: key, Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(10000) })
     if (!r.ok) throw new Error('A migração privada do bot ainda não foi confirmada no banco.')
   }
-  await call('setMyCommands', { commands: [{ command: 'start', description: 'Iniciar suporte privado' }, { command: 'help', description: 'Como consultar e corrigir acessos' }, { command: 'falhas', description: 'Clientes com falha de e-mail de acesso' }, { command: 'id', description: 'Meu ID para autorização de suporte' }] })
+  await call('setMyCommands', { commands: [{ command: 'start', description: 'Iniciar suporte privado' }, { command: 'help', description: 'Como consultar e corrigir acessos' }, { command: 'falhas', description: 'Clientes com falha de e-mail de acesso' }, { command: 'id', description: 'Meu ID para autorização de suporte' }, { command: 'equipe', description: 'Gerenciar equipe (proprietário)' }] })
   await call('setWebhook', { url, secret_token: secret, allowed_updates: ['message', 'callback_query'], max_connections: 1, drop_pending_updates: false })
   const webhook = await call('getWebhookInfo')
   if (webhook.url !== url) throw new Error('Não foi possível confirmar o endereço do webhook.')

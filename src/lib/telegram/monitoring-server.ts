@@ -3,6 +3,7 @@ import { getStoreBySlug } from '@/lib/data/stores'
 import { env } from '@/lib/env'
 import { createTelegramClient } from './client'
 import { getTelegramConfig } from './config'
+import { isSupportUser } from './team-access'
 import { dailyReport, menu, reportWindow, type DailyMetrics, type FailureList } from './monitoring'
 
 export async function listFailures(storeSlug: string, offset = 0): Promise<FailureList> {
@@ -62,7 +63,9 @@ export async function runDailyReport(now = new Date()) {
   const config = getTelegramConfig(), window = reportWindow(now)
   if (!config || !window) return { skipped: true }
   // Recipients are configured separately; granting support access never subscribes someone to reports.
-  const recipients = [...new Set((process.env.TELEGRAM_REPORT_USER_IDS ?? '').split(',').map(s => Number(s.trim())).filter(id => Number.isSafeInteger(id) && config.allowedUsers.includes(id)))]
+  const configured = [...new Set((process.env.TELEGRAM_REPORT_USER_IDS ?? '').split(',').map(s => Number(s.trim())).filter(id => Number.isSafeInteger(id) && id > 0))]
+  const recipients: number[] = []
+  for (const id of configured) if (await isSupportUser(id, config)) recipients.push(id)
   if (!recipients.length) return { skipped: true }
   const db = createAdminClient(), store = await getStoreBySlug(config.storeSlug)
   if (!store) throw new Error('telegram_store_missing')

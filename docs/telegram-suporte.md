@@ -52,9 +52,13 @@ Os endpoints `/api/cron/telegram-sync` e `/api/cron/telegram-report` exigem Bear
 ## Liberar outro membro da empresa
 
 1. O colega abre [@suporteelevamaxbot](https://t.me/suporteelevamaxbot), pressiona **Iniciar** e envia `/id`.
-2. Ele passa o ID numérico ao responsável da empresa. Até ser autorizado, o bot só informa seu próprio ID, sem consultar clientes.
-3. O responsável confirma a identidade e adiciona o ID à variável privada `TELEGRAM_ADMIN_USER_IDS`, preservando os operadores existentes, e publica a nova configuração. Não compartilhar o token do BotFather.
-4. Após a publicação, o colega pode consultar, corrigir e reenviar acesso em chat privado. Para retirar acesso, remover seu ID e republicar. Relatórios exigem inclusão separada em `TELEGRAM_REPORT_USER_IDS`.
+2. Ele passa o ID numérico ao proprietário. Até ser autorizado, o bot só informa seu próprio ID, sem consultar clientes.
+3. O proprietário abre **Gerenciar equipe → Adicionar membro** (ou `/equipe`), responde ao bot com `ID Nome`, confere a identidade e pressiona **Confirmar liberação**.
+4. O colega já pode consultar, corrigir e reenviar acessos em chat privado. Para retirar acesso, abra **Gerenciar equipe**, selecione **Remover [nome]** e confirme. Confirmações antigas de suporte são canceladas; ações que já começaram podem terminar. Relatórios exigem inclusão separada em `TELEGRAM_REPORT_USER_IDS`.
+
+O menu é exclusivo dos IDs em `TELEGRAM_OWNER_USER_IDS`. Proprietários não podem ser adicionados, removidos ou substituídos por esse menu. Operadores não podem gerenciar outros membros. A mudança é registrada em `telegram_team_changes`, com proprietário, alvo, momento e resultado. Confirmações expiram em 15 minutos, são vinculadas ao proprietário e protegidas contra repetição e mudanças posteriores de permissão.
+
+Antes de publicar o gerenciamento, aplique `20261026010000_telegram_team.sql` e configure `TELEGRAM_OWNER_USER_IDS`. Com proprietários configurados, a autorização de operadores passa a vir de `telegram_support_members`, sem cache e sem depender de nova publicação. A lista legada `TELEGRAM_ADMIN_USER_IDS` deixa de autorizar operadores nesse modo. Se houver operadores antigos além do proprietário, migre-os com identidade confirmada antes de ativar. Nesta instalação só havia o proprietário. Sem a variável de proprietários, o modo legado permanece; a variável antiga pode ser omitida no modo novo. Nunca compartilhar token.
 
 ## Conciliação de ações de suporte
 
