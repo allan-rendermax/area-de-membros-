@@ -1,11 +1,11 @@
 import { previewIncludesDrafts, type PreviewContext } from '@/lib/membros/preview-context'
 import type { Item } from '@/lib/domain/types'
 import { isHttpUrl } from '@/lib/content/url'
-import { resourceLabel } from '@/lib/content/resource-label'
+import { memberResourceLabel } from '@/lib/content/member-resource-label'
 import { ArrowRightIcon, FileIcon, LinkIcon } from './icons'
 import { withPreview } from '@/lib/membros/paths'
 
-export function ResourceList({ items, storeSlug, currentItemId, legacyPresentation = false, preview = false, complementScenario }: { items: Item[]; storeSlug: string; currentItemId?: string; legacyPresentation?: boolean; preview?: PreviewContext; complementScenario?: string }) {
+export function ResourceList({ items, storeSlug, currentItemId, legacyPresentation = false, preview = false, complementScenario, productTitle }: { items: Item[]; storeSlug: string; currentItemId?: string; legacyPresentation?: boolean; preview?: PreviewContext; complementScenario?: string; productTitle?: string }) {
   const resources = items.filter((item) => (previewIncludesDrafts(preview) || item.isPublished) && item.kind !== 'video' && isHttpUrl(item.url))
   if (resources.length === 0) return null
   const ordered = currentItemId
@@ -18,7 +18,7 @@ export function ResourceList({ items, storeSlug, currentItemId, legacyPresentati
       {ordered.map((item) => {
         const isLink = item.kind === 'link'
         const Icon = isLink ? LinkIcon : FileIcon
-        const { actionLabel, typeLabel } = resourceLabel(item)
+        const { actionLabel, typeLabel } = memberResourceLabel(item, productTitle)
         const action = legacyPresentation ? (isLink ? 'Abrir link' : 'Baixar') : actionLabel
         return (
           <li key={item.id} className="min-w-0">

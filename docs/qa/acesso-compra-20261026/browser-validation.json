@@ -1,0 +1,390 @@
+[
+  {
+    "name": "principal + acquired guide only",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura#materiais",
+          "title": "Voltar aos meus materiais"
+        }
+      ],
+      "nav": [
+        {
+          "current": "page",
+          "href": "/arquitetura/produto/paisagismo",
+          "title": "PrincipalAtlas Visual de Paisagismo TropicalVocê está aqui"
+        },
+        {
+          "current": null,
+          "href": "/arquitetura/produto/planta-certa",
+          "title": "ComplementoGuia da Planta Certa para Jardins TropicaisAdquirido · Acessar material"
+        }
+      ],
+      "overflow": false,
+      "pdf": false,
+      "title": "Atlas Visual de Paisagismo Tropical"
+    }
+  },
+  {
+    "name": "guide active and named return",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura/produto/paisagismo",
+          "title": "Voltar para Atlas Visual de Paisagismo Tropical"
+        }
+      ],
+      "nav": [
+        {
+          "current": null,
+          "href": "/arquitetura/produto/paisagismo",
+          "title": "PrincipalAtlas Visual de Paisagismo TropicalAdquirido · Acessar material"
+        },
+        {
+          "current": "page",
+          "href": "/arquitetura/produto/planta-certa",
+          "title": "ComplementoGuia da Planta Certa para Jardins TropicaisVocê está aqui"
+        }
+      ],
+      "overflow": false,
+      "pdf": false,
+      "title": "Guia da Planta Certa para Jardins Tropicais"
+    }
+  },
+  {
+    "name": "mobile 390",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura/produto/paisagismo",
+          "title": "Voltar para Atlas Visual de Paisagismo Tropical"
+        }
+      ],
+      "nav": [
+        {
+          "current": null,
+          "href": "/arquitetura/produto/paisagismo",
+          "title": "PrincipalAtlas Visual de Paisagismo TropicalAdquirido · Acessar material"
+        },
+        {
+          "current": "page",
+          "href": "/arquitetura/produto/planta-certa",
+          "title": "ComplementoGuia da Planta Certa para Jardins TropicaisVocê está aqui"
+        }
+      ],
+      "overflow": false,
+      "pdf": false,
+      "title": "Guia da Planta Certa para Jardins Tropicais",
+      "order": {
+        "nav": 313.015625,
+        "title": 149
+      }
+    }
+  },
+  {
+    "name": "mobile 320",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura/produto/paisagismo",
+          "title": "Voltar para Atlas Visual de Paisagismo Tropical"
+        }
+      ],
+      "nav": [
+        {
+          "current": null,
+          "href": "/arquitetura/produto/paisagismo",
+          "title": "PrincipalAtlas Visual de Paisagismo TropicalAdquirido · Acessar material"
+        },
+        {
+          "current": "page",
+          "href": "/arquitetura/produto/planta-certa",
+          "title": "ComplementoGuia da Planta Certa para Jardins TropicaisVocê está aqui"
+        }
+      ],
+      "overflow": false,
+      "pdf": false,
+      "title": "Guia da Planta Certa para Jardins Tropicais",
+      "order": {
+        "nav": 355.6875,
+        "title": 157
+      }
+    }
+  },
+  {
+    "name": "named return opens principal",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura#materiais",
+          "title": "Voltar aos meus materiais"
+        }
+      ],
+      "nav": [
+        {
+          "current": "page",
+          "href": "/arquitetura/produto/paisagismo",
+          "title": "PrincipalAtlas Visual de Paisagismo TropicalVocê está aqui"
+        },
+        {
+          "current": null,
+          "href": "/arquitetura/produto/planta-certa",
+          "title": "ComplementoGuia da Planta Certa para Jardins TropicaisAdquirido · Acessar material"
+        }
+      ],
+      "overflow": false,
+      "pdf": false,
+      "title": "Atlas Visual de Paisagismo Tropical"
+    }
+  },
+  {
+    "name": "material opens simulated destination in separate tab",
+    "passed": true,
+    "value": {
+      "url": "http://127.0.0.1:54329/material",
+      "snapshot": "- heading \"Homologação local\" [level=1, ref=e450]\n- paragraph\n  - StaticText \"Material e checkout simulados. Nenhuma compra é feita.\""
+    }
+  },
+  {
+    "name": "direct guide route",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura/produto/paisagismo",
+          "title": "Voltar para Atlas Visual de Paisagismo Tropical"
+        }
+      ],
+      "nav": [
+        {
+          "current": null,
+          "href": "/arquitetura/produto/paisagismo",
+          "title": "PrincipalAtlas Visual de Paisagismo TropicalAdquirido · Acessar material"
+        },
+        {
+          "current": "page",
+          "href": "/arquitetura/produto/planta-certa",
+          "title": "ComplementoGuia da Planta Certa para Jardins TropicaisVocê está aqui"
+        }
+      ],
+      "overflow": false,
+      "pdf": false,
+      "title": "Guia da Planta Certa para Jardins Tropicais"
+    }
+  },
+  {
+    "name": "zero",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura#materiais",
+          "title": "Voltar aos meus materiais"
+        }
+      ],
+      "nav": [],
+      "overflow": false,
+      "pdf": false,
+      "title": "Atlas Visual de Paisagismo Tropical"
+    }
+  },
+  {
+    "name": "refund-complement",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura#materiais",
+          "title": "Voltar aos meus materiais"
+        }
+      ],
+      "nav": [],
+      "overflow": false,
+      "pdf": false,
+      "title": "Atlas Visual de Paisagismo Tropical"
+    }
+  },
+  {
+    "name": "solo preserves guide standalone",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura#materiais",
+          "title": "Voltar aos meus materiais"
+        }
+      ],
+      "nav": [],
+      "overflow": false,
+      "pdf": false,
+      "title": "Guia da Planta Certa para Jardins Tropicais"
+    }
+  },
+  {
+    "name": "refund-parent preserves guide standalone",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura#materiais",
+          "title": "Voltar aos meus materiais"
+        }
+      ],
+      "nav": [],
+      "overflow": false,
+      "pdf": false,
+      "title": "Guia da Planta Certa para Jardins Tropicais"
+    }
+  },
+  {
+    "name": "draft-parent preserves guide standalone",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura#materiais",
+          "title": "Voltar aos meus materiais"
+        }
+      ],
+      "nav": [],
+      "overflow": false,
+      "pdf": false,
+      "title": "Guia da Planta Certa para Jardins Tropicais"
+    }
+  },
+  {
+    "name": "removed preserves guide standalone",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura#materiais",
+          "title": "Voltar aos meus materiais"
+        }
+      ],
+      "nav": [],
+      "overflow": false,
+      "pdf": false,
+      "title": "Guia da Planta Certa para Jardins Tropicais"
+    }
+  },
+  {
+    "name": "multiple complements at 320",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura/produto/paisagismo",
+          "title": "Voltar para Atlas Visual de Paisagismo Tropical"
+        }
+      ],
+      "nav": [
+        {
+          "current": null,
+          "href": "/arquitetura/produto/paisagismo",
+          "title": "PrincipalAtlas Visual de Paisagismo TropicalAdquirido · Acessar material"
+        },
+        {
+          "current": null,
+          "href": "/arquitetura/produto/orcamento-jardins",
+          "title": "ComplementoOrçamento de Jardins na PráticaAdquirido · Acessar material"
+        },
+        {
+          "current": null,
+          "href": "/arquitetura/produto/mestres-paisagismo",
+          "title": "ComplementoBiblioteca Visual dos Mestres do PaisagismoAdquirido · Acessar material"
+        },
+        {
+          "current": "page",
+          "href": "/arquitetura/produto/planta-certa",
+          "title": "ComplementoGuia da Planta Certa para Jardins TropicaisVocê está aqui"
+        }
+      ],
+      "overflow": false,
+      "pdf": false,
+      "title": "Guia da Planta Certa para Jardins Tropicais"
+    }
+  },
+  {
+    "name": "preview preserves simulation parameters",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura/produto/paisagismo?previa=1&simular=complete&complementos=all",
+          "title": "Voltar para Atlas Visual de Paisagismo Tropical"
+        }
+      ],
+      "nav": [
+        {
+          "current": null,
+          "href": "/arquitetura/produto/paisagismo?previa=1&simular=complete&complementos=all",
+          "title": "PrincipalAtlas Visual de Paisagismo TropicalAdquirido · Acessar material"
+        },
+        {
+          "current": null,
+          "href": "/arquitetura/produto/orcamento-jardins?previa=1&simular=complete&complementos=all",
+          "title": "ComplementoOrçamento de Jardins na PráticaAdquirido · Acessar material"
+        },
+        {
+          "current": null,
+          "href": "/arquitetura/produto/mestres-paisagismo?previa=1&simular=complete&complementos=all",
+          "title": "ComplementoBiblioteca Visual dos Mestres do PaisagismoAdquirido · Acessar material"
+        },
+        {
+          "current": "page",
+          "href": "/arquitetura/produto/planta-certa?previa=1&simular=complete&complementos=all",
+          "title": "ComplementoGuia da Planta Certa para Jardins TropicaisVocê está aqui"
+        }
+      ],
+      "overflow": false,
+      "pdf": false,
+      "title": "Guia da Planta Certa para Jardins Tropicais"
+    }
+  },
+  {
+    "name": "preview one chooses configured first complement",
+    "passed": true,
+    "value": {
+      "back": [
+        {
+          "href": "/arquitetura?previa=1&simular=complete&complementos=one#materiais",
+          "title": "Voltar aos meus materiais"
+        }
+      ],
+      "nav": [
+        {
+          "current": "page",
+          "href": "/arquitetura/produto/paisagismo?previa=1&simular=complete&complementos=one",
+          "title": "PrincipalAtlas Visual de Paisagismo TropicalVocê está aqui"
+        },
+        {
+          "current": null,
+          "href": "/arquitetura/produto/orcamento-jardins?previa=1&simular=complete&complementos=one",
+          "title": "ComplementoOrçamento de Jardins na PráticaAdquirido · Acessar material"
+        }
+      ],
+      "overflow": false,
+      "pdf": false,
+      "title": "Atlas Visual de Paisagismo Tropical"
+    }
+  },
+  {
+    "name": "homepage identical text links geometry fonts",
+    "passed": true,
+    "value": {
+      "sections": 8,
+      "links": 5
+    }
+  },
+  {
+    "name": "JavaScript errors",
+    "passed": true,
+    "value": []
+  }
+]

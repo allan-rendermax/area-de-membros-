@@ -2,6 +2,8 @@ import { previewIncludesDrafts, type PreviewContext } from '@/lib/membros/previe
 import Link from 'next/link'
 import type { AccessLevel, CustomerRow, Item, Module, ModuleWithItems, Product, Store } from '@/lib/domain/types'
 import { materialTitle } from '@/lib/content/material-title'
+import { buildPurchaseNavigation } from '@/lib/membros/purchase-navigation'
+import { PurchaseNavigationLinks } from './purchase-navigation'
 import { MaterialHelp } from './material-help'
 import { supportHref } from '@/lib/support/whatsapp'
 import { listCompletedItemIds } from '@/lib/data/member-progress'
@@ -37,6 +39,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
   complementScenario?: string
   requestedComplement?: string
 }) {
+  const purchaseNavigation = contextualInput ? buildPurchaseNavigation(contextualInput, ctx.product.id, store.slug, preview, complementScenario) : null
   const editorial = previewIncludesDrafts(preview)
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
   const contextual=contextualInput?projectProductComplements(contextualInput,ctx.product.id):null
@@ -76,7 +79,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
 
   const footer = <>
     {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
-    <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
+    <div className="mt-8"><MaterialHelp purchaseNavigation={Boolean(purchaseNavigation)} href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
     <LessonToolbar
       key={`${customer?.id ?? 'preview'}:${ctx.item.id}`}
       preview={Boolean(preview)}
@@ -100,14 +103,17 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
       <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} complementScenario={complementScenario} simulationHref={ctx.product.isPublished ? `/${store.slug}/produto/${ctx.product.slug}` : `/${store.slug}`} active="materials" actions={<InstallAppButton />} />
       <main className="lesson-workspace member-item-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
         <div id="seu-material" className="lesson-workspace-grid grid min-w-0 scroll-mt-28 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
-          <div className="min-w-0 order-2 lg:order-1">
+          <div className={purchaseNavigation ? "min-w-0 order-1" : "min-w-0 order-2 lg:order-1"}>
             <header className="lesson-heading flex min-w-0 items-start gap-4">
-              <Link href={libraryHref} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
+              <Link href={libraryHref} aria-label={purchaseNavigation?.backParent ? `Voltar para ${purchaseNavigation.backParent.title}` : "Voltar aos meus materiais"} className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
+                <Link href={libraryHref} className="mb-2 inline-flex min-h-6 text-xs text-texto-suave underline underline-offset-4">{purchaseNavigation?.backParent ? `Voltar para ${purchaseNavigation.backParent.title}` : "Voltar aos meus materiais"}</Link>
                 <h1 className="lesson-title mt-1 text-balance break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{ctx.product.title}</h1>
                 {blocked && <p role="status" className="mt-3 rounded-xl border border-borda bg-superficie px-4 py-3 text-sm">Este conteúdo não faz parte da sua versão atual.</p>}
               </div>
             </header>
+
+            {purchaseNavigation && <div className="mt-5 lg:hidden"><h2 className="text-base font-semibold">Conteúdos da compra</h2><PurchaseNavigationLinks navigation={purchaseNavigation} /></div>}
 
             {embed && <div className="mt-7 aspect-video overflow-hidden rounded-xl border border-borda bg-fundo">
               <iframe
@@ -122,14 +128,14 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
 
             {siblings.some((item) => item.kind !== 'video') && <section className="mt-9" aria-label="Materiais disponíveis">
               <h2 className="lesson-section-heading mb-5 text-2xl font-bold">Materiais disponíveis</h2>
-              <ResourceList items={siblings} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} currentItemId={ctx.item.id} />
+              <ResourceList productTitle={ctx.product.title} items={siblings} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} currentItemId={ctx.item.id} />
             </section>}
 
             {complement && <ProductComplementOffer complement={complement} />}
 
             {!contextual && footer}
           </div>
-          <LessonSidebar complement={complement && <ProductComplementCard complement={complement} />} upgrade={<ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} productTitle={ctx.product.title} imageUrl={ctx.product.upgradeImageUrl || ctx.product.coverUrl} buttonText={ctx.product.upgradeButtonText} sectionName={lockedModules[0]?.title} supportUrl={supportHref(store, 'geral', customer?.email ?? null)} />} modules={modules} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
+          <div className={purchaseNavigation ? `min-w-0 order-2 ${modules.length === 1 && modules[0].items.length === 1 && !lockedModules.length && !complement ? "hidden lg:block" : ""}` : "min-w-0 order-1 lg:order-2"}><LessonSidebar purchaseNavigation={purchaseNavigation} complement={complement && <ProductComplementCard complement={complement} />} upgrade={<ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} productTitle={ctx.product.title} imageUrl={ctx.product.upgradeImageUrl || ctx.product.coverUrl} buttonText={ctx.product.upgradeButtonText} sectionName={lockedModules[0]?.title} supportUrl={supportHref(store, 'geral', customer?.email ?? null)} />} modules={modules} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} /></div>
         </div>
         {contextual && <ContextualComplementShelves complements={contextual} storeSlug={store.slug} preview={preview} requestedSlug={requestedComplement} complementScenario={complementScenario}/>}
         {contextual && <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10"><div className="min-w-0">{footer}</div></div>}

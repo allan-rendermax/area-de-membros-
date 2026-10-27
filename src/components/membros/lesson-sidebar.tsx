@@ -5,6 +5,8 @@ import { useSyncExternalStore, type ReactNode } from 'react'
 import type { ModuleWithItems } from '@/lib/domain/types'
 import { isHttpUrl } from '@/lib/content/url'
 import { toVideoEmbed } from '@/lib/content/video'
+import { PurchaseNavigationLinks } from './purchase-navigation'
+import type { PurchaseNavigation } from '@/lib/membros/purchase-navigation'
 import { ItemAnchor } from './episode-card'
 import { FileIcon, LinkIcon, PlayIcon } from './icons'
 
@@ -21,7 +23,8 @@ function subscribeToViewport(onChange: () => void) {
 function isDesktop() { return window.matchMedia(desktopQuery).matches }
 function serverViewport() { return false }
 
-export function LessonSidebar({ modules, storeSlug, currentItemId, completedItemIds = [], legacyPresentation = false, preview = false, complementScenario, upgrade, complement }: {
+export function LessonSidebar({ modules, storeSlug, currentItemId, completedItemIds = [], legacyPresentation = false, preview = false, complementScenario, upgrade, complement, purchaseNavigation }: {
+  purchaseNavigation?: PurchaseNavigation | null
   upgrade?: ReactNode
   complement?: ReactNode
   modules: ModuleWithItems[]
@@ -34,11 +37,10 @@ export function LessonSidebar({ modules, storeSlug, currentItemId, completedItem
 }) {
   const desktop = useSyncExternalStore(subscribeToViewport, isDesktop, serverViewport)
   const visible = modules.filter((module) => previewIncludesDrafts(preview) || module.isPublished).map((module) => ({ ...module, items: module.items.filter((item) => usable(item, preview)) })).filter((module) => module.items.length > 0)
-  if (visible.length === 0 && !complement) return null
-
+  if (visible.length === 0 && !complement && !purchaseNavigation) return null
   const content = (
     <div className="mt-5 space-y-3">
-      {visible.map((module) => (
+      {(purchaseNavigation && visible.length === 1 && visible[0].items.length === 1 ? [] : visible).map((module) => (
         <details key={module.id} open={currentItemId ? module.items.some((item) => item.id === currentItemId) : true} className="lesson-module group min-w-0 rounded-xl border border-borda bg-fundo/50">
           <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-4 marker:hidden [&::-webkit-details-marker]:hidden">
             <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere] font-semibold leading-snug">{module.title}</span>
@@ -58,24 +60,25 @@ export function LessonSidebar({ modules, storeSlug, currentItemId, completedItem
           </ol>
         </details>
       ))}
-      {upgrade}
     </div>
   )
-
   return (
-    <aside className={`lesson-sidebar min-w-0 self-start ${legacyPresentation ? '' : 'order-1 lg:order-2'}`} aria-label="Conteúdos do produto">
+    <aside className={`lesson-sidebar min-w-0 self-start ${legacyPresentation ? '' : 'order-1 lg:order-2'}`} aria-label={purchaseNavigation ? "Conteúdos da compra" : "Conteúdos do produto"}>
       {legacyPresentation ? (
         <div className="lesson-sidebar-panel rounded-2xl border border-borda bg-superficie p-5 sm:p-6">
           <h2 className="lesson-sidebar-heading break-words text-2xl font-bold">Conteúdos</h2>
           {content}
+          {upgrade}
           {complement && <div className="mt-5">{complement}</div>}
         </div>
       ) : (
         <div className="lesson-sidebar-panel rounded-2xl border border-borda bg-superficie px-4 py-2 sm:p-6">
-          <details open={desktop || undefined} className="lesson-contents">
+          {purchaseNavigation && <div className="hidden lg:block"><h2 className="lesson-sidebar-heading pt-3 text-xl font-bold sm:pt-0">Conteúdos da compra</h2><PurchaseNavigationLinks navigation={purchaseNavigation} /></div>}
+          <details open={desktop || undefined} className={`lesson-contents ${purchaseNavigation && (visible.length === 0 || (visible.length === 1 && visible[0].items.length === 1)) ? "hidden" : ""}`}>
             <summary tabIndex={desktop ? -1 : undefined} onClick={(event) => { if (desktop) event.preventDefault() }} className="lesson-sidebar-heading min-h-11 cursor-pointer break-words text-2xl font-bold">Conteúdos</summary>
             {content}
           </details>
+          {upgrade}
           {complement && <div className="mt-5">{complement}</div>}
         </div>
       )}
