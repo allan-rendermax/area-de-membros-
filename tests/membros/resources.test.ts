@@ -37,7 +37,7 @@ describe('lista e navegação de recursos', () => {
     expect(html).not.toContain(link.url)
     expect(html).not.toContain('href="/loja-a/item/bad/abrir"')
     expect(html).not.toContain('Baixar PDF')
-    expect(html).toContain('Material digital')
+    expect(html).toContain('>PDF</span>')
     expect(html).not.toContain('hidden shrink-0 text-sm font-semibold text-destaque')
   })
 
@@ -59,7 +59,7 @@ describe('lista e navegação de recursos', () => {
     const html = renderToStaticMarkup(createElement(ResourceList, { items: [file], storeSlug: 'loja-a' }))
     expect(html).toContain('target="_blank"')
     expect(html).toContain('rel="noopener noreferrer"')
-    expect(html).toContain('volte a esta página e tente novamente')
-    expect(html).toContain('copie o link desta página')
+    expect(html).toContain(`href="/loja-a/item/${file.id}/abrir"`)
+    expect(html).not.toContain('volte a esta página e tente novamente')
   })
 })

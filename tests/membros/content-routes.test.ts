@@ -565,7 +565,7 @@ describe('rota de item', () => {
     vi.mocked(listModulesWithItems).mockResolvedValueOnce([{ ...courseModule, items: [file] }])
     const html = renderToStaticMarkup(await ItemPage(itemProps()))
     expect(html).toContain(product.title)
-    expect(html).toContain('Abrir material')
+    expect(html).toContain('Acesse seu conteúdo')
     expect(html).toContain(`href="/${store.slug}/item/${file.id}/abrir"`)
     expect(html).not.toContain(file.url)
     expect(redirect).not.toHaveBeenCalled()

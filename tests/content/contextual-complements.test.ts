@@ -17,6 +17,17 @@ it('paginates within the store and maps all relations without per-product querie
   expect(urls[1].searchParams.get('offset')).toBe('500')
 })
 it('drops partial relationships on server failure without claiming access',async()=>{
-  admin.client.mockReturnValue(createClient('https://db.example.test','test',{global:{fetch:async()=>new Response('{"message":"unavailable"}',{status:503})}}))
+  const offsets:(string|null)[]=[]
+  // Exercise the loader's terminal-error fallback without PostgREST's retry delays.
+  admin.client.mockReturnValue(createClient('https://db.example.test','test',{db:{retry:false},global:{fetch:async(input)=>{
+    const offset=new URL(String(input)).searchParams.get('offset')
+    offsets.push(offset)
+    if(offset==='0') {
+      const rows=Array.from({length:500},(_,i)=>({store_id:'s',parent_product_id:'p',complement_product_id:String(i),sort_order:i}))
+      return new Response(JSON.stringify(rows),{headers:{'content-type':'application/json'}})
+    }
+    return new Response('{"message":"unavailable"}',{status:503})
+  }}}))
   expect(await listContextualRelations('s')).toEqual({relations:[],available:false})
+  expect(offsets).toEqual(['0','500'])
 })
