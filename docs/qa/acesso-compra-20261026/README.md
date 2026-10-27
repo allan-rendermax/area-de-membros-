@@ -47,4 +47,4 @@ Comandos de qualidade: `npm test -- --maxWorkers=2 --testTimeout=20000`, `npm ru
 2. Remover PDF/PDFs da apresentação gerada para membros, preservando formatos e endereços técnicos. Custo: nomes técnicos ainda podem aparecer no visualizador externo ou no arquivo baixado.
 3. Manter a implementação em branch isolada, sem publicar. Custo: a disponibilização em produção depende de uma etapa posterior de publicação.
 
-Relatórios das tarefas em `task-1-report.md` e `task-2-report.md`; decisões e revisões em `decisions.md`. A revisão final independente é registrada no fechamento deste relatório.
+Relatórios das tarefas em `task-1-report.md` e `task-2-report.md`; decisões em `decisions.md`. A revisão independente final aprovou a implementação, sem apontamentos críticos ou importantes. O único ajuste documental foi corrigido e conferido em uma revisão posterior; ver `final-review.md`.

@@ -134,7 +134,7 @@ Sem inventar quatro guias: manter título cadastrado “Atlas completo + 3 bônu
 - [x] Fixture: `node scripts/qa-contextual-complements-fixture.mjs --app`; localhost 3180 e 54329, nenhuma credencial real.
 - [x] Vercel Agent Browser em sessão própria: login sintético, Atlas → Guia → Atlas, link direto do Guia, abertura simulada de material; screenshots 1440/390/320 e nenhuma rolagem horizontal.
 - [x] Cenários one/zero/all/solo/refund-parent/refund-complement/draft-parent e prévia complete + one; conferir que não aparecem produtos não adquiridos como adquiridos e que avulso continua acessível.
-- [ ] Revisão independente final do intervalo desde 611aac7. Relatório e evidências em `docs/qa/acesso-compra-20261026/`; commit de documentação. Não publicar.
+- [x] Revisão independente final do intervalo desde 611aac7. Relatório e evidências em `docs/qa/acesso-compra-20261026/`; commit de documentação. Não publicar.
 
 ## Auto-revisão e execução
 

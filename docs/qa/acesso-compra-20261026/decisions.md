@@ -29,3 +29,7 @@ Task 2 scope extension: existing tests community-whatsapp.test.ts, content-route
 Task 2: fix round 1/5 (lint4 errors, mobile roles, React act global cleanup, content growth test; commits289b008..b554ff5). Implementer focused6 tests pass, tsc clean, lint0errors3baselinewarnings. Re-review pending.
 
 Task 2: complete (1d102e1..b554ff5). Scoped re-review rereview_purchase_ui: all findings addressed, no new breakage. Integrated browser: 18 checks pass including home text/link/geometry/font equivalence, 320/390, standalone/refunds, preview one/all, named return and simulated material opening.
+
+Final review: final_purchase_review (GPT-6-astra), ready to merge; no Critical/Important findings. One documentation whitespace minor corrected in e4a322f; full base..HEAD diffcheck passed. 167files1317tests final suite passed, build passed, lint0errors3preexistingwarnings. Review limitations accepted as documented in docs/qa/acesso-compra-20261026/final-review.md. No runtime changes after validation.
+
+Final scoped re-review: final_doc_rereview confirmed documentation finding ADDRESSED. Base-to-final diffcheck exit0; ignore-space-at-eol comparison confirms no substantive report changes. Delivery retained on codex/compra-acesso-ui; no merge, push or deploy. Optional SDD temporary-folder cleanup was blocked by execution policy; folder retained.
