@@ -29,10 +29,10 @@ it('home groups owned complements and hides contextual offers from all general t
   expect(html).toContain('/arq/produto/guia');expect(html).not.toContain('Conhecer optional')
   expect(html).not.toContain('optional — bloqueado');expect(html).toContain('next')
 })
-it('restores the historical presentation on the first-item product path and direct item path',async()=>{
+it('shows existing complement cards after materials on first-item and direct item paths',async()=>{
   const p=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arq',slug:'atlas'})} as never))
   const i=renderToStaticMarkup(await ItemPage({...query(),params:Promise.resolve({loja:'arq',id:item.id})} as never))
-  for(const html of [p,i]){expect(html).not.toContain('Seus complementos');expect(html).not.toContain('Conhecer optional');expect(html).toContain('lesson-heading');expect(html).toContain('sm:sticky');expect(html).not.toContain('Abrir meus materiais')}
+  for(const html of [p,i]){expect(html).toContain('Seus complementos');expect(html).toContain('/arq/produto/guia');expect(html).toContain('Conhecer optional');expect(html.indexOf('Materiais disponíveis')).toBeLessThan(html.indexOf('Seus complementos'));expect(html).not.toContain('Conhecer guia');expect(html).toContain('lesson-heading');expect(html).toContain('sm:sticky');expect(html).not.toContain('Abrir meus materiais')}
 })
 it('keeps acquired materials available when relations fail and omits offers',async()=>{
   state.relationsAvailable=false
@@ -56,7 +56,8 @@ it.each([false,true])('keeps a requested complement purchasable after following 
   expect(url.pathname).toBe('/arq/produto/atlas')
   const html=renderToStaticMarkup(await ProdutoPage({params:Promise.resolve({loja:'arq',slug:'atlas'}),searchParams:Promise.resolve(Object.fromEntries(url.searchParams))} as never))
   expect(html).toContain('id="complementos"')
-  expect(html).toContain('aria-label="Compra solicitada"')
+  expect(html.match(/aria-label="Compra solicitada"/g)).toHaveLength(1)
+  expect(html).not.toContain('role="dialog"')
   expect(html).toContain('href="https://example.test/optional-checkout"')
   const ordinary=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arq',slug:'atlas'})} as never))
   expect(ordinary).not.toContain('Compra solicitada')
@@ -71,6 +72,9 @@ it.each([false,true])('does not turn arbitrary complement queries into offers (e
     for(const complemento of ['missing','next','guia','draft','foreign']) {
       const html=renderToStaticMarkup(await ProdutoPage({...query({complemento}),params:Promise.resolve({loja:'arq',slug:'atlas'})} as never))
       expect(html,complemento).not.toContain('aria-label="Compra solicitada"')
+      expect(html).not.toContain('Conhecer draft')
+      expect(html).not.toContain('Conhecer foreign')
+      expect(html).not.toContain('Conhecer guia')
     }
     state.granted=[]
     await expect(ProdutoPage({...query({complemento:'optional'}),params:Promise.resolve({loja:'arq',slug:'atlas'})} as never)).rejects.toThrow('redirect:/arq?comprar=atlas')
@@ -105,4 +109,37 @@ it('restores the October 19 library return and empty state without extra purchas
  expect(html).not.toContain('Conteúdos da compra')
  expect(html).toContain('Nenhum conteúdo publicado ainda.')
  expect(html).not.toContain('aria-label="Materiais adquiridos nesta compra"')
+})
+
+it('shows complement cards after the empty state in the main column',async()=>{
+  state.noItems=true
+  const html=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arq',slug:'atlas'})} as never))
+  expect(html).toContain('Seus complementos')
+  expect(html).toContain('/arq/produto/guia')
+  expect(html).toContain('Conhecer optional')
+  expect(html.indexOf('Nenhum conteúdo publicado ainda.')).toBeLessThan(html.indexOf('Seus complementos'))
+})
+it.each([false,true])('omits complement shelves when relations are unavailable (empty product: %s)',async(noItems)=>{
+  state.noItems=noItems;state.relationsAvailable=false
+  const html=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arq',slug:'atlas'})} as never))
+  expect(html).not.toContain('Seus complementos')
+  expect(html).not.toContain('Conhecer optional')
+})
+
+it('keeps both material resources and the original banner after shelves, outside the sidebar',async()=>{
+  const originalSlug=products[0].slug
+  store.slug='arquitetura'
+  products[0].slug='atlas-visual-das-patologias-na-construcao-civil-completo'
+  moduleRow.items.push({...item,id:'00000000-0000-4000-8000-000000000102',title:'Segundo material'})
+  try {
+    const html=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arquitetura',slug:products[0].slug})} as never))
+    expect(html.match(/aria-label="Acesse seu conteúdo:/g)).toHaveLength(2)
+    expect(html.indexOf('Seus complementos')).toBeLessThan(html.indexOf('protocolo-upsell-title'))
+    expect(html).toContain('href="https://checkout.payt.com.br/f2b5337a076c0be3ccd09fdcfc651601"')
+    const sidebar=html.match(/<aside[\s\S]*?<\/aside>/)?.[0]
+    expect(sidebar).toBeDefined()
+    expect(sidebar).not.toContain('Seus complementos')
+    expect(sidebar).not.toContain('Conhecer optional')
+    expect(sidebar).not.toContain('Acesse seu conteúdo:')
+  } finally {store.slug='arq';products[0].slug=originalSlug;moduleRow.items.pop()}
 })
