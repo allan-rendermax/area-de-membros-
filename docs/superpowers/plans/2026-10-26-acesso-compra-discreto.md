@@ -1,6 +1,6 @@
 # Acesso à compra discreto Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Implementar o piloto discreto aprovado dentro da compra, com acesso claro ao principal e complementos e linguagem de produto.
 
@@ -55,7 +55,7 @@ export function buildPurchaseNavigation(input: ContextualInput, currentProductId
 export function memberResourceLabel(item: Pick<Item, 'kind' | 'url' | 'title'>, productTitle?: string): { typeLabel: string; actionLabel: string }
 ```
 
-- [ ] **Step 1: Escrever testes de comportamento antes do código.** Usar `product` e `relation` de `tests/fixtures/contextual-products`.
+- [x] **Step 1: Escrever testes de comportamento antes do código.** Usar `product` e `relation` de `tests/fixtures/contextual-products`.
 ```ts
 const input = { storeId: 's1', products: [product('atlas'), product('guia'), product('extra')], relations: [relation('atlas', 'guia'), relation('atlas', 'extra')], granted: new Set(['atlas', 'guia']) }
 expect(buildPurchaseNavigation(input, 'guia', 'arquitetura')?.products.map(p => p.id)).toEqual(['atlas', 'guia'])
@@ -66,9 +66,9 @@ expect(memberResourceLabel({kind:'arquivo', title:'Guia de Plantio', url:'https:
 ```
 Acrescentar principal e irmãos (todos adquiridos), não publicado/foreign/relação removida, relações repetidas, pai compartilhado determinístico, includeDrafts, links com simular/complementos, fonte imutável. Nomes: Atlas no título, Guia no título tem prioridade sobre produto Atlas, título genérico usa produto, nenhum dos dois usa Material digital, PDF query-only não inventa formato, URL inválida mantém fallback, DWG/SKP/XLSX preservados.
 
-- [ ] **Step 2: Executar RED.** `npx vitest run tests/membros/purchase-navigation.test.ts tests/membros/member-resource-label.test.ts`; falha esperada por módulos ausentes. Guardar saída no relatório.
+- [x] **Step 2: Executar RED.** `npx vitest run tests/membros/purchase-navigation.test.ts tests/membros/member-resource-label.test.ts`; falha esperada por módulos ausentes. Guardar saída no relatório.
 
-- [ ] **Step 3: Implementar helpers.** Não modificar a projeção existente. Usar o grupo de `projectContextualLibrary(input).owned` que contém currentProductId; retornar null se não existir ou contiver menos de dois produtos. Construir `[group.product, ...group.complements]` com URLs codificadas e `withPreview`. Marcar somente atual; backParent somente quando atual não é principal. Isso reutiliza a seleção determinística da home sem alterá-la.
+- [x] **Step 3: Implementar helpers.** Não modificar a projeção existente. Usar o grupo de `projectContextualLibrary(input).owned` que contém currentProductId; retornar null se não existir ou contiver menos de dois produtos. Construir `[group.product, ...group.complements]` com URLs codificadas e `withPreview`. Marcar somente atual; backParent somente quando atual não é principal. Isso reutiliza a seleção determinística da home sem alterá-la.
 ```ts
 const projection = projectContextualLibrary(input)
 const group = projection.owned.find(g => g.product.id === currentProductId || g.complements.some(p => p.id === currentProductId))
@@ -76,8 +76,8 @@ if (!group || group.complements.length === 0) return null
 ```
 `memberResourceLabel` chama `resourceLabel` para detecção existente; somente o rótulo PDF é convertido. Reconhecer `/\batlas\b/i` e `/\bguias?\b/i` primeiro em item.title e depois productTitle. Sem identificação retornar Material digital / Abrir material. Links, vídeos e formatos editáveis preservam rótulos e ações existentes. Não converter URLs ou conteúdos. Não criar contagens de arquivos.
 
-- [ ] **Step 4: Executar GREEN e regressões.** `npx vitest run tests/membros/purchase-navigation.test.ts tests/membros/member-resource-label.test.ts tests/access/contextual-complements.test.ts tests/membros/resource-label.test.ts`.
-- [ ] **Step 5: Self-review, relatório e commit.** Commit somente os quatro arquivos próprios: `feat: add owned purchase navigation and member material labels`. Relatar RED/GREEN e interface final; não executar subagentes.
+- [x] **Step 4: Executar GREEN e regressões.** `npx vitest run tests/membros/purchase-navigation.test.ts tests/membros/member-resource-label.test.ts tests/access/contextual-complements.test.ts tests/membros/resource-label.test.ts`.
+- [x] **Step 5: Self-review, relatório e commit.** Commit somente os quatro arquivos próprios: `feat: add owned purchase navigation and member material labels`. Relatar RED/GREEN e interface final; não executar subagentes.
 
 ### Task 2: Integrar navegação e refinar a interface existente
 
@@ -97,7 +97,7 @@ if (!group || group.complements.length === 0) return null
 - Consumes: helpers e tipos exatos da tarefa 1.
 - Produces: optional `purchaseNavigation?: PurchaseNavigation | null` em LessonSidebar; optional `productTitle?: string` em ResourceList; optional `purchaseNavigation?: boolean` em MaterialHelp; optional `controls?: 'always' | 'overflow'` em Carousel, padrão `always`.
 
-- [ ] **Step 1: Escrever testes RED de renderização e interação.** Usar renderToStaticMarkup/Window como testes existentes; para resize, montar componente React e ResizeObserver controlado no happy-dom.
+- [x] **Step 1: Escrever testes RED de renderização e interação.** Usar renderToStaticMarkup/Window como testes existentes; para resize, montar componente React e ResizeObserver controlado no happy-dom.
 ```ts
 const nav = buildPurchaseNavigation(input, 'guia', 'arquitetura', 'complete', 'one')!
 const markup = renderToStaticMarkup(createElement(PurchaseNavigationLinks, { navigation: nav }))
@@ -109,9 +109,9 @@ for (const a of document.querySelectorAll('a')) expect(a.href).toContain('comple
 ```
 Adaptar fixtures para títulos reais reconhecíveis. Cobrir links adquiridos/ausentes, estado atual, retorno nomeado, rota sem itens, módulos múltiplos, Básico/Completo, recurso Guia sem texto PDF, fallback legacy, carrossel padrão com controles e opt-in com/sem overflow após resize. Controles devem voltar quando cresce conteúdo e sumir quando não há overflow. Não testar apenas texto do código.
 
-- [ ] **Step 2: Rodar os testes novos e registrar falhas previstas.** `npx vitest run tests/membros/purchase-navigation-ui.test.ts tests/membros/carousel-overflow.test.ts tests/membros/contextual-product-routes.test.ts tests/membros/item-content-complement.test.ts tests/membros/resource-list.test.ts`.
+- [x] **Step 2: Rodar os testes novos e registrar falhas previstas.** `npx vitest run tests/membros/purchase-navigation-ui.test.ts tests/membros/carousel-overflow.test.ts tests/membros/contextual-product-routes.test.ts tests/membros/item-content-complement.test.ts tests/membros/resource-list.test.ts`.
 
-- [ ] **Step 3: Integrar UI sem substituir o layout.** Antes de editar, ler guias locais de Next `use-client.md`, `link.md` e craft-floor do Impeccable. Em renderItemContent calcular navegação com input existente; não buscar módulos de outros produtos. Passar modelo ao sidebar. Usar componente de links sem estado para ambos desktop/mobile, com o título completo e `aria-current="page"`, rótulo de papel e “Você está aqui” / “Adquirido · Acessar material”. Coluna existente chama-se “Conteúdos da compra” somente com grupo. Atalhos ficam fora do details recolhido no mobile. Se houver um único módulo com um único recurso, o atalho atual substitui a lista redundante; nos demais casos manter módulos existentes sob a navegação. Preservar upgrade e legacy complement.
+- [x] **Step 3: Integrar UI sem substituir o layout.** Antes de editar, ler guias locais de Next `use-client.md`, `link.md` e craft-floor do Impeccable. Em renderItemContent calcular navegação com input existente; não buscar módulos de outros produtos. Passar modelo ao sidebar. Usar componente de links sem estado para ambos desktop/mobile, com o título completo e `aria-current="page"`, rótulo de papel e “Você está aqui” / “Adquirido · Acessar material”. Coluna existente chama-se “Conteúdos da compra” somente com grupo. Atalhos ficam fora do details recolhido no mobile. Se houver um único módulo com um único recurso, o atalho atual substitui a lista redundante; nos demais casos manter módulos existentes sob a navegação. Preservar upgrade e legacy complement.
 ```tsx
 {navigation.products.map(p => <Link key={p.id} href={p.href} aria-current={p.current ? 'page' : undefined}>
   <span>{p.title}</span><small>{p.current ? 'Você está aqui' : 'Adquirido · Acessar material'}</small>
@@ -119,21 +119,21 @@ Adaptar fixtures para títulos reais reconhecíveis. Cobrir links adquiridos/aus
 ```
 Retorno com texto visível “Voltar para {parent.title}” quando houver pai; caso contrário “Voltar aos meus materiais”. Respeitar o estilo da seta existente, sem header gigante novo. Aplicar também à rota sem itens. Ajuda adiciona orientação contextual sem substituir mensagens técnicas úteis. ResourceList usa `memberResourceLabel(item, productTitle)` sem mudar destinos/target/rel.
 
-- [ ] **Step 4: Ajustar somente fileiras internas.** Título “Seus complementos adquiridos”, status “Adquirido”, link textual “Acessar material” por produto. Carousel mantém padrão antigo; com `controls="overflow"`, medir `scrollWidth > clientWidth + 1`, observar resize de track/conteúdo e limpar listeners/observer. Ativar apenas nas fileiras ContextualComplementShelves, não home.
+- [x] **Step 4: Ajustar somente fileiras internas.** Título “Seus complementos adquiridos”, status “Adquirido”, link textual “Acessar material” por produto. Carousel mantém padrão antigo; com `controls="overflow"`, medir `scrollWidth > clientWidth + 1`, observar resize de track/conteúdo e limpar listeners/observer. Ativar apenas nas fileiras ContextualComplementShelves, não home.
 ```tsx
 <Carousel title="Seus complementos adquiridos" controls="overflow">{children}</Carousel>
 ```
 Sem inventar quatro guias: manter título cadastrado “Atlas completo + 3 bônus” quando existir. Não acrescentar lista hardcoded dos bônus do piloto.
 
-- [ ] **Step 5: GREEN, verificação de escopo e commit.** Rodar todos testes de membros e acesso relevantes; `git diff --check`. Verificar ausência de alterações em home (`src/app/[loja]/page.tsx`, contextual-library-home, owned-product-group, contextual-library.ts e CSS global). Salvar relatório e commit `feat: clarify acquired materials inside purchase pages`.
+- [x] **Step 5: GREEN, verificação de escopo e commit.** Rodar todos testes de membros e acesso relevantes; `git diff --check`. Verificar ausência de alterações em home (`src/app/[loja]/page.tsx`, contextual-library-home, owned-product-group, contextual-library.ts e CSS global). Salvar relatório e commit `feat: clarify acquired materials inside purchase pages`.
 
 ## Validação integrada pelo controlador
 
-- [ ] Registrar baseline da suíte e home antes da integração; comparar textos, links, layout e screenshot no mesmo cenário.
-- [ ] `npm test -- --maxWorkers=2 --testTimeout=20000`, `npm run lint`, `npm run build`, `git diff --check`.
-- [ ] Fixture: `node scripts/qa-contextual-complements-fixture.mjs --app`; localhost 3180 e 54329, nenhuma credencial real.
-- [ ] Vercel Agent Browser em sessão própria: login sintético, Atlas → Guia → Atlas, link direto do Guia, abertura simulada de material; screenshots 1440/390/320 e nenhuma rolagem horizontal.
-- [ ] Cenários one/zero/all/solo/refund-parent/refund-complement/draft-parent e prévia complete + one; conferir que não aparecem produtos não adquiridos como adquiridos e que avulso continua acessível.
+- [x] Registrar baseline da suíte e home antes da integração; comparar textos, links, layout e screenshot no mesmo cenário.
+- [x] `npm test -- --maxWorkers=2 --testTimeout=20000`, `npm run lint`, `npm run build`, `git diff --check`.
+- [x] Fixture: `node scripts/qa-contextual-complements-fixture.mjs --app`; localhost 3180 e 54329, nenhuma credencial real.
+- [x] Vercel Agent Browser em sessão própria: login sintético, Atlas → Guia → Atlas, link direto do Guia, abertura simulada de material; screenshots 1440/390/320 e nenhuma rolagem horizontal.
+- [x] Cenários one/zero/all/solo/refund-parent/refund-complement/draft-parent e prévia complete + one; conferir que não aparecem produtos não adquiridos como adquiridos e que avulso continua acessível.
 - [ ] Revisão independente final do intervalo desde 611aac7. Relatório e evidências em `docs/qa/acesso-compra-20261026/`; commit de documentação. Não publicar.
 
 ## Auto-revisão e execução

@@ -126,40 +126,40 @@ Replaced explicit children props with createElement third arguments, renamed mod
 Command: `npx vitest run tests/membros/carousel-overflow.test.ts tests/membros/purchase-navigation-ui.test.ts tests/membros/resource-list.test.ts`
 
 ```text
-(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
-  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
-Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
-
- RUN  v5.0.1 C:/Users/arqal/.codex/worktrees/compra-acesso-ui/Area de membros
-
-
- Test Files  3 passed (3)
-      Tests  6 passed (6)
-   Start at  20:57:54
-   Duration  648ms (import 45%, tests 39%, transform 15%, worker 1%)
-
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+
+ RUN  v5.0.1 C:/Users/arqal/.codex/worktrees/compra-acesso-ui/Area de membros
+
+
+ Test Files  3 passed (3)
+      Tests  6 passed (6)
+   Start at  20:57:54
+   Duration  648ms (import 45%, tests 39%, transform 15%, worker 1%)
+
 
 ```
 
 Command: `npm run lint`
 
 ```text
-
-> area-de-membros@0.1.0 lint
-> eslint
-
-
-C:\Users\arqal\.codex\worktrees\compra-acesso-ui\Area de membros\scripts\trocar-admin-e-aluno.mjs
-  20:15  warning  'loja' is assigned a value but never used  @typescript-eslint/no-unused-vars
-
-C:\Users\arqal\.codex\worktrees\compra-acesso-ui\Area de membros\src\app\admin\(painel)\produtos\locked-product-fields.tsx
-  9:39  warning  'product' is defined but never used  @typescript-eslint/no-unused-vars
-
-C:\Users\arqal\.codex\worktrees\compra-acesso-ui\Area de membros\src\app\admin\(painel)\produtos\upgrade-fields.tsx
-  8:33  warning  'product' is defined but never used  @typescript-eslint/no-unused-vars
-
-✖ 3 problems (0 errors, 3 warnings)
-
+
+> area-de-membros@0.1.0 lint
+> eslint
+
+
+C:\Users\arqal\.codex\worktrees\compra-acesso-ui\Area de membros\scripts\trocar-admin-e-aluno.mjs
+  20:15  warning  'loja' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\arqal\.codex\worktrees\compra-acesso-ui\Area de membros\src\app\admin\(painel)\produtos\locked-product-fields.tsx
+  9:39  warning  'product' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\arqal\.codex\worktrees\compra-acesso-ui\Area de membros\src\app\admin\(painel)\produtos\upgrade-fields.tsx
+  8:33  warning  'product' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 3 problems (0 errors, 3 warnings)
+
 
 ```
 

@@ -1,0 +1,15 @@
+
+> area-de-membros@0.1.0 lint
+> eslint
+
+
+C:\Users\arqal\.codex\worktrees\compra-acesso-ui\Area de membros\scripts\trocar-admin-e-aluno.mjs
+  20:15  warning  'loja' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\arqal\.codex\worktrees\compra-acesso-ui\Area de membros\src\app\admin\(painel)\produtos\locked-product-fields.tsx
+  9:39  warning  'product' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\arqal\.codex\worktrees\compra-acesso-ui\Area de membros\src\app\admin\(painel)\produtos\upgrade-fields.tsx
+  8:33  warning  'product' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 3 problems (0 errors, 3 warnings)
