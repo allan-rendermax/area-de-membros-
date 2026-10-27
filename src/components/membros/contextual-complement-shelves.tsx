@@ -6,9 +6,9 @@ import { Carousel } from './carousel'
 import { PosterLink,POSTER_WIDTH } from './poster-card'
 import { LockedPoster } from './locked-poster'
 import styles from './contextual-complements.module.css'
-export function ContextualComplementShelves({complements,storeSlug,preview,requestedSlug,complementScenario}:{complements:ProductComplements;storeSlug:string;preview:PreviewContext;requestedSlug?:string;complementScenario?:string}) {
+export function ContextualComplementShelves({complements,storeSlug,preview,requestedSlug,complementScenario,anchorId='complementos'}:{complements:ProductComplements;storeSlug:string;preview:PreviewContext;requestedSlug?:string;complementScenario?:string;anchorId?:string}) {
   if(!complements.owned.length && !complements.optional.length)return null
-  return <div id="complementos" className={styles.shelves}>
+  return <div id={anchorId} className={styles.shelves}>
     {complements.owned.length>0 && <div id="complementos-adquiridos"><Carousel title="Seus complementos">{complements.owned.map(p=><div key={p.id} className={`${styles.card} ${POSTER_WIDTH}`}>
       <PosterLink product={{...p,unlocked:true}} href={withPreview(`/${storeSlug}/produto/${p.slug}`,preview,complementScenario)} /><p className={`${styles.status} ${styles.acquired}`}>✓ Adquirido · <Link href={withPreview(`/${storeSlug}/produto/${p.slug}`,preview,complementScenario)} className="underline underline-offset-4">Acessar material</Link></p>
     </div>)}</Carousel></div>}

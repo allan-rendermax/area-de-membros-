@@ -81,7 +81,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
             <p className="mt-10 text-texto-suave">{lockedModules.length ? 'Nenhum conteúdo disponível no seu acesso atual.' : 'Nenhum conteúdo publicado ainda.'}</p>
             <LockedModules modules={lockedModules} />
             <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={productHref} productTitle={product.title} imageUrl={product.upgradeImageUrl || product.coverUrl} buttonText={product.upgradeButtonText} supportUrl={support} />
-            {complements && <ContextualComplementShelves complements={complements} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} />}
+            {complements && <ContextualComplementShelves anchorId={requestedOffer ? 'complementos-lista' : undefined} complements={complements} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} />}
           </div>
         </div>
         {requestedOffer && <div id="complementos" className="mt-8 scroll-mt-28"><ComplementPurchasePrompt product={{ ...requestedOffer, unlocked: false }} dismissHref={productHref} /></div>}

@@ -17,4 +17,4 @@ Read platform guidelines and bundled Next.js server/client component and page co
 
 No browser/server/deploy or external database operations. Existing local test suite uses isolated PGlite instances. Visual preview remains the parent task responsibility.
 
-The unchanged shelf and requested-offer wrapper both use id=complementos; explicit deep links therefore contain duplicate anchor IDs. Existing prompt is shown once and shelf modals remain closed initially, per requested scope. Consider a separate anchor cleanup if desired.
+Review follow-up fixed duplicate anchor IDs. ContextualComplementShelves accepts optional anchorId, defaulting to complementos. Both renderers use complementos-lista only when requestedOffer exists, preserving #complementos on the purchase prompt. Regression assertions failed three cases before the fix and now pass for first-item product, empty product and direct item routes, checking one target, prompt target ownership and no auto-open modal. Targeted route suite: 15/15 pass; TypeScript, targeted ESLint and diff check pass. Full suite was not rerun for this narrow follow-up per parent instruction.

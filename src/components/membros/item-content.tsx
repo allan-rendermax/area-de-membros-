@@ -106,7 +106,7 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
               <ResourceList items={siblings} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} currentItemId={ctx.item.id} />
             </section>}
 
-            {complements && <ContextualComplementShelves complements={complements} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} />}
+            {complements && <ContextualComplementShelves anchorId={requestedOffer ? 'complementos-lista' : undefined} complements={complements} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} />}
 
             <PathologyUpsell storeSlug={store.slug} productSlug={ctx.product.slug} />
 

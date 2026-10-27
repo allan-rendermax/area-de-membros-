@@ -55,7 +55,10 @@ it.each([false,true])('keeps a requested complement purchasable after following 
   const url=new URL(destination,'https://members.example.test')
   expect(url.pathname).toBe('/arq/produto/atlas')
   const html=renderToStaticMarkup(await ProdutoPage({params:Promise.resolve({loja:'arq',slug:'atlas'}),searchParams:Promise.resolve(Object.fromEntries(url.searchParams))} as never))
-  expect(html).toContain('id="complementos"')
+  expect(html.match(/id="complementos"/g)).toHaveLength(1)
+  expect(html).toContain('id="complementos-lista"')
+  expect(html).toMatch(/id="complementos"[^>]*><section[^>]*aria-label="Compra solicitada"/)
+  expect(html).not.toContain('role="dialog"')
   expect(html.match(/aria-label="Compra solicitada"/g)).toHaveLength(1)
   expect(html).not.toContain('role="dialog"')
   expect(html).toContain('href="https://example.test/optional-checkout"')
@@ -84,7 +87,10 @@ it.each([false,true])('does not turn arbitrary complement queries into offers (e
 it('supports a requested complement from a direct item link',async()=>{
   const html=renderToStaticMarkup(await ItemPage({...query({complemento:'optional'}),params:Promise.resolve({loja:'arq',id:item.id})} as never))
   expect(html).toContain('href="https://example.test/optional-checkout"')
-  expect(html).toContain('id="complementos"')
+  expect(html.match(/id="complementos"/g)).toHaveLength(1)
+  expect(html).toContain('id="complementos-lista"')
+  expect(html).toMatch(/id="complementos"[^>]*><section[^>]*aria-label="Compra solicitada"/)
+  expect(html).not.toContain('role="dialog"')
 })
 
 it('preserves requested legacy upsell prompt in grouped mode',async()=>{
