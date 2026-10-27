@@ -593,7 +593,7 @@ describe('rota de item', () => {
     const access = doc.querySelector(`a[href="/loja-a/item/${item.id}/abrir"]`)
     expect(access?.textContent).toContain('Acesse seu conteúdo')
     expect(access?.textContent).toContain(product.title)
-    expect(access?.getAttribute('target')).toBe(kind === 'link' ? '_blank' : null)
+    expect(access?.getAttribute('target')).toBe('_blank')
     expect(recordItemAccess).not.toHaveBeenCalled()
   })
 

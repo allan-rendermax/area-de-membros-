@@ -66,6 +66,7 @@ export function createEmailLogRepo(): EmailLogRepo {
           kind: entry.kind,
           product_ids: entry.productIds,
           status: 'pendente',
+          access_notice: true,
         })
         .select('id')
         .single()

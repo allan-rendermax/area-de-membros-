@@ -27,6 +27,12 @@ beforeEach(() => {
 })
 
 describe('correção de email', () => {
+  it('não sobrescreve mudança concorrente quando a confirmação fornece email esperado', async () => {
+    io.email = 'admin@example.test'
+    await expect(changeCustomerEmail('customer', 'new@example.com', 'old@example.com')).rejects.toThrow('mudou')
+    expect(io.authUpdate).not.toHaveBeenCalled()
+    expect(io.rpc).not.toHaveBeenCalled()
+  })
   it('envia email anterior como precondição da RPC', async () => {
     await changeCustomerEmail('customer', 'new@example.com')
     expect(io.rpc).toHaveBeenCalledWith('change_customer_email_tracked_atomic', {

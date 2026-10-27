@@ -99,6 +99,7 @@ export function createPostbackRepo(): PostbackRepo {
         kind: entry.kind,
         product_ids: entry.productIds,
         status: 'falhou',
+        access_notice: true,
         error: entry.error,
       })
       if (error) throw error

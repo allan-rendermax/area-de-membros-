@@ -13,6 +13,7 @@ export function ResourceList({ items, storeSlug, currentItemId, legacyPresentati
     : resources
 
   return (
+    <>
     <ul className="space-y-3">
       {ordered.map((item) => {
         const isLink = item.kind === 'link'
@@ -23,9 +24,9 @@ export function ResourceList({ items, storeSlug, currentItemId, legacyPresentati
           <li key={item.id} className="min-w-0">
             <a
               href={withPreview(`/${storeSlug}/item/${item.id}/abrir`, preview, complementScenario)}
-              target={isLink ? '_blank' : undefined}
-              rel={isLink ? 'noopener noreferrer' : undefined}
-              aria-label={`${action}${legacyPresentation ? ' ' : ': '}${item.title}${isLink ? ' (abre em nova aba)' : ''}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${action}${legacyPresentation ? ' ' : ': '}${item.title} (abre em nova aba)`}
               className={`group grid min-h-20 min-w-0 grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-x-4 gap-y-2 rounded-xl border border-borda px-4 py-4 transition-colors hover:border-destaque/70 hover:bg-superficie-2 focus-visible:border-destaque focus-visible:bg-superficie-2 sm:flex sm:gap-4 sm:px-5 ${item.id === currentItemId ? 'bg-superficie-2' : 'bg-superficie'}`}
             >
               <span className="row-span-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-borda bg-fundo text-destaque" aria-hidden>
@@ -44,5 +45,7 @@ export function ResourceList({ items, storeSlug, currentItemId, legacyPresentati
         )
       })}
     </ul>
+    {resources.some((item) => item.kind === 'arquivo') && <p className="mt-3 text-xs leading-relaxed text-texto-suave">Se o arquivo não abrir, volte a esta página e tente novamente. Para abrir em outro navegador, copie o link desta página.</p>}
+    </>
   )
 }

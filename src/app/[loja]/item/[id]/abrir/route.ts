@@ -13,6 +13,8 @@ import { getItemWithContext } from '@/lib/data/products'
 import { env } from '@/lib/env'
 import { requireStoreSession } from '@/lib/membros/session'
 import { requireStorePreview } from '@/lib/membros/preview'
+import { privateFilePath } from '@/lib/content/private-files'
+import { downloadRedirect, downloadUnavailable } from '@/lib/content/download-response'
 
 export async function GET(request: Request, { params }: { params: Promise<{ loja: string; id: string }> }) {
   const { loja, id } = await params
@@ -34,11 +36,17 @@ export async function GET(request: Request, { params }: { params: Promise<{ loja
   if (!canAccessProductModule(level, ctx.module.requiredLevel, ctx.product.contentMode, editorial)) redirect(withPreview(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`, preview, complementScenario))
 
   const destination = await resolveResourceDestination(ctx.item, env.supabaseUrl)
-  if (!destination) notFound()
+  if (!destination) {
+    if (ctx.item.kind === 'arquivo' && privateFilePath(ctx.item.url, env.supabaseUrl)) {
+      const materialPath = `/${store.slug}/item/${id}`
+      return downloadUnavailable(withPreview(`${materialPath}/abrir`, preview, complementScenario), withPreview(materialPath, preview, complementScenario))
+    }
+    notFound()
+  }
 
   if (customer && !preview) {
     const entry = { customerId: customer.id, storeId: store.id, productId: ctx.product.id, itemId: ctx.item.id, kind: ctx.item.kind }
     after(() => recordItemAccessSafely(entry))
   }
-  redirect(destination)
+  return downloadRedirect(destination)
 }

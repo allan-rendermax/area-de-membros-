@@ -4,6 +4,7 @@ import type { Item } from '@/lib/domain/types'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const privatePrefix = `/storage/v1/object/authenticated/${PRIVATE_FILES_BUCKET}/`
+export const DOWNLOAD_URL_TTL_SECONDS = 15 * 60
 
 export async function resolveResourceDestination(item: Pick<Item, 'kind' | 'url'>, supabaseUrl: string): Promise<string | null> {
   let source: URL
@@ -20,7 +21,7 @@ export async function resolveResourceDestination(item: Pick<Item, 'kind' | 'url'
     const path = privateFilePath(item.url, supabaseUrl)
     if (!path) return null
     try {
-      const { data, error } = await createAdminClient().storage.from(PRIVATE_FILES_BUCKET).createSignedUrl(path, 60, { download: true })
+      const { data, error } = await createAdminClient().storage.from(PRIVATE_FILES_BUCKET).createSignedUrl(path, DOWNLOAD_URL_TTL_SECONDS, { download: true })
       if (error || !data?.signedUrl) return null
       const signed = new URL(data.signedUrl, configured.origin)
       return signed.protocol === 'https:' || signed.protocol === 'http:' ? signed.toString() : null
