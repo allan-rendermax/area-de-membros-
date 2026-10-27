@@ -1,0 +1,131 @@
+{
+  "status": "LOCAL PREVIEW ONLY, NOT APPLIED",
+  "changes": [
+    {
+      "id": "4a06645d-c5a4-4ed7-b001-c7690fab7ed6",
+      "product": "Kit Captação e Atendimento de Clientes",
+      "key": "cover_url",
+      "before": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/complementos-contextuais/20261024/captacao-clientes-2x3-a33df7966d8c2526.webp",
+      "after": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/products/kit-captacao-e-atendimento-de-clientes/capa-62e81e9f2635b454.webp"
+    },
+    {
+      "id": "4a06645d-c5a4-4ed7-b001-c7690fab7ed6",
+      "product": "Kit Captação e Atendimento de Clientes",
+      "key": "catalog_visibility",
+      "before": "contextual",
+      "after": "catalog"
+    },
+    {
+      "id": "608ed6ad-8488-4eb5-a98a-02ca07c495a4",
+      "product": "Kit Gestão de Obras",
+      "key": "cover_url",
+      "before": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/complementos-contextuais/20261024/gestao-obras-2x3-3015fa0e1f86c027.webp",
+      "after": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/products/kit-gestao-de-obras/capa-f5b7e69d63de5635.webp"
+    },
+    {
+      "id": "608ed6ad-8488-4eb5-a98a-02ca07c495a4",
+      "product": "Kit Gestão de Obras",
+      "key": "catalog_visibility",
+      "before": "contextual",
+      "after": "catalog"
+    },
+    {
+      "id": "78bff9d8-29c8-47dc-9898-237e29dccfe2",
+      "product": "Orçamento de Obras na Prática",
+      "key": "cover_url",
+      "before": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/complementos-contextuais/20261024/orcamento-obras-2x3-df6a05755b9e1f66.webp",
+      "after": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/covers/products/orcamento-de-obras-na-pratica/capa-b8ca73d8216a3315.webp"
+    },
+    {
+      "id": "78bff9d8-29c8-47dc-9898-237e29dccfe2",
+      "product": "Orçamento de Obras na Prática",
+      "key": "catalog_visibility",
+      "before": "contextual",
+      "after": "catalog"
+    }
+  ],
+  "insertedRelations": [
+    {
+      "store_id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+      "parent_product_id": "cf2eb5dc-2b84-4a20-b7f4-b298045b911f",
+      "complement_product_id": "02e57e72-c316-4567-921d-3a5637377a56",
+      "sort_order": 0
+    },
+    {
+      "store_id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+      "parent_product_id": "cf2eb5dc-2b84-4a20-b7f4-b298045b911f",
+      "complement_product_id": "aec3d46d-a9fc-4d15-bd79-00ad09eab346",
+      "sort_order": 1
+    },
+    {
+      "store_id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+      "parent_product_id": "cf2eb5dc-2b84-4a20-b7f4-b298045b911f",
+      "complement_product_id": "bf0d1df6-893a-421f-a850-f093a95e7c90",
+      "sort_order": 2
+    },
+    {
+      "store_id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+      "parent_product_id": "1c90a301-3687-405d-bae4-11b6e671d716",
+      "complement_product_id": "2341b447-7065-4478-8834-4e7a78150562",
+      "sort_order": 0
+    },
+    {
+      "store_id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+      "parent_product_id": "1c90a301-3687-405d-bae4-11b6e671d716",
+      "complement_product_id": "57b8ea27-5acb-46b8-b637-97afd9ef4f30",
+      "sort_order": 1
+    },
+    {
+      "store_id": "8e2a9eb3-8b06-4b8b-9d98-bac3c9d0b234",
+      "parent_product_id": "1c90a301-3687-405d-bae4-11b6e671d716",
+      "complement_product_id": "068eca82-a357-4e2e-b56c-a116f748230b",
+      "sort_order": 2
+    }
+  ],
+  "checks": [
+    {
+      "product": "Kit Captação e Atendimento de Clientes",
+      "coverStatus": 200,
+      "coverSha256": "62e81e9f2635b45412d92d0e990e4a3023c1ffbc6a2a7c9b0dd2b653a542ccbc",
+      "checkout": "https://checkout.payt.com.br/4d29550d257b717e7a57a469b728d8ca"
+    },
+    {
+      "product": "Orçamento de Obras na Prática",
+      "coverStatus": 200,
+      "coverSha256": "b8ca73d8216a331514a43b4616a3e479ac136945932abae4c1984864201377a3",
+      "checkout": "https://checkout.payt.com.br/9374ef3d53a00c33de62be93467ec04d"
+    },
+    {
+      "product": "Kit Gestão de Obras",
+      "coverStatus": 200,
+      "coverSha256": "f5b7e69d63de5635e86a4555140f04a3899ddde151419451fed6fd747dd9179b",
+      "checkout": "https://checkout.payt.com.br/53b7855a87c62719593f7a159bc075a0"
+    }
+  ],
+  "missingStandaloneCheckouts": [
+    {
+      "id": "02e57e72-c316-4567-921d-3a5637377a56",
+      "title": "Calculadora de Áreas Hospitalares"
+    },
+    {
+      "id": "068eca82-a357-4e2e-b56c-a116f748230b",
+      "title": "Biblioteca Visual dos Mestres do Urbanismo"
+    },
+    {
+      "id": "2341b447-7065-4478-8834-4e7a78150562",
+      "title": "Kit Diagnóstico Urbano na Prática"
+    },
+    {
+      "id": "57b8ea27-5acb-46b8-b637-97afd9ef4f30",
+      "title": "Kit Aprovação Urbana"
+    },
+    {
+      "id": "aec3d46d-a9fc-4d15-bd79-00ad09eab346",
+      "title": "Kit Briefing e Gestão Hospitalar"
+    },
+    {
+      "id": "bf0d1df6-893a-421f-a850-f093a95e7c90",
+      "title": "Enciclopédia Visual dos Grandes Hospitais"
+    }
+  ]
+}
