@@ -1,10 +1,10 @@
 # Retorno das capas e dos complementos — prévia de 27/10/2026
 
-Status: **prévia local, não publicada**. Nenhuma alteração de catálogo, Payt, pedidos ou produção foi executada nesta etapa.
+Registro da prévia. Publicação autorizada pelo usuário em 27/10/2026; resultado registrado em `publicacao.md`.
 
 ## Resultado
 
-- Cards existentes de complementos recolocados na coluna principal, imediatamente depois dos links dos materiais.
+- Cards existentes de complementos recolocados na coluna principal. Após a conferência, o usuário aprovou a posição imediatamente abaixo do banner do Protocolo (commit `efec391`). As capturas desta pasta registram a etapa anterior; a publicação terá capturas próprias.
 - Banner original do Protocolo Anti-Retrabalho preservado, conforme confirmação expressa do usuário.
 - Atlas Completo continua com dois materiais; Básico com um. Downloads individuais não foram reintroduzidos.
 - Comprados abrem seus materiais; não comprados abrem a oferta e o checkout cadastrado.
