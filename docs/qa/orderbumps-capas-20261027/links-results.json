@@ -1,0 +1,40 @@
+[
+  {
+    "expected": "Kit Captação e Atendimento de Clientes",
+    "has1990": true,
+    "hasPaymentButton": true,
+    "product": "Kit Captação de Clientes",
+    "title": "Payt | Kit Captação de Clientes",
+    "url": "https://checkout.payt.com.br/4d29550d257b717e7a57a469b728d8ca"
+  },
+  {
+    "expected": "Orçamento de Obras na Prática",
+    "has1990": true,
+    "hasPaymentButton": true,
+    "product": "Orçamento de Obras na Prática",
+    "title": "Payt | Orçamento de Obras na Prática",
+    "url": "https://checkout.payt.com.br/9374ef3d53a00c33de62be93467ec04d"
+  },
+  {
+    "expected": "Kit Gestão de Obras",
+    "has1990": true,
+    "hasPaymentButton": true,
+    "product": "Kit Gestão de Obras",
+    "title": "Payt | Kit Gestão de Obras",
+    "url": "https://checkout.payt.com.br/53b7855a87c62719593f7a159bc075a0"
+  },
+  {
+    "case": "deep-link",
+    "anchors": 1,
+    "modals": 0,
+    "prompt": "Disponível para vocêKit Gestão de ObrasContinue para o checkout e libere este material.Comprar Kit Gestão de ObrasVoltar ao acervo",
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-das-patologias-na-construcao-civil-completo?complemento=kit-gestao-de-obras#complementos"
+  },
+  {
+    "case": "deep-link",
+    "anchors": 1,
+    "modals": 0,
+    "prompt": "Disponível para vocêKit Gestão de ObrasContinue para o checkout e libere este material.Comprar Kit Gestão de ObrasVoltar ao acervo",
+    "url": "http://127.0.0.1:3180/arquitetura/item/68799aee-de69-40b6-a72b-43135b2d22bf?complemento=kit-gestao-de-obras#complementos"
+  }
+]

@@ -1,0 +1,497 @@
+[
+  {
+    "case": "complete-zero",
+    "banner": true,
+    "images": [
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-gestao-de-obras%2Fcapa-f5b7e69d63de5635.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Forcamento-de-obras-na-pratica%2Fcapa-b8ca73d8216a3315.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-captacao-e-atendimento-de-clientes%2Fcapa-62e81e9f2635b454.webp&w=3840&q=75"
+      }
+    ],
+    "materials": 2,
+    "optional": [
+      "Conhecer Kit Gestão de Obras",
+      "Conhecer Orçamento de Obras na Prática",
+      "Conhecer Kit Captação e Atendimento de Clientes"
+    ],
+    "order": true,
+    "owned": [],
+    "scrollWidth": 1440,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-das-patologias-na-construcao-civil-completo",
+    "width": 1440
+  },
+  {
+    "case": "viewport",
+    "banner": true,
+    "images": [
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-gestao-de-obras%2Fcapa-f5b7e69d63de5635.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Forcamento-de-obras-na-pratica%2Fcapa-b8ca73d8216a3315.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-captacao-e-atendimento-de-clientes%2Fcapa-62e81e9f2635b454.webp&w=3840&q=75"
+      }
+    ],
+    "materials": 2,
+    "optional": [
+      "Conhecer Kit Gestão de Obras",
+      "Conhecer Orçamento de Obras na Prática",
+      "Conhecer Kit Captação e Atendimento de Clientes"
+    ],
+    "order": true,
+    "owned": [],
+    "scrollWidth": 1440,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-das-patologias-na-construcao-civil-completo",
+    "width": 1440
+  },
+  {
+    "case": "viewport",
+    "banner": true,
+    "images": [
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-gestao-de-obras%2Fcapa-f5b7e69d63de5635.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Forcamento-de-obras-na-pratica%2Fcapa-b8ca73d8216a3315.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-captacao-e-atendimento-de-clientes%2Fcapa-62e81e9f2635b454.webp&w=3840&q=75"
+      }
+    ],
+    "materials": 2,
+    "optional": [
+      "Conhecer Kit Gestão de Obras",
+      "Conhecer Orçamento de Obras na Prática",
+      "Conhecer Kit Captação e Atendimento de Clientes"
+    ],
+    "order": true,
+    "owned": [],
+    "scrollWidth": 918,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-das-patologias-na-construcao-civil-completo",
+    "width": 918
+  },
+  {
+    "case": "viewport",
+    "banner": true,
+    "images": [
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-gestao-de-obras%2Fcapa-f5b7e69d63de5635.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Forcamento-de-obras-na-pratica%2Fcapa-b8ca73d8216a3315.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-captacao-e-atendimento-de-clientes%2Fcapa-62e81e9f2635b454.webp&w=3840&q=75"
+      }
+    ],
+    "materials": 2,
+    "optional": [
+      "Conhecer Kit Gestão de Obras",
+      "Conhecer Orçamento de Obras na Prática",
+      "Conhecer Kit Captação e Atendimento de Clientes"
+    ],
+    "order": true,
+    "owned": [],
+    "scrollWidth": 390,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-das-patologias-na-construcao-civil-completo",
+    "width": 390
+  },
+  {
+    "case": "viewport",
+    "banner": true,
+    "images": [
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-gestao-de-obras%2Fcapa-f5b7e69d63de5635.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Forcamento-de-obras-na-pratica%2Fcapa-b8ca73d8216a3315.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-captacao-e-atendimento-de-clientes%2Fcapa-62e81e9f2635b454.webp&w=3840&q=75"
+      }
+    ],
+    "materials": 2,
+    "optional": [
+      "Conhecer Kit Gestão de Obras",
+      "Conhecer Orçamento de Obras na Prática",
+      "Conhecer Kit Captação e Atendimento de Clientes"
+    ],
+    "order": true,
+    "owned": [],
+    "scrollWidth": 320,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-das-patologias-na-construcao-civil-completo",
+    "width": 320
+  },
+  {
+    "case": "checkout-modal",
+    "slug": "kit-captacao-e-atendimento-de-clientes",
+    "checkout": "https://checkout.payt.com.br/4d29550d257b717e7a57a469b728d8ca",
+    "images": [
+      {
+        "loaded": false,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fcomplementos-contextuais%2F20261024%2Fcaptacao-clientes-1x1-c72a188dcc996173.webp&w=3840&q=75"
+      }
+    ],
+    "text": "Disponível para vocêKit Captação e Atendimento de ClientesAprenda a estruturar briefings, propostas e follow-ups com modelos práticos para conduzir cada etapa do atendimento ao cliente.CLIQUE AQUI - PREÇO ESPECIAL→Já paguei · Conferir meu acessoO material aparece em seu acervo após a confirmação do pagamento. Se ainda estiver pendente, aguarde a confirmação ou procure o suporte.Fechar"
+  },
+  {
+    "case": "checkout-modal",
+    "slug": "kit-gestao-de-obras",
+    "checkout": "https://checkout.payt.com.br/53b7855a87c62719593f7a159bc075a0",
+    "images": [
+      {
+        "loaded": false,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fcomplementos-contextuais%2F20261024%2Fgestao-obras-1x1-e326edd159cd46eb.webp&w=3840&q=75"
+      }
+    ],
+    "text": "Disponível para vocêKit Gestão de ObrasAprenda a organizar cronogramas, compras e registros de obra com ferramentas práticas para acompanhar cada etapa da execução.CLIQUE AQUI - PREÇO ESPECIAL→Já paguei · Conferir meu acessoO material aparece em seu acervo após a confirmação do pagamento. Se ainda estiver pendente, aguarde a confirmação ou procure o suporte.Fechar"
+  },
+  {
+    "case": "checkout-modal",
+    "slug": "orcamento-de-obras-na-pratica",
+    "checkout": "https://checkout.payt.com.br/9374ef3d53a00c33de62be93467ec04d",
+    "images": [
+      {
+        "loaded": false,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fcomplementos-contextuais%2F20261024%2Forcamento-obras-1x1-88987d3eb6052fac.webp&w=3840&q=75"
+      }
+    ],
+    "text": "Disponível para vocêOrçamento de Obras na PráticaAprenda a organizar custos, levantar quantitativos e interpretar seu orçamento com uma planilha prática e um guia de uso.CLIQUE AQUI - PREÇO ESPECIAL→Já paguei · Conferir meu acessoO material aparece em seu acervo após a confirmação do pagamento. Se ainda estiver pendente, aguarde a confirmação ou procure o suporte.Fechar"
+  },
+  {
+    "case": "one-owned",
+    "banner": true,
+    "images": [
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-gestao-de-obras%2Fcapa-f5b7e69d63de5635.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Forcamento-de-obras-na-pratica%2Fcapa-b8ca73d8216a3315.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-captacao-e-atendimento-de-clientes%2Fcapa-62e81e9f2635b454.webp&w=3840&q=75"
+      }
+    ],
+    "materials": 2,
+    "optional": [
+      "Conhecer Orçamento de Obras na Prática",
+      "Conhecer Kit Captação e Atendimento de Clientes"
+    ],
+    "order": true,
+    "owned": [
+      "/arquitetura/produto/kit-gestao-de-obras",
+      "/arquitetura/produto/kit-gestao-de-obras"
+    ],
+    "scrollWidth": 1440,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-das-patologias-na-construcao-civil-completo",
+    "width": 1440
+  },
+  {
+    "case": "owned-access",
+    "url": "http://127.0.0.1:3180/arquitetura/produto/kit-gestao-de-obras"
+  },
+  {
+    "case": "all-owned",
+    "banner": true,
+    "images": [
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-gestao-de-obras%2Fcapa-f5b7e69d63de5635.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Forcamento-de-obras-na-pratica%2Fcapa-b8ca73d8216a3315.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-captacao-e-atendimento-de-clientes%2Fcapa-62e81e9f2635b454.webp&w=3840&q=75"
+      }
+    ],
+    "materials": 2,
+    "optional": [],
+    "order": true,
+    "owned": [
+      "/arquitetura/produto/kit-gestao-de-obras",
+      "/arquitetura/produto/kit-gestao-de-obras",
+      "/arquitetura/produto/orcamento-de-obras-na-pratica",
+      "/arquitetura/produto/orcamento-de-obras-na-pratica",
+      "/arquitetura/produto/kit-captacao-e-atendimento-de-clientes",
+      "/arquitetura/produto/kit-captacao-e-atendimento-de-clientes"
+    ],
+    "scrollWidth": 1440,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-das-patologias-na-construcao-civil-completo",
+    "width": 1440
+  },
+  {
+    "case": "basic",
+    "banner": true,
+    "images": [
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-gestao-de-obras%2Fcapa-f5b7e69d63de5635.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Forcamento-de-obras-na-pratica%2Fcapa-b8ca73d8216a3315.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fproducts%2Fkit-captacao-e-atendimento-de-clientes%2Fcapa-62e81e9f2635b454.webp&w=3840&q=75"
+      }
+    ],
+    "materials": 1,
+    "optional": [
+      "Conhecer Kit Gestão de Obras",
+      "Conhecer Orçamento de Obras na Prática",
+      "Conhecer Kit Captação e Atendimento de Clientes"
+    ],
+    "order": true,
+    "owned": [],
+    "scrollWidth": 1440,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-das-patologias-na-construcao-civil-completo",
+    "width": 1440
+  },
+  {
+    "case": "related",
+    "slug": "atlas-visual-de-paisagismo-tropical",
+    "banner": false,
+    "images": [
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fcomplementos-contextuais%2F20261024%2Fplanta-certa-2x3-9e4c76372136a802.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fcomplementos-contextuais%2F20261024%2Forcamento-jardins-2x3-4f6f415451b19a14.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fcomplementos-contextuais%2F20261024%2Fmestres-paisagismo-2x3-27cd9715ce2f4a4c.webp&w=3840&q=75"
+      }
+    ],
+    "materials": 1,
+    "optional": [
+      "Conhecer Guia da Planta Certa para Jardins Tropicais",
+      "Conhecer Orçamento de Jardins na Prática",
+      "Conhecer Biblioteca Visual dos Mestres do Paisagismo"
+    ],
+    "order": false,
+    "owned": [],
+    "scrollWidth": 1440,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-de-paisagismo-tropical",
+    "width": 1440
+  },
+  {
+    "case": "related-owned",
+    "slug": "atlas-visual-de-paisagismo-tropical",
+    "banner": false,
+    "images": [
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fcomplementos-contextuais%2F20261024%2Fplanta-certa-2x3-9e4c76372136a802.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fcomplementos-contextuais%2F20261024%2Forcamento-jardins-2x3-4f6f415451b19a14.webp&w=3840&q=75"
+      },
+      {
+        "loaded": true,
+        "src": "http://127.0.0.1:3180/_next/image?url=https%3A%2F%2Ftujtwlrxpetpiatlbrps.supabase.co%2Fstorage%2Fv1%2Fobject%2Fpublic%2Fcovers%2Fcomplementos-contextuais%2F20261024%2Fmestres-paisagismo-2x3-27cd9715ce2f4a4c.webp&w=3840&q=75"
+      }
+    ],
+    "materials": 1,
+    "optional": [],
+    "order": false,
+    "owned": [
+      "/arquitetura/produto/guia-da-planta-certa-para-jardins-tropicais",
+      "/arquitetura/produto/guia-da-planta-certa-para-jardins-tropicais",
+      "/arquitetura/produto/orcamento-de-jardins-na-pratica",
+      "/arquitetura/produto/orcamento-de-jardins-na-pratica",
+      "/arquitetura/produto/biblioteca-visual-dos-mestres-do-paisagismo",
+      "/arquitetura/produto/biblioteca-visual-dos-mestres-do-paisagismo"
+    ],
+    "scrollWidth": 1440,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-de-paisagismo-tropical",
+    "width": 1440
+  },
+  {
+    "case": "related",
+    "slug": "atlas-visual-de-arquitetura-hospitalar",
+    "banner": false,
+    "images": [
+      {
+        "loaded": true,
+        "src": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/calculadora-de-areas-hospitalares/revisions/c16750b1-1503-4441-9692-1eb2f85d894a/20261024/calculadora-de-areas-hospitalares/capa-10854c125cd38cda.webp?download=capa.webp"
+      },
+      {
+        "loaded": true,
+        "src": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/kit-briefing-e-gestao-hospitalar/revisions/33a8f9c5-e9a2-49f8-9b43-5aea0a520a19/20261024/kit-briefing-e-gestao-hospitalar/capa-438f0fab5b5b102a.webp?download=capa.webp"
+      },
+      {
+        "loaded": true,
+        "src": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/enciclopedia-visual-dos-grandes-hospitais/revisions/5d0f7e5a-d147-443a-91f9-d956de0e1fd9/20261024/enciclopedia-visual-dos-grandes-hospitais/capa-602ae68aed62de71.webp?download=capa.webp"
+      }
+    ],
+    "materials": 1,
+    "optional": [
+      "Conhecer Calculadora de Áreas Hospitalares",
+      "Conhecer Kit Briefing e Gestão Hospitalar",
+      "Conhecer Enciclopédia Visual dos Grandes Hospitais"
+    ],
+    "order": false,
+    "owned": [],
+    "scrollWidth": 1440,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-de-arquitetura-hospitalar",
+    "width": 1440
+  },
+  {
+    "case": "related-owned",
+    "slug": "atlas-visual-de-arquitetura-hospitalar",
+    "banner": false,
+    "images": [
+      {
+        "loaded": true,
+        "src": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/calculadora-de-areas-hospitalares/revisions/c16750b1-1503-4441-9692-1eb2f85d894a/20261024/calculadora-de-areas-hospitalares/capa-10854c125cd38cda.webp?download=capa.webp"
+      },
+      {
+        "loaded": true,
+        "src": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/kit-briefing-e-gestao-hospitalar/revisions/33a8f9c5-e9a2-49f8-9b43-5aea0a520a19/20261024/kit-briefing-e-gestao-hospitalar/capa-438f0fab5b5b102a.webp?download=capa.webp"
+      },
+      {
+        "loaded": true,
+        "src": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/enciclopedia-visual-dos-grandes-hospitais/revisions/5d0f7e5a-d147-443a-91f9-d956de0e1fd9/20261024/enciclopedia-visual-dos-grandes-hospitais/capa-602ae68aed62de71.webp?download=capa.webp"
+      }
+    ],
+    "materials": 1,
+    "optional": [],
+    "order": false,
+    "owned": [
+      "/arquitetura/produto/calculadora-de-areas-hospitalares",
+      "/arquitetura/produto/calculadora-de-areas-hospitalares",
+      "/arquitetura/produto/kit-briefing-e-gestao-hospitalar",
+      "/arquitetura/produto/kit-briefing-e-gestao-hospitalar",
+      "/arquitetura/produto/enciclopedia-visual-dos-grandes-hospitais",
+      "/arquitetura/produto/enciclopedia-visual-dos-grandes-hospitais"
+    ],
+    "scrollWidth": 1440,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-de-arquitetura-hospitalar",
+    "width": 1440
+  },
+  {
+    "case": "related",
+    "slug": "atlas-visual-de-urbanismo",
+    "banner": false,
+    "images": [
+      {
+        "loaded": true,
+        "src": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/kit-diagnostico-urbano-na-pratica/revisions/6620d321-3392-4261-be1f-234fc6a8545f/20261024/kit-diagnostico-urbano-na-pratica/capa-1adf1d50e6760101.webp?download=capa.webp"
+      },
+      {
+        "loaded": true,
+        "src": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/kit-aprovacao-urbana/revisions/aec9d57b-4d4e-42c0-a331-e1690ffc85ee/20261024/kit-aprovacao-urbana/capa-b187ec1f57fccf6b.webp?download=capa.webp"
+      },
+      {
+        "loaded": true,
+        "src": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/biblioteca-visual-dos-mestres-do-urbanismo/revisions/a867bed4-3302-41cc-814b-3bc636886313/20261024/biblioteca-visual-dos-mestres-do-urbanismo/capa-397e4a9da4a6761b.webp?download=capa.webp"
+      }
+    ],
+    "materials": 1,
+    "optional": [
+      "Conhecer Kit Diagnóstico Urbano na Prática",
+      "Conhecer Kit Aprovação Urbana",
+      "Conhecer Biblioteca Visual dos Mestres do Urbanismo"
+    ],
+    "order": false,
+    "owned": [],
+    "scrollWidth": 1440,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-de-urbanismo",
+    "width": 1440
+  },
+  {
+    "case": "related-owned",
+    "slug": "atlas-visual-de-urbanismo",
+    "banner": false,
+    "images": [
+      {
+        "loaded": true,
+        "src": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/kit-diagnostico-urbano-na-pratica/revisions/6620d321-3392-4261-be1f-234fc6a8545f/20261024/kit-diagnostico-urbano-na-pratica/capa-1adf1d50e6760101.webp?download=capa.webp"
+      },
+      {
+        "loaded": true,
+        "src": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/kit-aprovacao-urbana/revisions/aec9d57b-4d4e-42c0-a331-e1690ffc85ee/20261024/kit-aprovacao-urbana/capa-b187ec1f57fccf6b.webp?download=capa.webp"
+      },
+      {
+        "loaded": true,
+        "src": "https://tujtwlrxpetpiatlbrps.supabase.co/storage/v1/object/public/arquivos/biblioteca-visual-dos-mestres-do-urbanismo/revisions/a867bed4-3302-41cc-814b-3bc636886313/20261024/biblioteca-visual-dos-mestres-do-urbanismo/capa-397e4a9da4a6761b.webp?download=capa.webp"
+      }
+    ],
+    "materials": 1,
+    "optional": [],
+    "order": false,
+    "owned": [
+      "/arquitetura/produto/kit-diagnostico-urbano-na-pratica",
+      "/arquitetura/produto/kit-diagnostico-urbano-na-pratica",
+      "/arquitetura/produto/kit-aprovacao-urbana",
+      "/arquitetura/produto/kit-aprovacao-urbana",
+      "/arquitetura/produto/biblioteca-visual-dos-mestres-do-urbanismo",
+      "/arquitetura/produto/biblioteca-visual-dos-mestres-do-urbanismo"
+    ],
+    "scrollWidth": 1440,
+    "sidebarCards": 0,
+    "url": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-de-urbanismo",
+    "width": 1440
+  },
+  {
+    "case": "home-showcase",
+    "offers": [
+      "Kit Captação e Atendimento de Clientes — bloqueado, ver detalhes",
+      "Orçamento de Obras na Prática — bloqueado, ver detalhes",
+      "Kit Gestão de Obras — bloqueado, ver detalhes"
+    ],
+    "scrollWidth": 1440,
+    "text": "A\nArquitetura\nInício\nMeus materiais\nInstalar app\nConta\n\nSEU ACERVO CRIATIVO\n\nMENOS TEMPO NO ZERO.\nMAIS PROJETO PRONTO.\n\nMateriais visuais e ferramentas para colocar suas ideias em prática.\n\nExplorar meus materiais\n→\n\nIDEIAS + FERRAMENTAS + REFERÊNCIAS = MAIS ARQUITETURA NO SEU DIA\n\nTudo pronto para você criar\n\nSeu acervo de arquitetura, em um só lugar.\n\nMeus materiais\n\nAtlas Visual das Patologias na Construção Civil\n\nAtlas Visual de Cozinhas\n\nAtlas Visual de Detalhes Construtivos\n\nAtlas Visual de Fundações\n\nAtlas Visual de Urbanismo\n\nProtocolo Anti-Retrabalho\n\nAtlas Visual de Paisagismo Tropical\n\nAtlas Visual de Arquitetura Hospitalar\n\nPack AutoCAD Pro\n\nPack Sketchup Plus\n\nPack Revit Pro\n\nPrompts de IA para Renderização\n\nExplore outros produtos\nPrática Profissional\n\nKit Captação e Atendimento de Clientes\n\nOrçamento de Obras na Prática\n\nKit Gestão de Obras\n\nGrupo ElevaMAX\n\nMaterial de uso pessoal. Todos os direitos reservados",
+    "width": 1440
+  },
+  {
+    "case": "standalone-owned",
+    "url": "http://127.0.0.1:3180/arquitetura/produto/kit-gestao-de-obras"
+  }
+]

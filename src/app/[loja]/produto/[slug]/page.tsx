@@ -20,6 +20,7 @@ import { requireStorePreview } from '@/lib/membros/preview'
 import { withPreview } from '@/lib/membros/paths'
 import { loadContextualInput } from '@/lib/data/contextual-page'
 import { projectProductComplements } from '@/lib/access/contextual-complements'
+import { ContextualComplementShelves } from '@/components/membros/contextual-complement-shelves'
 import { ComplementPurchasePrompt } from '@/components/membros/product-complement'
 
 export const dynamic = 'force-dynamic'
@@ -56,8 +57,9 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
     })
   }
   const support = supportHref(store, 'geral', customer?.email ?? null)
+  const complements = contextualInput ? projectProductComplements(contextualInput, product.id) : null
   const requestedOffer = typeof query.complemento === 'string' && contextualInput
-    ? projectProductComplements(contextualInput, product.id).optional.find((candidate) => candidate.slug === query.complemento)
+    ? complements?.optional.find((candidate) => candidate.slug === query.complemento)
     : undefined
 
   return (
@@ -79,6 +81,7 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
             <p className="mt-10 text-texto-suave">{lockedModules.length ? 'Nenhum conteúdo disponível no seu acesso atual.' : 'Nenhum conteúdo publicado ainda.'}</p>
             <LockedModules modules={lockedModules} />
             <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={productHref} productTitle={product.title} imageUrl={product.upgradeImageUrl || product.coverUrl} buttonText={product.upgradeButtonText} supportUrl={support} />
+            {complements && <ContextualComplementShelves anchorId={requestedOffer ? 'complementos-lista' : undefined} complements={complements} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} />}
           </div>
         </div>
         {requestedOffer && <div id="complementos" className="mt-8 scroll-mt-28"><ComplementPurchasePrompt product={{ ...requestedOffer, unlocked: false }} dismissHref={productHref} /></div>}

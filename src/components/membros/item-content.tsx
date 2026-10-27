@@ -20,6 +20,7 @@ import { listModulesWithItems } from '@/lib/data/products'
 import { withPreview } from '@/lib/membros/paths'
 import { PathologyUpsell } from './pathology-upsell'
 import { CommunityWhatsapp } from './community-whatsapp'
+import { ContextualComplementShelves } from './contextual-complement-shelves'
 import { ComplementPurchasePrompt } from './product-complement'
 
 // Both callers authorize the store, product and selected item before rendering.
@@ -69,8 +70,9 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
   const next = index >= 0 && index < sequence.length - 1 ? sequence[index + 1] : null
   const libraryHref = withPreview(`/${store.slug}#materiais`, preview, complementScenario)
   const itemHref = withPreview(`/${store.slug}/item/${ctx.item.id}`, preview, complementScenario)
+  const complements = contextualInput ? projectProductComplements(contextualInput, ctx.product.id) : null
   const requestedOffer = requestedComplement && contextualInput
-    ? projectProductComplements(contextualInput, ctx.product.id).optional.find((product) => product.slug === requestedComplement)
+    ? complements?.optional.find((product) => product.slug === requestedComplement)
     : undefined
 
   return (
@@ -105,6 +107,8 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
             </section>}
 
             <PathologyUpsell storeSlug={store.slug} productSlug={ctx.product.slug} />
+
+            {complements && <ContextualComplementShelves anchorId={requestedOffer ? 'complementos-lista' : undefined} complements={complements} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} />}
 
             {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
             <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
