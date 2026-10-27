@@ -5,7 +5,7 @@ import ProdutoPage from '@/app/[loja]/produto/[slug]/page'
 import ItemPage from '@/app/[loja]/item/[id]/page'
 import { product,relation } from '../fixtures/contextual-products'
 const state=vi.hoisted(()=>({granted:['atlas','guia'],relationsAvailable:true,noItems:false}))
-const products=[product('atlas'),product('guia',{catalogVisibility:'contextual'}),product('optional',{catalogVisibility:'contextual'}),product('next')]
+const products=[product('atlas'),product('guia',{catalogVisibility:'contextual'}),product('optional',{catalogVisibility:'contextual',checkoutUrl:'https://example.test/optional-checkout'}),product('next')]
 const relations=[relation('atlas','guia'),relation('atlas','optional')]
 const store={id:'s1',slug:'arq',name:'Arq',memberLibraryMode:'grouped' as const,logoUrl:null,supportUrl:null,supportWhatsapp:null,loginImageUrl:null}
 const customer={id:'c',email:'c@example.test',name:'C',blockedAt:null}
@@ -29,10 +29,10 @@ it('home groups owned complements and hides contextual offers from all general t
   expect(html).toContain('/arq/produto/guia');expect(html).not.toContain('Conhecer optional')
   expect(html).not.toContain('optional — bloqueado');expect(html).toContain('next')
 })
-it('composes contextual shelves on the first-item product path and direct item path',async()=>{
+it('restores the historical presentation on the first-item product path and direct item path',async()=>{
   const p=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arq',slug:'atlas'})} as never))
   const i=renderToStaticMarkup(await ItemPage({...query(),params:Promise.resolve({loja:'arq',id:item.id})} as never))
-  for(const html of [p,i]){expect(html).toContain('Seus complementos');expect(html).toContain('Conhecer optional');expect(html).toContain('lesson-heading');expect(html).not.toContain('Abrir meus materiais')}
+  for(const html of [p,i]){expect(html).not.toContain('Seus complementos');expect(html).not.toContain('Conhecer optional');expect(html).toContain('lesson-heading');expect(html).toContain('sm:sticky');expect(html).not.toContain('Abrir meus materiais')}
 })
 it('keeps acquired materials available when relations fail and omits offers',async()=>{
   state.relationsAvailable=false
@@ -47,6 +47,42 @@ it('redirects old purchase links inside eligible parents, otherwise shows suppor
   expect(html).toContain('não está liberado');expect(html).not.toContain('Conhecer guia')
 })
 
+it.each([false,true])('keeps a requested complement purchasable after following the home redirect (empty product: %s)',async(noItems)=>{
+  state.noItems=noItems
+  let destination=''
+  try { await VitrinePage(query({comprar:'optional'}) as never) }
+  catch(error) { destination=(error as Error).message.replace(/^redirect:/,'') }
+  const url=new URL(destination,'https://members.example.test')
+  expect(url.pathname).toBe('/arq/produto/atlas')
+  const html=renderToStaticMarkup(await ProdutoPage({params:Promise.resolve({loja:'arq',slug:'atlas'}),searchParams:Promise.resolve(Object.fromEntries(url.searchParams))} as never))
+  expect(html).toContain('id="complementos"')
+  expect(html).toContain('aria-label="Compra solicitada"')
+  expect(html).toContain('href="https://example.test/optional-checkout"')
+  const ordinary=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arq',slug:'atlas'})} as never))
+  expect(ordinary).not.toContain('Compra solicitada')
+  expect(ordinary).not.toContain('optional-checkout')
+})
+
+it.each([false,true])('does not turn arbitrary complement queries into offers (empty product: %s)',async(noItems)=>{
+  state.noItems=noItems
+  products.push(product('draft',{catalogVisibility:'contextual',isPublished:false}),product('foreign',{storeId:'s2',catalogVisibility:'contextual'}))
+  relations.push(relation('atlas','draft'),relation('atlas','foreign'))
+  try {
+    for(const complemento of ['missing','next','guia','draft','foreign']) {
+      const html=renderToStaticMarkup(await ProdutoPage({...query({complemento}),params:Promise.resolve({loja:'arq',slug:'atlas'})} as never))
+      expect(html,complemento).not.toContain('aria-label="Compra solicitada"')
+    }
+    state.granted=[]
+    await expect(ProdutoPage({...query({complemento:'optional'}),params:Promise.resolve({loja:'arq',slug:'atlas'})} as never)).rejects.toThrow('redirect:/arq?comprar=atlas')
+  } finally { products.splice(-2);relations.splice(-2) }
+})
+
+it('supports a requested complement from a direct item link',async()=>{
+  const html=renderToStaticMarkup(await ItemPage({...query({complemento:'optional'}),params:Promise.resolve({loja:'arq',id:item.id})} as never))
+  expect(html).toContain('href="https://example.test/optional-checkout"')
+  expect(html).toContain('id="complementos"')
+})
+
 it('preserves requested legacy upsell prompt in grouped mode',async()=>{
  products.push(product('protocolo',{role:'upsell',checkoutUrl:'https://example.test/checkout'}))
  products[0].complementaryProductId='protocolo'
@@ -58,11 +94,14 @@ it('preserves requested legacy upsell prompt in grouped mode',async()=>{
 })
 
 
-it('keeps the original parent return and empty state without extra purchase navigation',async()=>{
+it('restores the October 19 library return and empty state without extra purchase navigation',async()=>{
  state.noItems=true
  const html=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arq',slug:'guia'})} as never))
  expect(html).toContain('aria-label="Voltar ao acervo"')
- expect(html).toContain('href="/arq/produto/atlas"')
+ expect(html).toContain('href="/arq#materiais"')
+ expect(html).not.toContain('lesson-workspace-grid grid min-w-0 scroll-mt-28')
+ expect(html).not.toContain('aria-label="Produto complementar"')
+ expect(html).not.toContain('Seus complementos')
  expect(html).not.toContain('Conteúdos da compra')
  expect(html).toContain('Nenhum conteúdo publicado ainda.')
  expect(html).not.toContain('aria-label="Materiais adquiridos nesta compra"')

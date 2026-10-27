@@ -21,20 +21,20 @@ function subscribeToViewport(onChange: () => void) {
 function isDesktop() { return window.matchMedia(desktopQuery).matches }
 function serverViewport() { return false }
 
-export function LessonSidebar({ modules, storeSlug, currentItemId, completedItemIds = [], legacyPresentation = false, preview = false, complementScenario, upgrade, complement }: {
+export function LessonSidebar({ modules, storeSlug, currentItemId, completedItemIds = [], legacyPresentation = false, preview = false, complementScenario, upgrade }: {
   upgrade?: ReactNode
   complement?: ReactNode
+  complementScenario?: string
   modules: ModuleWithItems[]
   storeSlug: string
   currentItemId?: string
   completedItemIds?: string[]
   legacyPresentation?: boolean
-  complementScenario?: string
   preview?: PreviewContext
 }) {
   const desktop = useSyncExternalStore(subscribeToViewport, isDesktop, serverViewport)
   const visible = modules.filter((module) => previewIncludesDrafts(preview) || module.isPublished).map((module) => ({ ...module, items: module.items.filter((item) => usable(item, preview)) })).filter((module) => module.items.length > 0)
-  if (visible.length === 0 && !complement) return null
+  if (visible.length === 0) return null
 
   const content = (
     <div className="mt-5 space-y-3">
@@ -68,16 +68,12 @@ export function LessonSidebar({ modules, storeSlug, currentItemId, completedItem
         <div className="lesson-sidebar-panel rounded-2xl border border-borda bg-superficie p-5 sm:p-6">
           <h2 className="lesson-sidebar-heading break-words text-2xl font-bold">Conteúdos</h2>
           {content}
-          {complement && <div className="mt-5">{complement}</div>}
         </div>
       ) : (
-        <div className="lesson-sidebar-panel rounded-2xl border border-borda bg-superficie px-4 py-2 sm:p-6">
-          <details open={desktop || undefined} className="lesson-contents">
-            <summary tabIndex={desktop ? -1 : undefined} onClick={(event) => { if (desktop) event.preventDefault() }} className="lesson-sidebar-heading min-h-11 cursor-pointer break-words text-2xl font-bold">Conteúdos</summary>
-            {content}
-          </details>
-          {complement && <div className="mt-5">{complement}</div>}
-        </div>
+        <details open={desktop || undefined} className="lesson-contents lesson-sidebar-panel rounded-2xl border border-borda bg-superficie px-4 py-2 sm:p-6">
+          <summary tabIndex={desktop ? -1 : undefined} onClick={(event) => { if (desktop) event.preventDefault() }} className="lesson-sidebar-heading min-h-11 cursor-pointer break-words text-2xl font-bold">Conteúdos</summary>
+          {content}
+        </details>
       )}
     </aside>
   )

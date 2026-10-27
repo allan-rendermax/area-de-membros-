@@ -1,0 +1,74 @@
+.offer {
+  position: relative;
+  margin-top: 32px;
+  padding: 28px 24px 24px;
+  border: 1.5px dashed #ff5a16;
+  border-radius: 16px;
+  background: #1e1b18;
+}
+
+.label {
+  position: absolute;
+  top: -11px;
+  left: 20px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: #c74413;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: .035em;
+}
+
+.offer h2 {
+  margin: 0;
+  font-family: inherit;
+  font-size: 22px;
+  line-height: 1.35;
+  letter-spacing: -.02em;
+  font-weight: 800;
+  color: #f8f9fa;
+}
+
+.offer p {
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #d1c7bd;
+}
+
+.offer p strong {
+  color: #f8f9fa;
+  font-weight: 650;
+}
+
+.offer a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 22px;
+  min-height: 52px;
+  padding: 15px 18px;
+  border-radius: 9px;
+  background: #ffd53d;
+  color: #171717;
+  text-align: center;
+  text-decoration: none;
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: 800;
+}
+
+.offer a:hover { background: #ffe477; }
+.offer a:focus-visible { outline: 2px solid #ffd53d; outline-offset: 4px; }
+.offer a span { font-size: 20px; }
+
+@media (max-width: 639px) {
+  .offer { padding: 27px 20px 20px; }
+  .offer h2 { font-size: 20px; }
+  .offer p { font-size: 13px; }
+  .offer a { font-size: 12px; gap: 8px; padding: 15px 12px; }
+  .label { font-size: 9px; left: 14px; padding: 5px 10px; }
+}

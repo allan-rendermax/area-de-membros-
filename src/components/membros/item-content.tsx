@@ -1,5 +1,6 @@
 import { previewIncludesDrafts, type PreviewContext } from '@/lib/membros/preview-context'
 import Link from 'next/link'
+import { projectProductComplements, type ContextualInput } from '@/lib/access/contextual-complements'
 import type { AccessLevel, CustomerRow, Item, Module, ModuleWithItems, Product, Store } from '@/lib/domain/types'
 import { materialTitle } from '@/lib/content/material-title'
 import { MaterialHelp } from './material-help'
@@ -17,15 +18,12 @@ import { isHttpUrl } from '@/lib/content/url'
 import { canAccessProductModule, sectionTitle } from '@/lib/access/product-content'
 import { listModulesWithItems } from '@/lib/data/products'
 import { withPreview } from '@/lib/membros/paths'
-import { ProductComplementCard, ProductComplementOffer } from './product-complement'
-import { loadProductComplement } from '@/lib/data/product-complement'
+import { PathologyUpsell } from './pathology-upsell'
 import { CommunityWhatsapp } from './community-whatsapp'
-import { projectProductComplements,type ContextualInput } from '@/lib/access/contextual-complements'
-import { contextualLegacyComplement } from '@/lib/data/contextual-page'
-import { ContextualComplementShelves } from './contextual-complement-shelves'
+import { ComplementPurchasePrompt } from './product-complement'
 
 // Both callers authorize the store, product and selected item before rendering.
-export async function renderItemContent({ ctx, store, customer, level, preview, blocked, productModules: suppliedModules,contextualInput,complementScenario,requestedComplement }: {
+export async function renderItemContent({ ctx, store, customer, level, preview, blocked, productModules: suppliedModules, contextualInput, complementScenario, requestedComplement }: {
   ctx: { item: Item; module: Module; product: Product }
   store: Store
   customer: CustomerRow | null
@@ -39,8 +37,6 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
 }) {
   const editorial = previewIncludesDrafts(preview)
   const embed = ctx.item.kind === 'video' ? toVideoEmbed(ctx.item.url) : null
-  const contextual=contextualInput?projectProductComplements(contextualInput,ctx.product.id):null
-  const complement = contextualInput?contextualLegacyComplement(contextualInput,ctx.product,store.slug,preview):await loadProductComplement(ctx.product, store.slug, customer, preview)
   const [completionResult, productModules] = await Promise.all([
     Promise.allSettled([customer ? listCompletedItemIds(customer.id, store.id, ctx.product.id) : Promise.resolve([])]),
     suppliedModules ?? listModulesWithItems(ctx.product.id, { publishedOnly: !editorial }),
@@ -71,35 +67,18 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
   const index = sequence.findIndex((item) => item.id === ctx.item.id)
   const previous = index > 0 ? sequence[index - 1] : null
   const next = index >= 0 && index < sequence.length - 1 ? sequence[index + 1] : null
-  const libraryHref = withPreview(contextual?.backParent?`/${store.slug}/produto/${contextual.backParent.slug}`:`/${store.slug}#materiais`, preview,complementScenario)
+  const libraryHref = withPreview(`/${store.slug}#materiais`, preview, complementScenario)
   const itemHref = withPreview(`/${store.slug}/item/${ctx.item.id}`, preview, complementScenario)
-
-  const footer = <>
-    {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
-    <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
-    <LessonToolbar
-      key={`${customer?.id ?? 'preview'}:${ctx.item.id}`}
-      preview={Boolean(preview)}
-      sticky={!contextual}
-      storeSlug={store.slug}
-      initialCompleted={visibleCompletedIds.includes(ctx.item.id)}
-      progressAvailable={progressAvailable}
-      productTitle={ctx.product.title}
-      moduleTitle={moduleTitle}
-      itemId={ctx.item.id}
-      itemTitle={itemTitle}
-      description={ctx.product.description}
-      previous={previous ? { href: withPreview(`/${store.slug}/item/${previous.id}`, preview, complementScenario), title: previous.title } : null}
-      next={next ? { href: withPreview(`/${store.slug}/item/${next.id}`, preview, complementScenario), title: next.title } : null}
-    />
-  </>
+  const requestedOffer = requestedComplement && contextualInput
+    ? projectProductComplements(contextualInput, ctx.product.id).optional.find((product) => product.slug === requestedComplement)
+    : undefined
 
   return (
     <>
       {customer && !preview && embed && <RecordItemVisit key={customer.id} storeSlug={store.slug} itemId={ctx.item.id} />}
       <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} complementScenario={complementScenario} simulationHref={ctx.product.isPublished ? `/${store.slug}/produto/${ctx.product.slug}` : `/${store.slug}`} active="materials" actions={<InstallAppButton />} />
       <main className="lesson-workspace member-item-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
-        <div id="seu-material" className="lesson-workspace-grid grid min-w-0 scroll-mt-28 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
+        <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0 order-2 lg:order-1">
             <header className="lesson-heading flex min-w-0 items-start gap-4">
               <Link href={libraryHref} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
@@ -122,17 +101,31 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
 
             {siblings.some((item) => item.kind !== 'video') && <section className="mt-9" aria-label="Materiais disponíveis">
               <h2 className="lesson-section-heading mb-5 text-2xl font-bold">Materiais disponíveis</h2>
-              <ResourceList items={siblings} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} currentItemId={ctx.item.id} productTitle={ctx.product.title} />
+              <ResourceList items={siblings} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} currentItemId={ctx.item.id} />
             </section>}
 
-            {complement && <ProductComplementOffer complement={complement} />}
+            <PathologyUpsell storeSlug={store.slug} productSlug={ctx.product.slug} />
 
-            {!contextual && footer}
+            {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
+            <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>
+            <LessonToolbar
+              key={`${customer?.id ?? 'preview'}:${ctx.item.id}`}
+              preview={Boolean(preview)}
+              storeSlug={store.slug}
+              initialCompleted={visibleCompletedIds.includes(ctx.item.id)}
+              progressAvailable={progressAvailable}
+              productTitle={ctx.product.title}
+              moduleTitle={moduleTitle}
+              itemId={ctx.item.id}
+              itemTitle={itemTitle}
+              description={ctx.product.description}
+              previous={previous ? { href: withPreview(`/${store.slug}/item/${previous.id}`, preview, complementScenario), title: previous.title } : null}
+              next={next ? { href: withPreview(`/${store.slug}/item/${next.id}`, preview, complementScenario), title: next.title } : null}
+            />
           </div>
-          <LessonSidebar complement={complement && <ProductComplementCard complement={complement} />} upgrade={<ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} productTitle={ctx.product.title} imageUrl={ctx.product.upgradeImageUrl || ctx.product.coverUrl} buttonText={ctx.product.upgradeButtonText} sectionName={lockedModules[0]?.title} supportUrl={supportHref(store, 'geral', customer?.email ?? null)} />} modules={modules} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
+          <LessonSidebar upgrade={<ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={ctx.product.upgradeCheckoutUrl} refreshHref={itemHref} productTitle={ctx.product.title} imageUrl={ctx.product.upgradeImageUrl || ctx.product.coverUrl} buttonText={ctx.product.upgradeButtonText} sectionName={lockedModules[0]?.title} supportUrl={supportHref(store, 'geral', customer?.email ?? null)} />} modules={modules} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} currentItemId={ctx.item.id} completedItemIds={visibleCompletedIds} />
         </div>
-        {contextual && <ContextualComplementShelves complements={contextual} storeSlug={store.slug} preview={preview} requestedSlug={requestedComplement} complementScenario={complementScenario}/>}
-        {contextual && <div className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10"><div className="min-w-0">{footer}</div></div>}
+        {requestedOffer && <div id="complementos" className="mt-8 scroll-mt-28"><ComplementPurchasePrompt product={{ ...requestedOffer, unlocked: false }} dismissHref={itemHref} /></div>}
       </main>
       <CommunityWhatsapp url={store.communityWhatsappUrl} />
     </>

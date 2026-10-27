@@ -1,0 +1,91 @@
+{
+  "preview": "http://127.0.0.1:3180/arquitetura/produto/atlas-visual-das-patologias-na-construcao-civil-completo",
+  "checks": [
+    {
+      "bonus": true,
+      "individual": false,
+      "materials": [
+        {
+          "href": "/arquitetura/item/826627c3-035d-495e-adbc-83422b2e89ce/abrir",
+          "rel": "noopener noreferrer",
+          "target": "_blank",
+          "text": "Atlas Visual das Patologias na Construção CivilPDFAcesse seu conteúdo"
+        },
+        {
+          "href": "/arquitetura/item/68799aee-de69-40b6-a72b-43135b2d22bf/abrir",
+          "rel": "noopener noreferrer",
+          "target": "_blank",
+          "text": "Acesse seu bônusLink externo · abre em nova abaAcesse seu conteúdo"
+        }
+      ],
+      "newComplement": false,
+      "oldOffer": true,
+      "overflow": false,
+      "whatsapp": true,
+      "width": 1440
+    },
+    {
+      "bonus": true,
+      "individual": false,
+      "materials": [
+        {
+          "href": "/arquitetura/item/826627c3-035d-495e-adbc-83422b2e89ce/abrir",
+          "rel": "noopener noreferrer",
+          "target": "_blank",
+          "text": "Atlas Visual das Patologias na Construção CivilPDFAcesse seu conteúdo"
+        },
+        {
+          "href": "/arquitetura/item/68799aee-de69-40b6-a72b-43135b2d22bf/abrir",
+          "rel": "noopener noreferrer",
+          "target": "_blank",
+          "text": "Acesse seu bônusLink externo · abre em nova abaAcesse seu conteúdo"
+        }
+      ],
+      "newComplement": false,
+      "oldOffer": true,
+      "overflow": false,
+      "whatsapp": true,
+      "width": 918
+    },
+    {
+      "bonus": true,
+      "individual": false,
+      "materials": [
+        {
+          "href": "/arquitetura/item/826627c3-035d-495e-adbc-83422b2e89ce/abrir",
+          "rel": "noopener noreferrer",
+          "target": "_blank",
+          "text": "Atlas Visual das Patologias na Construção CivilPDFAcesse seu conteúdo"
+        },
+        {
+          "href": "/arquitetura/item/68799aee-de69-40b6-a72b-43135b2d22bf/abrir",
+          "rel": "noopener noreferrer",
+          "target": "_blank",
+          "text": "Acesse seu bônusLink externo · abre em nova abaAcesse seu conteúdo"
+        }
+      ],
+      "newComplement": false,
+      "oldOffer": true,
+      "overflow": false,
+      "whatsapp": true,
+      "width": 390
+    }
+  ],
+  "errors": {
+    "errors": [],
+    "lifecycle": {
+      "effectiveLaunch": {
+        "browserLaunched": true,
+        "engine": "chrome",
+        "launchHash": 11677035664275012000
+      },
+      "launched": false,
+      "relaunchedBrowser": false,
+      "restartedBackground": false,
+      "restoreStatus": "not_configured",
+      "reused": true,
+      "saveStatus": "not_attempted"
+    }
+  },
+  "notice": "Exact October19 presentation and backed-up product metadata, current security. Local test account and placeholder material destinations. Screenshots captured now, not historical screenshots. No deployment or production catalog mutation."
+}

@@ -29,11 +29,11 @@ describe('product complement surfaces', () => {
     expect(unavailable.querySelector('a')).toBeNull()
     expect(unavailable.body.textContent).toContain('Compra indisponível')
   })
-  it('keeps complement outside collapsed contents even with no usable items', () => {
+  it('preserves the October 19 empty sidebar without adding a complement panel', () => {
     const complement: ProductComplement = { product, owned: true, href: '/arquitetura/produto/protocolo', external: false }
     const document = doc(renderToStaticMarkup(createElement(LessonSidebar, { modules: [], storeSlug: 'arquitetura', complement: createElement(ProductComplementCard, { complement }) })))
-    expect(document.querySelector('aside[aria-label="Conteúdos do produto"]')).not.toBeNull()
-    expect(document.querySelector('details.lesson-contents')?.contains(document.querySelector('section[aria-label="Produto complementar"]')!)).toBe(false)
+    expect(document.querySelector('aside[aria-label="Conteúdos do produto"]')).toBeNull()
+    expect(document.querySelector('section[aria-label="Produto complementar"]')).toBeNull()
   })
   it('shows a deep-link purchase action while the cover still opens checkout directly', () => {
     const cover = { id: 'protocol', slug: 'protocol', title: 'Protocolo Anti-Retrabalho', coverUrl: null, checkoutUrl: 'https://example.test/regular', studentCheckoutUrl: 'https://example.test/student', unlocked: false } as import('@/lib/access/access').ShelfProduct

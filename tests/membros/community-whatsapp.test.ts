@@ -53,7 +53,7 @@ describe('member content integration', () => {
     expect(document.querySelectorAll(`a[href="${invitation}"]`)).toHaveLength(1)
     expect(document.querySelector('main')?.nextElementSibling?.querySelector('a')?.getAttribute('href')).toBe(invitation)
     expect(document.querySelector(`a[href="${support}"]`)?.textContent).toBe('Falar pelo WhatsApp')
-    expect(document.body.textContent).toContain('Abrir material')
+    expect(document.body.textContent).toContain('Acesse seu conteúdo')
   })
   it.each([invitation, null])('renders the empty-product branch with configured group %s and unchanged support', async url => {
     vi.mocked(requireStoreSession).mockResolvedValue({ store: { ...store, communityWhatsappUrl: url }, customer: { id: 'c', email: 'student@example.test', name: 'Aluno', blockedAt: null } })

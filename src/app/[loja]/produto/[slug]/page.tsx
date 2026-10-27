@@ -18,11 +18,9 @@ import { isHttpUrl } from '@/lib/content/url'
 import { toVideoEmbed } from '@/lib/content/video'
 import { requireStorePreview } from '@/lib/membros/preview'
 import { withPreview } from '@/lib/membros/paths'
-import { loadProductComplement } from '@/lib/data/product-complement'
-import { ProductComplementCard, ProductComplementOffer } from '@/components/membros/product-complement'
-import { loadContextualInput,contextualLegacyComplement } from '@/lib/data/contextual-page'
+import { loadContextualInput } from '@/lib/data/contextual-page'
 import { projectProductComplements } from '@/lib/access/contextual-complements'
-import { ContextualComplementShelves } from '@/components/membros/contextual-complement-shelves'
+import { ComplementPurchasePrompt } from '@/components/membros/product-complement'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,18 +56,18 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
     })
   }
   const support = supportHref(store, 'geral', customer?.email ?? null)
-  const contextual=contextualInput?projectProductComplements(contextualInput,product.id):null
-  const complement = contextualInput?contextualLegacyComplement(contextualInput,product,store.slug,preview):await loadProductComplement(product, store.slug, customer, preview)
-  const backHref=withPreview(contextual?.backParent?`/${store.slug}/produto/${contextual.backParent.slug}`:`/${store.slug}#materiais`,preview,complementScenario)
+  const requestedOffer = typeof query.complemento === 'string' && contextualInput
+    ? projectProductComplements(contextualInput, product.id).optional.find((candidate) => candidate.slug === query.complemento)
+    : undefined
 
   return (
     <>
       <StoreHeader store={store} email={customer?.email ?? ''} preview={preview} complementScenario={complementScenario} simulationHref={product.isPublished ? undefined : `/${store.slug}`} actions={<InstallAppButton />} legacyHome />
       <main className="lesson-workspace mx-auto w-full max-w-[1440px] px-4 pt-7 pb-24 sm:px-8 sm:pt-10 lg:px-10">
-        <div id="seu-material" className="lesson-workspace-grid grid min-w-0 scroll-mt-28 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
+        <div className="lesson-workspace-grid grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(290px,34%)] xl:gap-10">
           <div className="min-w-0">
             <header className="lesson-heading flex min-w-0 items-start gap-4">
-              <Link href={backHref} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
+              <Link href={withPreview(`/${store.slug}#materiais`, preview, complementScenario)} aria-label="Voltar ao acervo" className="lesson-back grid h-11 w-11 shrink-0 place-items-center rounded-full border border-borda bg-superficie text-xl text-texto hover:bg-superficie-2">←</Link>
               <div className="min-w-0 flex-1">
                 <p className="lesson-eyebrow text-xs font-bold uppercase tracking-[.16em] text-texto-suave">Seu material</p>
                 <h1 className="lesson-title mt-1 break-words [overflow-wrap:anywhere] text-3xl font-extrabold leading-tight sm:text-4xl">{product.title}</h1>
@@ -80,12 +78,10 @@ export default async function ProdutoPage({ params, searchParams }: PageProps<'/
 
             <p className="mt-10 text-texto-suave">{lockedModules.length ? 'Nenhum conteúdo disponível no seu acesso atual.' : 'Nenhum conteúdo publicado ainda.'}</p>
             <LockedModules modules={lockedModules} />
-            {complement && <ProductComplementOffer complement={complement} />}
             <ProductUpgrade level={level} lockedCount={lockedModules.length} checkoutUrl={product.upgradeCheckoutUrl} refreshHref={productHref} productTitle={product.title} imageUrl={product.upgradeImageUrl || product.coverUrl} buttonText={product.upgradeButtonText} supportUrl={support} />
           </div>
-          {complement && <aside className="min-w-0" aria-label="Conteúdos do produto"><div className="rounded-2xl border border-borda bg-superficie p-5 sm:p-6"><h2 className="text-2xl font-bold">Conteúdos</h2><div className="mt-5"><ProductComplementCard complement={complement} /></div></div></aside>}
         </div>
-        {contextual && <ContextualComplementShelves complements={contextual} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} requestedSlug={typeof query.complemento==='string'?query.complemento:undefined}/>}
+        {requestedOffer && <div id="complementos" className="mt-8 scroll-mt-28"><ComplementPurchasePrompt product={{ ...requestedOffer, unlocked: false }} dismissHref={productHref} /></div>}
       </main>
       <CommunityWhatsapp url={store.communityWhatsappUrl} />
       <WhatsAppFloating href={support} />
