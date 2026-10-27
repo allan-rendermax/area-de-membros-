@@ -106,9 +106,9 @@ export async function renderItemContent({ ctx, store, customer, level, preview, 
               <ResourceList items={siblings} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} currentItemId={ctx.item.id} />
             </section>}
 
-            {complements && <ContextualComplementShelves anchorId={requestedOffer ? 'complementos-lista' : undefined} complements={complements} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} />}
-
             <PathologyUpsell storeSlug={store.slug} productSlug={ctx.product.slug} />
+
+            {complements && <ContextualComplementShelves anchorId={requestedOffer ? 'complementos-lista' : undefined} complements={complements} storeSlug={store.slug} preview={preview} complementScenario={complementScenario} />}
 
             {!progressAvailable && <p role="status" className="mt-6 text-sm text-texto-suave">Não foi possível carregar seu progresso. Os materiais continuam disponíveis. Atualize a página para tentar novamente.</p>}
             <div className="mt-8"><MaterialHelp href={supportHref(store, 'geral', customer?.email ?? null)} /></div>

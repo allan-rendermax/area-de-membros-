@@ -132,7 +132,7 @@ it.each([false,true])('omits complement shelves when relations are unavailable (
   expect(html).not.toContain('Conhecer optional')
 })
 
-it('keeps both material resources and the original banner after shelves, outside the sidebar',async()=>{
+it('keeps both material resources and shelves after the original banner, outside the sidebar',async()=>{
   const originalSlug=products[0].slug
   store.slug='arquitetura'
   products[0].slug='atlas-visual-das-patologias-na-construcao-civil-completo'
@@ -140,7 +140,7 @@ it('keeps both material resources and the original banner after shelves, outside
   try {
     const html=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arquitetura',slug:products[0].slug})} as never))
     expect(html.match(/aria-label="Acesse seu conteúdo:/g)).toHaveLength(2)
-    expect(html.indexOf('Seus complementos')).toBeLessThan(html.indexOf('protocolo-upsell-title'))
+    expect(html.indexOf('protocolo-upsell-title')).toBeLessThan(html.indexOf('Seus complementos'))
     expect(html).toContain('href="https://checkout.payt.com.br/f2b5337a076c0be3ccd09fdcfc651601"')
     const sidebar=html.match(/<aside[\s\S]*?<\/aside>/)?.[0]
     expect(sidebar).toBeDefined()
