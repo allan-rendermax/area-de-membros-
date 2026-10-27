@@ -29,4 +29,12 @@ O backup cobre código e catálogo, não é uma cópia integral de clientes/pedi
 
 ## Resultado da publicação
 
-Pendente neste registro inicial. Atualizar com commit, deployment e comparação final do catálogo após a publicação.
+Publicado via PR #5, merge `16c09952edd3f90f288df1c965d753965696594c`. Deployment `dpl_27JZNPjmDW4WPLqqvi6XkLFvCw7V` READY; o alias `members.grupoelevamax.com` foi confirmado nesse deployment.
+
+Comparação integral das dez tabelas exportadas: mesmos 24 produtos, 33 módulos, 71 itens, 47 ofertas, 24 grupos, 47 vínculos de oferta, seis relações de complementos e quatro materiais legados. Somente seis campos de cinco itens do Atlas mudaram, exatamente conforme o plano: quatro `is_published`, título e ordem do bônus. Nenhum registro foi removido. Todos os outros campos/tabelas permaneceram idênticos.
+
+Verificação posterior em produção: 24/24 páginas abriram, incluindo 12 order bumps e um upsell; títulos e 24 links de produtos da homepage ficaram idênticos ao registro anterior. Simulação administrativa do Atlas validou dois acessos no Completo e um no Básico, em 1440/918/390px, sem overflow nem erros JavaScript. Link explícito de oferta de Kit Gestão de Obras também validado. Não foram criadas compras nem modificadas liberações de compradores para testar.
+
+Os links reais do Atlas Básico/Completo e da pasta de bônus foram reconferidos depois da publicação. As três subpastas de bônus foram abertas sem login no Google, com seus checklists, modelos e referências disponíveis. Permissões do Drive não foram modificadas. Rotas sem sessão continuam exigindo login; as checagens públicas de login/admin/manifest/Speed Insights passaram.
+
+Backup remoto de código: tag `backup/layout-original-19-outubro-aprovado-20261027` no GitHub, apontando ao commit aprovado `9e2e36f78b239ef4a078865cff57b26c0e1103ab`, cujo código coincide com o merge publicado. Bundle completo verificado e cópia ZIP na pasta externa; catálogo final e manifesto de hashes adicionados. O backup é de código e catálogo; não contém a base de clientes/pedidos nem os bytes de todos os materiais.
