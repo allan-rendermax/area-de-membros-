@@ -58,12 +58,12 @@ it('preserves requested legacy upsell prompt in grouped mode',async()=>{
 })
 
 
-it('keeps acquired navigation and named parent return on the empty complement route',async()=>{
+it('keeps the original parent return and empty state without extra purchase navigation',async()=>{
  state.noItems=true
  const html=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arq',slug:'guia'})} as never))
- expect(html).toContain('Voltar para atlas')
- expect(html).toContain('Conteúdos da compra')
+ expect(html).toContain('aria-label="Voltar ao acervo"')
+ expect(html).toContain('href="/arq/produto/atlas"')
+ expect(html).not.toContain('Conteúdos da compra')
  expect(html).toContain('Nenhum conteúdo publicado ainda.')
- expect(html).toContain('aria-current="page"')
- expect(html).not.toContain('Adquirido · Acessar material</small></a><a href="/arq/produto/optional')
+ expect(html).not.toContain('aria-label="Materiais adquiridos nesta compra"')
 })
