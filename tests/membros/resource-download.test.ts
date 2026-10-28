@@ -20,6 +20,15 @@ describe('resolver destino privado autorizado', () => {
     expect(createSignedUrl).toHaveBeenCalledWith('pasta/modelo.pdf', 900, { download: true })
   })
 
+  it('devolve o nome legível em Unicode com uma única codificação, sem modificar o cadastro', async () => {
+    const item = { ...file, title: 'Checklist de Vistoria de Entrega' }
+    const destination = await resolveResourceDestination(item, supabaseUrl, 'Orçamento de Jardins na Prática')
+    expect(new URL(destination!).searchParams.get('download')).toBe('Orçamento de Jardins na Prática - Checklist de Vistoria de Entrega.pdf')
+    expect(destination).not.toContain('%25C3')
+    expect(item.url).toBe(file.url)
+    expect(createSignedUrl).toHaveBeenCalledWith('pasta/modelo.pdf', 900, { download: true })
+  })
+
   it('falha fechado quando assinatura falha', async () => {
     createSignedUrl.mockResolvedValueOnce({ data: null, error: new Error('unavailable') })
     expect(await resolveResourceDestination(file, supabaseUrl)).toBeNull()

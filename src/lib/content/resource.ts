@@ -1,8 +1,9 @@
 import type { Item } from '@/lib/domain/types'
+import { resourceDownloadName } from '@/lib/content/download-name'
 
 const PUBLIC_FILES_PREFIX = '/storage/v1/object/public/arquivos/'
 
-export function getResourceDestination(item: Pick<Item, 'kind' | 'url'>, supabaseUrl: string): string | null {
+export function getResourceDestination(item: Pick<Item, 'kind' | 'url'> & Partial<Pick<Item, 'title'>>, supabaseUrl: string, productTitle = ''): string | null {
   if (item.kind === 'video') return null
 
   let destination: URL
@@ -17,7 +18,7 @@ export function getResourceDestination(item: Pick<Item, 'kind' | 'url'>, supabas
   try {
     const configured = new URL(supabaseUrl)
     if (destination.origin === configured.origin && destination.pathname.startsWith(PUBLIC_FILES_PREFIX) && destination.pathname.length > PUBLIC_FILES_PREFIX.length) {
-      destination.searchParams.set('download', '')
+      destination.searchParams.set('download', resourceDownloadName(item, productTitle))
       return destination.toString()
     }
   } catch {

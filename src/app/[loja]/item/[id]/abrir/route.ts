@@ -35,7 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ loja
   if (!level) redirect(withPreview(`/${store.slug}?comprar=${ctx.product.slug}`, preview, complementScenario))
   if (!canAccessProductModule(level, ctx.module.requiredLevel, ctx.product.contentMode, editorial)) redirect(withPreview(`/${store.slug}/produto/${ctx.product.slug}?bloqueado=1`, preview, complementScenario))
 
-  const destination = await resolveResourceDestination(ctx.item, env.supabaseUrl)
+  const destination = await resolveResourceDestination(ctx.item, env.supabaseUrl, ctx.product.title)
   if (!destination) {
     if (ctx.item.kind === 'arquivo' && privateFilePath(ctx.item.url, env.supabaseUrl)) {
       const materialPath = `/${store.slug}/item/${id}`

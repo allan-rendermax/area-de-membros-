@@ -91,7 +91,8 @@ describe('rota protegida para abrir recurso', () => {
     vi.mocked(getItemWithContext).mockResolvedValueOnce({ ...ctx, module: { ...courseModule, requiredLevel: 'complete' }, item: { ...item, url: 'https://project.supabase.co/storage/v1/object/authenticated/arquivos-restritos/modelo.pdf' } })
     const response = await GET(request, params())
     expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe(signedUrl)
+    expect(new URL(response.headers.get('location')!).searchParams.get('token')).toBe('short')
+    expect(new URL(response.headers.get('location')!).searchParams.get('download')).toBe('Produto A - Apostila.pdf')
     expect(response.headers.get('cache-control')).toBe('private, no-store')
     expect(response.headers.get('referrer-policy')).toBe('no-referrer')
     expect(createSignedUrl).toHaveBeenCalledWith('modelo.pdf', 900, { download: true })
@@ -122,7 +123,7 @@ describe('rota protegida para abrir recurso', () => {
     vi.mocked(createAdminClient).mockReturnValue({ from: vi.fn(() => ({ insert })) } as never)
     const response = await GET(request, params())
     expect(response.status).toBe(307)
-    expect(response.headers.get('location')).toBe(`${item.url}?download=`)
+    expect(new URL(response.headers.get('location')!).searchParams.get('download')).toBe('Produto A - Apostila.pdf')
     expect(insert).not.toHaveBeenCalled()
     expect(after).toHaveBeenCalledOnce()
     const callback = vi.mocked(after).mock.calls[0][0] as () => Promise<void>
@@ -135,7 +136,7 @@ describe('rota protegida para abrir recurso', () => {
     vi.mocked(createAdminClient).mockReturnValue({ from: vi.fn(() => ({ insert })) } as never)
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
-      expect((await GET(request, params())).headers.get('location')).toBe(`${item.url}?download=`)
+      expect(new URL((await GET(request, params())).headers.get('location')!).searchParams.get('download')).toBe('Produto A - Apostila.pdf')
       const callback = vi.mocked(after).mock.calls[0][0] as () => Promise<void>
       await expect(callback()).resolves.toBeUndefined()
       expect(error).toHaveBeenCalledWith('item_access_write_failed', { itemId: item.id })

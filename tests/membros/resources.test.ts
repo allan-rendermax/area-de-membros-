@@ -12,7 +12,9 @@ const link: Item = { ...file, id: '22222222-2222-4222-8222-222222222222', title:
 
 describe('destino de recursos', () => {
   it('pede download apenas de arquivo público no bucket da origem Supabase configurada', () => {
-    expect(getResourceDestination(file, supabase)).toBe(`${supabase}/storage/v1/object/public/arquivos/aula.pdf?token=1&download=`)
+    const destination = new URL(getResourceDestination(file, supabase)!)
+    expect(destination.searchParams.get('token')).toBe('1')
+    expect(destination.searchParams.get('download')).toBe(`${file.title}.pdf`)
     expect(getResourceDestination({ ...file, url: 'https://project.supabase.co.evil.test/storage/v1/object/public/arquivos/aula.pdf' }, supabase)).toBe('https://project.supabase.co.evil.test/storage/v1/object/public/arquivos/aula.pdf')
     expect(getResourceDestination({ ...file, url: `${supabase}/storage/v1/object/public/outro/aula.pdf` }, supabase)).toBe(`${supabase}/storage/v1/object/public/outro/aula.pdf`)
   })
