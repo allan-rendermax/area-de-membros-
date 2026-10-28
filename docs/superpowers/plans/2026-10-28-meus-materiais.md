@@ -71,7 +71,7 @@ Esperar falhas específicas: details ainda presente, título antigo e consulta d
 - [ ] **Step 3: Implementar mínimo**
 
 ```tsx
-export function OwnedProductGroup({group,storeSlug,preview,complementScenario}: /* manter tipo existente */){
+export function OwnedProductGroup({group,storeSlug,preview,complementScenario}:{group:OwnedGroup;storeSlug:string;preview:PreviewContext;complementScenario?:string}){
   return <>{[group.product,...group.complements].map(product=><PosterLink
     key={product.id}
     product={{...product,unlocked:true}}
