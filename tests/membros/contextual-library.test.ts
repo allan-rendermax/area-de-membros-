@@ -8,13 +8,21 @@ import { product } from '../fixtures/contextual-products'
 vi.mock('next/navigation',()=>({usePathname:()=>'/arq/produto/atlas',useSearchParams:()=>new URLSearchParams(),useRouter:()=>({refresh:()=>{}})}))
 const atlas=product('atlas',{coverUrl:'https://example.test/atlas.webp'})
 const guia=product('guia',{coverUrl:'https://example.test/guia-portrait.webp',purchaseImageUrl:'https://example.test/guia-square.webp'})
-it('renders accessible acquired shortcuts outside the parent link',()=>{
+it('renders acquired parent and complement covers as independent links',()=>{
   const html=renderToStaticMarkup(createElement(OwnedProductGroup,{group:{product:atlas,complements:[guia]},storeSlug:'arq',preview:false}))
   const doc=new Window().document;doc.body.innerHTML=html
-  expect(doc.querySelectorAll('details a')).toHaveLength(1)
-  expect(doc.querySelector('details a')?.getAttribute('href')).toBe('/arq/produto/guia')
-  expect(doc.querySelector('a details')).toBeNull()
-  expect(doc.querySelector('summary')?.textContent).toContain('1 complemento adquirido')
+  expect(doc.querySelector('details')).toBeNull()
+  expect([...doc.querySelectorAll('a')].map(a=>a.getAttribute('href'))).toEqual(['/arq/produto/atlas','/arq/produto/guia'])
+  expect(doc.body.children).toHaveLength(2)
+  expect(doc.querySelectorAll('img')).toHaveLength(2)
+})
+it('preserves preview and complement scenario on every acquired cover',()=>{
+  const html=renderToStaticMarkup(createElement(OwnedProductGroup,{group:{product:atlas,complements:[guia]},storeSlug:'arq',preview:'complete',complementScenario:'all'}))
+  const doc=new Window().document;doc.body.innerHTML=html
+  expect([...doc.querySelectorAll('a')].map(a=>a.getAttribute('href'))).toEqual([
+    '/arq/produto/atlas?previa=1&simular=complete&complementos=all',
+    '/arq/produto/guia?previa=1&simular=complete&complementos=all',
+  ])
 })
 it('does not create empty shelves and separates purchased from optional materials',()=>{
   const html=renderToStaticMarkup(createElement(ContextualComplementShelves,{complements:{owned:[atlas],optional:[guia],backParent:null},storeSlug:'arq',preview:false}))

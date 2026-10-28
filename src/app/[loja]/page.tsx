@@ -32,9 +32,9 @@ export default async function VitrinePage({ params, searchParams }: PageProps<'/
   const { store, customer } = await (preview ? requireStorePreview(loja) : requireStoreSession(loja))
   const [{ products, granted, levels }, recentVisits] = await Promise.all([
     customer ? loadStoreAccess(store.id, customer) : listProducts(store.id).then((products) => ({ products, levels: new Map<string, 'basic' | 'complete'>(), granted: new Set(preview === 'locked' ? [] : products.map((p) => p.id)) })),
-    customer ? listRecentProductVisits(customer.id, store.id).catch(() => []) : Promise.resolve([]),
+    customer && store.memberLibraryMode !== 'grouped' ? listRecentProductVisits(customer.id, store.id).catch(() => []) : Promise.resolve([]),
   ])
-  if(store.memberLibraryMode==='grouped')return renderContextualHome({store,customer,products,granted,levels,recentVisits,preview,query})
+  if(store.memberLibraryMode==='grouped')return renderContextualHome({store,customer,products,granted,preview,query})
   const architecture = getMemberTheme(store.slug) === 'arquitetura'
   const shelf = buildShelf(products.map((product) => withMemberArtwork(product, store.slug)), granted, { includeDrafts: previewIncludesDrafts(preview) })
   const originalTracks = buildTracks(shelf, architecture

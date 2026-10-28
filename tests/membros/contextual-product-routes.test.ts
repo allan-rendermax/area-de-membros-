@@ -1,13 +1,16 @@
 import { beforeEach,expect,it,vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { Window } from 'happy-dom'
+import type { RecentProductVisitWithAccess } from '@/lib/data/item-access'
 import VitrinePage from '@/app/[loja]/page'
 import ProdutoPage from '@/app/[loja]/produto/[slug]/page'
 import ItemPage from '@/app/[loja]/item/[id]/page'
 import { product,relation } from '../fixtures/contextual-products'
 const state=vi.hoisted(()=>({granted:['atlas','guia'],relationsAvailable:true,noItems:false}))
+const listRecentProductVisits=vi.hoisted(()=>vi.fn<(...args: unknown[])=>Promise<RecentProductVisitWithAccess[]>>())
 const products=[product('atlas'),product('guia',{catalogVisibility:'contextual'}),product('optional',{catalogVisibility:'contextual',checkoutUrl:'https://example.test/optional-checkout'}),product('next')]
 const relations=[relation('atlas','guia'),relation('atlas','optional')]
-const store={id:'s1',slug:'arq',name:'Arq',memberLibraryMode:'grouped' as const,logoUrl:null,supportUrl:null,supportWhatsapp:null,loginImageUrl:null}
+const store={id:'s1',slug:'arq',name:'Arq',memberLibraryMode:'grouped' as 'grouped'|'legacy',logoUrl:null,supportUrl:null,supportWhatsapp:null,loginImageUrl:null}
 const customer={id:'c',email:'c@example.test',name:'C',blockedAt:null}
 const item={id:'00000000-0000-4000-8000-000000000101',moduleId:'m',title:'Material',kind:'link' as const,url:'https://example.test/material',coverUrl:null,isPublished:true,sortOrder:0}
 const moduleRow={id:'m',productId:'atlas',title:'Material',sortOrder:0,isPublished:true,requiredLevel:'basic' as const,items:[item]}
@@ -17,17 +20,82 @@ vi.mock('@/lib/data/access',()=>({loadGrantedProductLevels:async()=>new Map(stat
 vi.mock('@/lib/data/products',()=>({listProducts:async()=>products,getProductBySlug:async(_store:string,slug:string)=>products.find(p=>p.slug===slug),listModulesWithItems:async()=>state.noItems?[]:[moduleRow],getItemWithContext:async()=>({item,module:moduleRow,product:products[0]})}))
 vi.mock('@/lib/data/contextual-complements',()=>({listContextualRelations:async()=>({relations:state.relationsAvailable?relations:[],available:state.relationsAvailable})}))
 vi.mock('@/lib/data/product-complement',()=>({loadProductComplement:async()=>null}))
-vi.mock('@/lib/data/item-access',()=>({listRecentProductVisits:async()=>[]}))
+vi.mock('@/lib/data/item-access',()=>({listRecentProductVisits}))
 vi.mock('@/lib/data/member-progress',()=>({listCompletedItemIds:async()=>[]}))
 vi.mock('@/app/[loja]/progresso/actions',()=>({saveCompletion:vi.fn()}))
 vi.mock('@/app/[loja]/historico/actions',()=>({recordVisit:vi.fn()}))
-beforeEach(()=>{state.granted=['atlas','guia'];state.relationsAvailable=true;state.noItems=false})
+beforeEach(()=>{
+  state.granted=['atlas','guia'];state.relationsAvailable=true;state.noItems=false
+  listRecentProductVisits.mockReset().mockResolvedValue([{productId:'guia',itemId:item.id,accessedAt:'2026-10-28T12:00Z',availableItem:{requiredLevel:'basic'}}])
+})
 const query=(q={})=>({params:Promise.resolve({loja:'arq'}),searchParams:Promise.resolve(q)})
 it('home groups owned complements and hides contextual offers from all general tracks',async()=>{
   const html=renderToStaticMarkup(await VitrinePage(query() as never))
-  expect(html).toContain('Meus materiais');expect(html).toContain('1 complemento adquirido')
-  expect(html).toContain('/arq/produto/guia');expect(html).not.toContain('Conhecer optional')
+  const doc=new Window().document;doc.body.innerHTML=html
+  const materials=doc.querySelector('section[aria-label="MEUS MATERIAIS"]')
+  expect(materials).not.toBeNull()
+  expect([...materials!.querySelectorAll('a')].map(a=>a.getAttribute('href'))).toEqual(['/arq/produto/atlas','/arq/produto/guia'])
+  expect(materials!.querySelector('details')).toBeNull()
+  expect(doc.querySelector('[aria-label="Continuar"]')).toBeNull()
+  expect(html).not.toContain('Tudo pronto para você criar')
+  expect(html).not.toContain('Explore outros produtos')
+  expect(html).not.toContain('Conhecer optional')
   expect(html).not.toContain('optional — bloqueado');expect(html).toContain('next')
+})
+it('does not read visit history for the grouped library',async()=>{
+  await VitrinePage(query() as never)
+  expect(listRecentProductVisits).not.toHaveBeenCalled()
+})
+it('removes redundant architecture headings and resume cards from the grouped library',async()=>{
+  store.slug='arquitetura'
+  try {
+    const html=renderToStaticMarkup(await VitrinePage(query() as never))
+    const doc=new Window().document;doc.body.innerHTML=html
+    const headings=[...doc.querySelectorAll('h2')].map(h=>h.textContent)
+    expect(headings).not.toContain('Tudo pronto para você criar')
+    expect(headings).not.toContain('Explore outros produtos')
+    expect(html).not.toContain('aria-label="Continuar"')
+    expect(html).toContain('aria-label="MEUS MATERIAIS"')
+  } finally { store.slug='arq' }
+})
+it('preserves the legacy library and its visit history',async()=>{
+  store.memberLibraryMode='legacy'
+  try {
+    const html=renderToStaticMarkup(await VitrinePage(query() as never))
+    expect(listRecentProductVisits).toHaveBeenCalledWith('c','s1')
+    expect(html).toContain('aria-label="Continuar"')
+    expect(html).toContain(`/arq/item/${item.id}`)
+  } finally { store.memberLibraryMode='grouped' }
+})
+it('shows catalog order bumps in their configured category while optional contextual products stay hidden',async()=>{
+  products.push(product('pratica',{role:'orderbump',catalogVisibility:'catalog',track:'Prática Profissional'}))
+  try {
+    const html=renderToStaticMarkup(await VitrinePage(query() as never))
+    const doc=new Window().document;doc.body.innerHTML=html
+    expect(doc.querySelector('section[aria-label="Prática Profissional"] button[aria-label="pratica — bloqueado, ver detalhes"]')).not.toBeNull()
+    expect(doc.querySelector('section[aria-label="MEUS MATERIAIS"] [aria-label="pratica — bloqueado, ver detalhes"]')).toBeNull()
+    expect(html).not.toContain('optional — bloqueado')
+    expect(html).not.toContain('Conhecer optional')
+  } finally { products.pop() }
+})
+it('renders each acquired main product with its complements and a shared complement only once',async()=>{
+  products.push(product('second'),product('second-guide',{catalogVisibility:'contextual'}))
+  relations.push(relation('second','guia'),relation('second','second-guide'))
+  state.granted=['atlas','guia','second','second-guide']
+  try {
+    const html=renderToStaticMarkup(await VitrinePage(query() as never))
+    const doc=new Window().document;doc.body.innerHTML=html
+    expect([...doc.querySelectorAll('section[aria-label="MEUS MATERIAIS"] a')].map(a=>a.getAttribute('href'))).toEqual([
+      '/arq/produto/atlas','/arq/produto/guia','/arq/produto/second','/arq/produto/second-guide',
+    ])
+    expect(doc.querySelector('section[aria-label="MEUS MATERIAIS"] details')).toBeNull()
+  } finally { products.splice(-2);relations.splice(-2) }
+})
+it('keeps an acquired standalone complement in the material carousel',async()=>{
+  state.granted=['guia']
+  const html=renderToStaticMarkup(await VitrinePage(query() as never))
+  const doc=new Window().document;doc.body.innerHTML=html
+  expect([...doc.querySelectorAll('section[aria-label="MEUS MATERIAIS"] a')].map(a=>a.getAttribute('href'))).toEqual(['/arq/produto/guia'])
 })
 it('shows existing complement cards after materials on first-item and direct item paths',async()=>{
   const p=renderToStaticMarkup(await ProdutoPage({...query(),params:Promise.resolve({loja:'arq',slug:'atlas'})} as never))
