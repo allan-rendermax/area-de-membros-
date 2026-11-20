@@ -1,5 +1,6 @@
 import type { AccessNotice, EmailKind, NoticeResult } from '@/lib/domain/types'
 import { accessNoticeEmail } from './access-template'
+import { accessUrlFor } from '@/lib/membros/last-chance'
 
 export type OutgoingEmail = { from: string; to: string; subject: string; html: string; replyTo?: string }
 
@@ -28,6 +29,13 @@ export function loginUrlFor(appUrl: string, storeSlug: string, email: string): s
   return `${appUrl.replace(/\/$/, '')}/${storeSlug}/entrar?email=${encodeURIComponent(email)}`
 }
 
+/** Compra nova passa por /acesso (última oportunidade no 1º clique); reenvio vai direto ao login. */
+export function emailLinkFor(appUrl: string, notice: Pick<AccessNotice, 'kind' | 'to' | 'store'>): string {
+  return notice.kind === 'reenvio'
+    ? loginUrlFor(appUrl, notice.store.slug, notice.to)
+    : accessUrlFor(appUrl, notice.store.slug, notice.to)
+}
+
 export async function sendAccessNotice(
   notice: AccessNotice,
   deps: { log: EmailLogRepo; transport: EmailTransport; appUrl: string; emailFrom: string; emailReplyTo?: string },
@@ -41,7 +49,7 @@ export async function sendAccessNotice(
   })
 
   try {
-    const { subject, html } = accessNoticeEmail(notice, loginUrlFor(deps.appUrl, notice.store.slug, notice.to))
+    const { subject, html } = accessNoticeEmail(notice, emailLinkFor(deps.appUrl, notice))
     const { providerId } = await deps.transport.send({
       from: formatFrom(notice.store.name, deps.emailFrom),
       to: notice.to,

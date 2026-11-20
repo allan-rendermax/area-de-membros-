@@ -12,6 +12,6 @@ export function withPreview(href: string, preview: PreviewContext = false, compl
 export function protectedStoreSlug(pathname: string): string | null {
   const [first, second] = pathname.split('/').filter(Boolean)
   if (!first || RESERVED_STORE_SLUGS.has(first)) return null
-  if (second === 'entrar' || second === 'manifest.webmanifest') return null
+  if (second === 'entrar' || second === 'acesso' || second === 'manifest.webmanifest') return null
   return first
 }

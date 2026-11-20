@@ -79,7 +79,7 @@ describe('sendAccessNotice', () => {
     expect(transport.sent[0].to).toBe(notice.to)
     expect(transport.sent[0].html).toContain(`href="${group}"`)
     expect(transport.sent[0].html).toContain('Entrar no grupo do WhatsApp')
-    expect(transport.sent[0].html.split('href="https://app.test/arquitetura/entrar?email=joao%40gmail.com"')).toHaveLength(3)
+    expect(transport.sent[0].html.split('href="https://app.test/arquitetura/acesso?email=joao%40gmail.com"')).toHaveLength(3)
   })
 
   it('registra o envio e marca como enviado', async () => {
@@ -95,7 +95,13 @@ describe('sendAccessNotice', () => {
       subject: 'Seu acesso: Atlas Visual — liberado',
       replyTo: 'suporte@example.com',
     })
+    expect(transport.sent[0].html).toContain('https://app.test/arquitetura/acesso?email=joao%40gmail.com')
+  })
+
+  it('reenvio vai direto para o login, sem passar pela última oportunidade', async () => {
+    await sendAccessNotice({ ...notice, kind: 'reenvio' }, deps())
     expect(transport.sent[0].html).toContain('https://app.test/arquitetura/entrar?email=joao%40gmail.com')
+    expect(transport.sent[0].html).not.toContain('/acesso?email=')
   })
 
   it('falha no envio vira falhou com o erro', async () => {
