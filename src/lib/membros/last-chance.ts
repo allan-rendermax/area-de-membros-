@@ -44,6 +44,11 @@ export function accessUrlFor(appUrl: string, storeSlug: string, email: string, s
   return `${appUrl.replace(/\/$/, '')}/${storeSlug}/acesso?email=${encodeURIComponent(email)}&sig=${sig}`
 }
 
+/** Quem vai ver a oferta no 1º clique (mesma regra da rota /acesso). */
+export function isLastChanceEligible(rule: LastChanceRule | undefined, paidCodes: readonly string[]): boolean {
+  return lastChanceTarget(rule, paidCodes, '') !== null
+}
+
 /** Para onde mandar no clique do e-mail. null = login direto. */
 export function lastChanceTarget(
   rule: LastChanceRule | undefined,

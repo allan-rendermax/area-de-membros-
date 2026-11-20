@@ -98,3 +98,14 @@ describe('accessNoticeEmail', () => {
     expect(email.html.match(/&amp;a=&quot;x&quot;/g)).toHaveLength(2)
   })
 })
+
+describe('aviso da última oportunidade', () => {
+  const frase = 'condição especial de cliente que não aparece de novo'
+  it('aparece só quando marcado', () => {
+    expect(accessNoticeEmail({ ...notice, lastChance: true }, url).html).toContain(frase)
+    expect(accessNoticeEmail(notice, url).html).not.toContain(frase)
+  })
+  it('nunca aparece no reenvio', () => {
+    expect(accessNoticeEmail({ ...notice, kind: 'reenvio', lastChance: true }, url).html).not.toContain(frase)
+  })
+})

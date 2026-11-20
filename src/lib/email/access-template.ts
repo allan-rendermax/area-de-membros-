@@ -55,6 +55,10 @@ export function accessNoticeEmail(notice: AccessNotice, loginUrl: string): { sub
 ${notice.products.map((p, i) => `<h2 style="margin:${i ? '16px' : '0'} 0 0;font-size:22px;line-height:1.3;overflow-wrap:anywhere">${escapeHtml(p.title)}</h2>`).join('')}
 </td></tr></table></td></tr>` : ''
 
+  const lastChance = notice.lastChance && notice.kind !== 'reenvio'
+    ? `<p style="margin:18px 0 0;padding:14px 16px;border-left:4px solid ${theme.accent};background:${theme.inset};font-size:14px;line-height:1.6;color:${theme.text}"><strong>Atenção:</strong> no seu primeiro acesso, você vai ver uma condição especial de cliente que não aparece de novo.</p>`
+    : ''
+
   const html = `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${store} — Área de membros</title>
 <style>p{margin:0}a:focus-visible{outline:3px solid ${theme.action};outline-offset:5px}@media(max-width:480px){.pad,.product{padding-left:24px!important;padding-right:24px!important}.title{font-size:24px!important}.outer{padding:16px 12px!important}}</style>
@@ -73,7 +77,7 @@ ${products}
 <tr><td class="pad" style="padding:28px 42px 30px">
 <a class="button" style="display:block;padding:18px 20px;background:${theme.action};color:${theme.ink};text-align:center;text-decoration:none;border-radius:6px;font-size:16px;font-weight:bold" href="${href}">Acessar meus materiais</a>
 <p style="margin:0;text-align:center;font-size:12px;line-height:1.6;color:${theme.muted};margin-top:12px">No celular ou no computador. Sem criar uma senha.</p>
-
+${lastChance}
 </td></tr>
 <tr><td class="pad" style="background:${theme.inset};padding:26px 42px 28px">
 <h2 style="font-size:18px;margin:0 0 12px">${copy.instructions}</h2>

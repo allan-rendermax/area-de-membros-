@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LAST_CHANCE_RULES, accessSignature, accessUrlFor, isValidAccessSignature, lastChanceTarget } from '@/lib/membros/last-chance'
+import { LAST_CHANCE_RULES, accessSignature, isLastChanceEligible, accessUrlFor, isValidAccessSignature, lastChanceTarget } from '@/lib/membros/last-chance'
 import { protectedStoreSlug } from '@/lib/membros/paths'
 
 const rule = LAST_CHANCE_RULES.arquitetura
@@ -47,5 +47,14 @@ describe('accessUrlFor e assinatura', () => {
 describe('rota de acesso', () => {
   it('não exige login (quem chega do e-mail ainda não entrou)', () => {
     expect(protectedStoreSlug('/arquitetura/acesso')).toBeNull()
+  })
+})
+
+describe('isLastChanceEligible', () => {
+  it('segue a mesma regra da rota', () => {
+    expect(isLastChanceEligible(rule, ['LGADK6'])).toBe(true)
+    expect(isLastChanceEligible(rule, ['LGADK6', '45E268'])).toBe(false)
+    expect(isLastChanceEligible(rule, ['4OB2DZ'])).toBe(false)
+    expect(isLastChanceEligible(undefined, ['LGADK6'])).toBe(false)
   })
 })

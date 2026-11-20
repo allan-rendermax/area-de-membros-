@@ -103,6 +103,8 @@ export type AccessNotice = {
   store: StoreRef
   products: { id: string; title: string }[]
   kind: EmailKind
+  /** Vai ver a última oportunidade no 1º clique: o e-mail avisa. */
+  lastChance?: boolean
 }
 
 export type NoticeResult = { ok: true } | { ok: false; error: string }

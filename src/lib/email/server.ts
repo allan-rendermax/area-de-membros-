@@ -7,15 +7,30 @@ import {
   listUnresolvedFailed,
   markEmailsResolved,
 } from '@/lib/data/email-log'
+import { listAllOrderRefsByEmail } from '@/lib/data/orders'
 import { getStoreById } from '@/lib/data/stores'
 import type { AccessNotice, NoticeResult } from '@/lib/domain/types'
 import { env } from '@/lib/env'
+import { LAST_CHANCE_RULES, isLastChanceEligible } from '@/lib/membros/last-chance'
 import { runResendBatch, type BatchSummary } from './batch'
 import { sendAccessNotice, type NoticeOutcome } from './notifier'
 import { createResendTransport } from './resend-transport'
 
-export function notifyAccess(notice: AccessNotice): Promise<NoticeOutcome> {
-  return sendAccessNotice(notice, {
+// Só no 1º e-mail de acesso: avisa que o 1º clique mostra uma condição de cliente. Na dúvida, não avisa.
+async function withLastChance(notice: AccessNotice): Promise<AccessNotice> {
+  const rule = LAST_CHANCE_RULES[notice.store.slug]
+  if (notice.kind !== 'acesso_novo' || !rule || !env.loginGuardSecret) return notice
+  try {
+    const orders = await listAllOrderRefsByEmail(notice.to)
+    const paid = orders.filter((o) => o.status === 'pago').map((o) => o.productCode)
+    return { ...notice, lastChance: isLastChanceEligible(rule, paid) }
+  } catch {
+    return notice
+  }
+}
+
+export async function notifyAccess(notice: AccessNotice): Promise<NoticeOutcome> {
+  return sendAccessNotice(await withLastChance(notice), {
     log: createEmailLogRepo(),
     transport: createResendTransport(),
     appUrl: env.appUrl,
