@@ -20,7 +20,7 @@ describe('lastChanceTarget', () => {
   })
 
   it('pula a oferta para quem não comprou produto elegível ou para loja sem regra', () => {
-    expect(lastChanceTarget(rule, ['4OB2DZ'], login)).toBeNull()
+    expect(lastChanceTarget(rule, ['ZZZ999'], login)).toBeNull()
     expect(lastChanceTarget(rule, [], login)).toBeNull()
     expect(lastChanceTarget(undefined, ['LGADK6'], login)).toBeNull()
   })
@@ -55,7 +55,7 @@ describe('isLastChanceEligible', () => {
   it('segue a mesma regra da rota', () => {
     expect(isLastChanceEligible(rule, ['LGADK6'])).toBe(true)
     expect(isLastChanceEligible(rule, ['LGADK6', '45E268'])).toBe(false)
-    expect(isLastChanceEligible(rule, ['4OB2DZ'])).toBe(false)
+    expect(isLastChanceEligible(rule, ['ZZZ999'])).toBe(false)
     expect(isLastChanceEligible(undefined, ['LGADK6'])).toBe(false)
   })
 })
@@ -67,5 +67,14 @@ describe('várias regras por loja', () => {
     expect(lastChanceTarget(rules, ['LGADK6'], login)).toContain('patologias.casadoconhecimento.online')
     expect(lastChanceTarget(rules, ['LGADK6', 'ZZZ111'], login)).toContain('patologias.casadoconhecimento.online')
     expect(lastChanceTarget(rules, ['ZZZ111', '45E268'], login)).toBeNull()
+  })
+})
+
+describe('Hospitalar e Paisagismo', () => {
+  it('cada um leva para a sua página e quem tem Arq Black pula', () => {
+    expect(lastChanceTarget(rule, ['4OB2DZ'], login)).toContain('hospitalar.casadoconhecimento.online/ultima-oportunidade')
+    expect(lastChanceTarget(rule, ['R2D9O3'], login)).toContain('paisagismo.casadoconhecimento.online/ultima-oportunidade')
+    expect(lastChanceTarget(rule, ['4OB2DZ', 'LX365X'], login)).toBeNull()
+    expect(lastChanceTarget(rule, ['R2D9O3', '4Z3GZM'], login)).toBeNull()
   })
 })

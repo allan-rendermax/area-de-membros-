@@ -29,6 +29,18 @@ export const LAST_CHANCE_RULES: Readonly<Record<string, readonly LastChanceRule[
       eligibleCodes: ['LGADK6', '45WX6J'],
       skipCodes: ARQ_BLACK_CODES,
     },
+    {
+      // Atlas Hospitalar (produto 4OB2DZ: Básico, Completo e Upgrade).
+      offerUrl: 'https://hospitalar.casadoconhecimento.online/ultima-oportunidade',
+      eligibleCodes: ['4OB2DZ'],
+      skipCodes: ARQ_BLACK_CODES,
+    },
+    {
+      // Atlas Paisagismo Tropical (produto R2D9O3: Básico, Completo e Upgrade).
+      offerUrl: 'https://paisagismo.casadoconhecimento.online/ultima-oportunidade',
+      eligibleCodes: ['R2D9O3'],
+      skipCodes: ARQ_BLACK_CODES,
+    },
   ],
 }
 
