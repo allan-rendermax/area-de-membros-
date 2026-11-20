@@ -10,6 +10,9 @@ import {
   type EmailTransport,
   type OutgoingEmail,
 } from '@/lib/email/notifier'
+import { accessSignature } from '@/lib/membros/last-chance'
+
+const ACCESS = `https://app.test/arquitetura/acesso?email=joao%40gmail.com&amp;sig=${accessSignature('segredo-teste', 'arquitetura', 'joao@gmail.com')}`
 
 class FakeLog implements EmailLogRepo {
   rows: ({ id: string } & EmailLogStart & Partial<EmailLogFinish>)[] = []
@@ -44,7 +47,7 @@ const notice: AccessNotice = {
 
 let log: FakeLog
 let transport: FakeTransport
-const deps = () => ({ log, transport, appUrl: 'https://app.test/', emailFrom: 'Área de Membros <acesso@grupoelevamax.com>', emailReplyTo: 'suporte@example.com' })
+const deps = () => ({ log, transport, appUrl: 'https://app.test/', emailFrom: 'Área de Membros <acesso@grupoelevamax.com>', emailReplyTo: 'suporte@example.com', linkSecret: 'segredo-teste' })
 
 beforeEach(() => {
   log = new FakeLog()
@@ -79,7 +82,7 @@ describe('sendAccessNotice', () => {
     expect(transport.sent[0].to).toBe(notice.to)
     expect(transport.sent[0].html).toContain(`href="${group}"`)
     expect(transport.sent[0].html).toContain('Entrar no grupo do WhatsApp')
-    expect(transport.sent[0].html.split('href="https://app.test/arquitetura/acesso?email=joao%40gmail.com"')).toHaveLength(3)
+    expect(transport.sent[0].html.split(`href="${ACCESS}"`)).toHaveLength(3)
   })
 
   it('registra o envio e marca como enviado', async () => {
@@ -95,7 +98,13 @@ describe('sendAccessNotice', () => {
       subject: 'Seu acesso: Atlas Visual — liberado',
       replyTo: 'suporte@example.com',
     })
-    expect(transport.sent[0].html).toContain('https://app.test/arquitetura/acesso?email=joao%40gmail.com')
+    expect(transport.sent[0].html).toContain(ACCESS)
+  })
+
+  it('sem segredo configurado, o e-mail aponta direto para o login', async () => {
+    await sendAccessNotice(notice, { ...deps(), linkSecret: undefined })
+    expect(transport.sent[0].html).toContain('https://app.test/arquitetura/entrar?email=joao%40gmail.com')
+    expect(transport.sent[0].html).not.toContain('/acesso?email=')
   })
 
   it('reenvio vai direto para o login, sem passar pela última oportunidade', async () => {

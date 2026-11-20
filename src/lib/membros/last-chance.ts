@@ -1,3 +1,5 @@
+import { createHmac, timingSafeEqual } from 'node:crypto'
+
 // Última oportunidade no primeiro acesso: o link do e-mail de acesso passa por /[loja]/acesso.
 // Quem comprou um produto elegível e ainda não tem o Arq Black vê a oferta uma vez;
 // os outros (e quem já viu, marcado por cookie) seguem direto para o login, como antes.
@@ -26,8 +28,20 @@ export const LAST_CHANCE_RULES: Readonly<Record<string, LastChanceRule>> = {
   },
 }
 
-export function accessUrlFor(appUrl: string, storeSlug: string, email: string): string {
-  return `${appUrl.replace(/\/$/, '')}/${storeSlug}/acesso?email=${encodeURIComponent(email)}`
+// Assinatura do link: sem ela, a rota não consulta compras (evita descobrir o que um e-mail comprou).
+export function accessSignature(secret: string, storeSlug: string, email: string): string {
+  return createHmac('sha256', secret).update(`ultima-oportunidade|${storeSlug}|${email}`).digest('hex').slice(0, 32)
+}
+
+export function isValidAccessSignature(secret: string, storeSlug: string, email: string, signature: string): boolean {
+  const expected = Buffer.from(accessSignature(secret, storeSlug, email))
+  const received = Buffer.from(signature)
+  return expected.length === received.length && timingSafeEqual(expected, received)
+}
+
+export function accessUrlFor(appUrl: string, storeSlug: string, email: string, secret: string): string {
+  const sig = accessSignature(secret, storeSlug, email)
+  return `${appUrl.replace(/\/$/, '')}/${storeSlug}/acesso?email=${encodeURIComponent(email)}&sig=${sig}`
 }
 
 /** Para onde mandar no clique do e-mail. null = login direto. */

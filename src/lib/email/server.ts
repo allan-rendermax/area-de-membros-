@@ -21,6 +21,7 @@ export function notifyAccess(notice: AccessNotice): Promise<NoticeOutcome> {
     appUrl: env.appUrl,
     emailFrom: env.emailFrom,
     emailReplyTo: env.emailReplyTo,
+    linkSecret: env.loginGuardSecret,
   })
 }
 

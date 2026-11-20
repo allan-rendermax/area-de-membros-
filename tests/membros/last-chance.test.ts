@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LAST_CHANCE_RULES, accessUrlFor, lastChanceTarget } from '@/lib/membros/last-chance'
+import { LAST_CHANCE_RULES, accessSignature, accessUrlFor, isValidAccessSignature, lastChanceTarget } from '@/lib/membros/last-chance'
 import { protectedStoreSlug } from '@/lib/membros/paths'
 
 const rule = LAST_CHANCE_RULES.arquitetura
@@ -25,11 +25,22 @@ describe('lastChanceTarget', () => {
   })
 })
 
-describe('accessUrlFor', () => {
-  it('monta o link de acesso da loja com o e-mail', () => {
-    expect(accessUrlFor('https://app.test/', 'arquitetura', 'joao@gmail.com')).toBe(
-      'https://app.test/arquitetura/acesso?email=joao%40gmail.com',
+describe('accessUrlFor e assinatura', () => {
+  it('monta o link de acesso com e-mail e assinatura', () => {
+    const sig = accessSignature('s3gredo', 'arquitetura', 'joao@gmail.com')
+    expect(sig).toMatch(/^[0-9a-f]{32}$/)
+    expect(accessUrlFor('https://app.test/', 'arquitetura', 'joao@gmail.com', 's3gredo')).toBe(
+      `https://app.test/arquitetura/acesso?email=joao%40gmail.com&sig=${sig}`,
     )
+  })
+
+  it('só aceita a assinatura do mesmo segredo, loja e e-mail', () => {
+    const sig = accessSignature('s3gredo', 'arquitetura', 'joao@gmail.com')
+    expect(isValidAccessSignature('s3gredo', 'arquitetura', 'joao@gmail.com', sig)).toBe(true)
+    expect(isValidAccessSignature('s3gredo', 'arquitetura', 'maria@gmail.com', sig)).toBe(false)
+    expect(isValidAccessSignature('outro', 'arquitetura', 'joao@gmail.com', sig)).toBe(false)
+    expect(isValidAccessSignature('s3gredo', 'arquitetura', 'joao@gmail.com', '')).toBe(false)
+    expect(isValidAccessSignature('s3gredo', 'arquitetura', 'joao@gmail.com', 'x'.repeat(32))).toBe(false)
   })
 })
 

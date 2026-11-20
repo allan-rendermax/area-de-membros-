@@ -29,16 +29,16 @@ export function loginUrlFor(appUrl: string, storeSlug: string, email: string): s
   return `${appUrl.replace(/\/$/, '')}/${storeSlug}/entrar?email=${encodeURIComponent(email)}`
 }
 
-/** Compra nova passa por /acesso (última oportunidade no 1º clique); reenvio vai direto ao login. */
-export function emailLinkFor(appUrl: string, notice: Pick<AccessNotice, 'kind' | 'to' | 'store'>): string {
-  return notice.kind === 'reenvio'
+/** Compra nova passa por /acesso (última oportunidade no 1º clique); reenvio, ou sem segredo, vai direto ao login. */
+export function emailLinkFor(appUrl: string, notice: Pick<AccessNotice, 'kind' | 'to' | 'store'>, linkSecret?: string): string {
+  return notice.kind === 'reenvio' || !linkSecret
     ? loginUrlFor(appUrl, notice.store.slug, notice.to)
-    : accessUrlFor(appUrl, notice.store.slug, notice.to)
+    : accessUrlFor(appUrl, notice.store.slug, notice.to, linkSecret)
 }
 
 export async function sendAccessNotice(
   notice: AccessNotice,
-  deps: { log: EmailLogRepo; transport: EmailTransport; appUrl: string; emailFrom: string; emailReplyTo?: string },
+  deps: { log: EmailLogRepo; transport: EmailTransport; appUrl: string; emailFrom: string; emailReplyTo?: string; linkSecret?: string },
 ): Promise<NoticeOutcome> {
   const logId = await deps.log.start({
     storeId: notice.store.id,
@@ -49,7 +49,7 @@ export async function sendAccessNotice(
   })
 
   try {
-    const { subject, html } = accessNoticeEmail(notice, emailLinkFor(deps.appUrl, notice))
+    const { subject, html } = accessNoticeEmail(notice, emailLinkFor(deps.appUrl, notice, deps.linkSecret))
     const { providerId } = await deps.transport.send({
       from: formatFrom(notice.store.name, deps.emailFrom),
       to: notice.to,

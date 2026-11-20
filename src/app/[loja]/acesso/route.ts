@@ -7,6 +7,7 @@ import {
   LAST_CHANCE_COOKIE,
   LAST_CHANCE_COOKIE_MAX_AGE,
   LAST_CHANCE_RULES,
+  isValidAccessSignature,
   lastChanceTarget,
 } from '@/lib/membros/last-chance'
 
@@ -20,7 +21,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const login = loginUrlFor(env.appUrl, loja, email)
   const rule = LAST_CHANCE_RULES[loja]
 
+  const sig = request.nextUrl.searchParams.get('sig') ?? ''
   if (!rule || !email || request.cookies.get(LAST_CHANCE_COOKIE)) return NextResponse.redirect(login)
+  // Só consulta compras com link assinado pelo servidor (o do e-mail). Sem assinatura: login.
+  if (!isValidAccessSignature(env.loginGuardSecret, loja, email, sig)) return NextResponse.redirect(login)
 
   let target: string | null = null
   try {
