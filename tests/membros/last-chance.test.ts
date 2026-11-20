@@ -3,6 +3,7 @@ import { LAST_CHANCE_RULES, accessSignature, isLastChanceEligible, accessUrlFor,
 import { protectedStoreSlug } from '@/lib/membros/paths'
 
 const rule = LAST_CHANCE_RULES.arquitetura
+const outro = { offerUrl: 'https://outro.test/oferta', eligibleCodes: ['ZZZ111'], skipCodes: ['45E268'] }
 const login = 'https://app.test/arquitetura/entrar?email=joao%40gmail.com'
 
 describe('lastChanceTarget', () => {
@@ -56,5 +57,15 @@ describe('isLastChanceEligible', () => {
     expect(isLastChanceEligible(rule, ['LGADK6', '45E268'])).toBe(false)
     expect(isLastChanceEligible(rule, ['4OB2DZ'])).toBe(false)
     expect(isLastChanceEligible(undefined, ['LGADK6'])).toBe(false)
+  })
+})
+
+describe('várias regras por loja', () => {
+  it('cada Atlas leva para a sua página', () => {
+    const rules = [...rule, outro]
+    expect(lastChanceTarget(rules, ['ZZZ111'], login)).toBe(`https://outro.test/oferta?next=${encodeURIComponent(login)}`)
+    expect(lastChanceTarget(rules, ['LGADK6'], login)).toContain('patologias.casadoconhecimento.online')
+    expect(lastChanceTarget(rules, ['LGADK6', 'ZZZ111'], login)).toContain('patologias.casadoconhecimento.online')
+    expect(lastChanceTarget(rules, ['ZZZ111', '45E268'], login)).toBeNull()
   })
 })

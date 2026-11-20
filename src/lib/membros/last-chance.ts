@@ -19,13 +19,17 @@ export const LAST_CHANCE_COOKIE_MAX_AGE = 60 * 60 * 24 * 180
 // Arq Black de todas as linhas (plano "Acesso total"): quem tem qualquer um já tem tudo.
 const ARQ_BLACK_CODES = ['45E268', '4Z3KBP', 'LG5QNN', 'LX365X', '4Z3GZM', 'RV372G'] as const
 
-export const LAST_CHANCE_RULES: Readonly<Record<string, LastChanceRule>> = {
-  arquitetura: {
-    offerUrl: 'https://patologias.casadoconhecimento.online/ultima-oportunidade',
-    // Atlas Patologias Completo (LGADK6) e Básico (45WX6J).
-    eligibleCodes: ['LGADK6', '45WX6J'],
-    skipCodes: ARQ_BLACK_CODES,
-  },
+// Uma regra por Atlas: cada produto tem a sua página. Para incluir outro, acrescente um item na lista.
+// Quem tem mais de um produto elegível vê a primeira regra da lista que casar.
+export const LAST_CHANCE_RULES: Readonly<Record<string, readonly LastChanceRule[]>> = {
+  arquitetura: [
+    {
+      // Atlas Patologias Completo (LGADK6) e Básico (45WX6J).
+      offerUrl: 'https://patologias.casadoconhecimento.online/ultima-oportunidade',
+      eligibleCodes: ['LGADK6', '45WX6J'],
+      skipCodes: ARQ_BLACK_CODES,
+    },
+  ],
 }
 
 // Assinatura do link: sem ela, a rota não consulta compras (evita descobrir o que um e-mail comprou).
@@ -45,19 +49,21 @@ export function accessUrlFor(appUrl: string, storeSlug: string, email: string, s
 }
 
 /** Quem vai ver a oferta no 1º clique (mesma regra da rota /acesso). */
-export function isLastChanceEligible(rule: LastChanceRule | undefined, paidCodes: readonly string[]): boolean {
-  return lastChanceTarget(rule, paidCodes, '') !== null
+export function isLastChanceEligible(rules: readonly LastChanceRule[] | undefined, paidCodes: readonly string[]): boolean {
+  return lastChanceTarget(rules, paidCodes, '') !== null
 }
 
 /** Para onde mandar no clique do e-mail. null = login direto. */
 export function lastChanceTarget(
-  rule: LastChanceRule | undefined,
+  rules: readonly LastChanceRule[] | undefined,
   paidCodes: readonly string[],
   loginUrl: string,
 ): string | null {
-  if (!rule) return null
   const codes = new Set(paidCodes)
-  if (rule.skipCodes.some((code) => codes.has(code))) return null
-  if (!rule.eligibleCodes.some((code) => codes.has(code))) return null
-  return `${rule.offerUrl}?next=${encodeURIComponent(loginUrl)}`
+  for (const rule of rules ?? []) {
+    if (rule.skipCodes.some((code) => codes.has(code))) continue
+    if (!rule.eligibleCodes.some((code) => codes.has(code))) continue
+    return `${rule.offerUrl}?next=${encodeURIComponent(loginUrl)}`
+  }
+  return null
 }
