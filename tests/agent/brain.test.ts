@@ -69,6 +69,45 @@ describe('cérebro do agente', () => {
     expect(results(h.calls[1].messages.at(-1)!)[0]).toMatchObject({ tool_use_id: 'reenviar_acesso', is_error: true })
   })
 
+  it('responder no mesmo lote do reenvio é adiado', async () => {
+    const h = harness([
+      response([
+        tool('buscar_compra', { email: 'cliente@example.com' }),
+        tool('reenviar_acesso', { email: 'cliente@example.com' }),
+        tool('responder', { texto: 'Reenviei.' }),
+      ]),
+      response([tool('escalar', { motivo: 'reenvio_recusado', resumo: 'Cota insuficiente.' })]),
+    ])
+    h.tools.reenviar_acesso.mockResolvedValueOnce({ ok: false, reason: 'cota' })
+    expect(await runAgent(h.input)).toEqual({ replied: false, escalated: true })
+    expect(h.tools.responder).not.toHaveBeenCalled()
+    expect(h.tools.reenviar_acesso).toHaveBeenCalledExactlyOnceWith('cliente@example.com')
+    expect(h.tools.escalar).toHaveBeenCalledExactlyOnceWith('reenvio_recusado', 'Cota insuficiente.')
+    expect(results(h.calls[1].messages.at(-1)!)).toEqual([
+      expect.objectContaining({ tool_use_id: 'buscar_compra' }),
+      expect.objectContaining({ tool_use_id: 'reenviar_acesso', is_error: true }),
+      { type: 'tool_result', tool_use_id: 'responder', is_error: true, content: 'aguarde o resultado das ferramentas antes de responder' },
+    ])
+  })
+
+  it.each(['buscar_compra', 'reenviar_acesso'] as const)('adia responder antes de %s no lote e permite responder no próximo', async name => {
+    const h = harness([
+      ...(name === 'reenviar_acesso' ? [response([tool('buscar_compra', { email: 'cliente@example.com' })])] : []),
+      response([
+        tool('responder', { texto: 'Não enviar antes dos resultados.' }, 'deferred'),
+        tool(name, { email: 'cliente@example.com' }),
+      ]),
+      response([tool('responder', { texto: 'Resposta após os resultados.' })]),
+    ])
+    expect(await runAgent(h.input)).toEqual({ replied: true, escalated: false })
+    expect(h.tools.responder).toHaveBeenCalledExactlyOnceWith('Resposta após os resultados.')
+    expect(h.tools.escalar).not.toHaveBeenCalled()
+    expect(h.tools[name]).toHaveBeenCalledExactlyOnceWith('cliente@example.com')
+    expect(results(h.calls.at(-1)!.messages.at(-1)!)[0]).toEqual({
+      type: 'tool_result', tool_use_id: 'deferred', is_error: true, content: 'aguarde o resultado das ferramentas antes de responder',
+    })
+  })
+
   it('segunda chamada a responder é ignorada', async () => {
     const h = harness([response([
       tool('responder', { texto: 'Primeira' }, 'reply-1'), tool('responder', { texto: 'Segunda' }, 'reply-2'),
@@ -139,7 +178,8 @@ describe('cérebro do agente', () => {
 
   it('não reaproveita a autorização de compra em outra execução', async () => {
     const h = harness([
-      response([tool('buscar_compra', { email: 'cliente@example.com' }), tool('responder', { texto: 'Ok' })]),
+      response([tool('buscar_compra', { email: 'cliente@example.com' })]),
+      response([tool('responder', { texto: 'Ok' })]),
       response([tool('reenviar_acesso', { email: 'cliente@example.com' })]),
       response([tool('escalar', { motivo: 'compra_nao_encontrada', resumo: 'Precisa buscar novamente.' })]),
     ])
@@ -155,6 +195,7 @@ describe('cérebro do agente', () => {
     ['responder', '{"texto":"JSON não parseado"}'],
     ['escalar', { motivo: 'inventado', resumo: 'x' }],
     ['escalar', { motivo: 'outro' }],
+    ['escalar', { motivo: 'outro', resumo: '  ' }],
     ['ferramenta_inventada', {}],
   ])('recusa entrada inválida em %s e devolve tool_result de erro', async (name, input) => {
     const h = harness([response([tool(name, input, 'invalid')]), response([tool('responder', { texto: 'Vou verificar.' })])])
@@ -241,6 +282,54 @@ describe('cérebro do agente', () => {
     expect(h.callModel).toHaveBeenCalledTimes(1)
   })
 
+  it('escalar que falha depois de responder dispara escalação de contingência', async () => {
+    const h = harness([response([
+      tool('responder', { texto: 'Vou verificar com a equipe.' }),
+      tool('escalar', { motivo: 'reembolso', resumo: 'Pediu reembolso.' }),
+    ])])
+    h.tools.escalar.mockRejectedValueOnce(new Error('falha de escalação'))
+    expect(await runAgent(h.input)).toEqual({ replied: true, escalated: true })
+    expect(h.callModel).toHaveBeenCalledTimes(1)
+    expect(h.tools.responder).toHaveBeenCalledExactlyOnceWith('Vou verificar com a equipe.')
+    expect(h.tools.escalar).toHaveBeenCalledTimes(2)
+    expect(h.tools.escalar).toHaveBeenNthCalledWith(1, 'reembolso', 'Pediu reembolso.')
+    expect(h.tools.escalar).toHaveBeenNthCalledWith(2, 'sem_solucao', expect.any(String))
+    const live = h.callModel.mock.calls[0][0].messages
+    expect(results(live.at(-1)!)[1]).toMatchObject({ tool_use_id: 'escalar', is_error: true, content: 'erro_ferramenta' })
+  })
+
+  it('escalar recusado antes de responder também dispara contingência', async () => {
+    const h = harness([response([
+      tool('escalar', { motivo: 'reembolso', resumo: 'Pediu reembolso.' }),
+      tool('responder', { texto: 'Vou verificar com a equipe.' }),
+    ])])
+    h.tools.escalar.mockResolvedValueOnce({ ok: false })
+    expect(await runAgent(h.input)).toEqual({ replied: true, escalated: true })
+    expect(h.callModel).toHaveBeenCalledTimes(1)
+    expect(h.tools.escalar).toHaveBeenCalledTimes(2)
+    expect(h.tools.escalar).toHaveBeenNthCalledWith(2, 'sem_solucao', expect.any(String))
+  })
+
+  it('escalação bem-sucedida após falha no mesmo lote dispensa contingência', async () => {
+    const h = harness([response([
+      tool('responder', { texto: 'Vou verificar com a equipe.' }),
+      tool('escalar', { motivo: 'reembolso', resumo: 'Pediu reembolso.' }, 'failed'),
+      tool('escalar', { motivo: 'reembolso', resumo: 'Pediu reembolso.' }, 'success'),
+    ])])
+    h.tools.escalar.mockResolvedValueOnce({ ok: false })
+    expect(await runAgent(h.input)).toEqual({ replied: true, escalated: true })
+    expect(h.tools.escalar).toHaveBeenCalledTimes(2)
+    expect(h.tools.escalar).not.toHaveBeenCalledWith('sem_solucao', expect.any(String))
+  })
+
+  it('escalar sozinho encerra sem exigir responder', async () => {
+    const h = harness([response([tool('escalar', { motivo: 'reembolso', resumo: 'Pediu reembolso.' })])])
+    expect(await runAgent(h.input)).toEqual({ replied: false, escalated: true })
+    expect(h.tools.escalar).toHaveBeenCalledExactlyOnceWith('reembolso', 'Pediu reembolso.')
+    expect(h.tools.responder).not.toHaveBeenCalled()
+    expect(h.callModel).toHaveBeenCalledTimes(1)
+  })
+
   it('converte o histórico, descarta assistants iniciais e junta papéis consecutivos', async () => {
     const h = harness([response([tool('responder', { texto: 'Ok' })])])
     const messages = [
@@ -265,9 +354,10 @@ describe('cérebro do agente', () => {
       expect(t.input_schema).toMatchObject({ type: 'object', additionalProperties: false })
       expect(t.input_schema.required).toEqual(t.name === 'escalar' ? ['motivo', 'resumo'] : t.name === 'responder' ? ['texto'] : ['email'])
     }
-    expect(h.calls[0].tools[2].input_schema.properties).toMatchObject({ motivo: { enum: [
+    expect(h.calls[0].tools[2].input_schema.properties).toEqual({ motivo: { type: 'string', enum: [
       'reembolso', 'ameaca', 'compra_nao_encontrada', 'hotmart', 'troca_de_email', 'reenvio_recusado', 'fora_do_escopo', 'reclamacao', 'sem_solucao', 'outro',
-    ] } })
+    ] }, resumo: { type: 'string' } })
+    expect(h.calls[0].tools[3].input_schema.properties).toEqual({ texto: { type: 'string' } })
   })
 })
 
@@ -281,6 +371,7 @@ describe('instruções', () => {
     expect(prompt).toMatch(/nunca revelar dados de outro cliente/i)
     expect(prompt).toMatch(/nunca dizer ao cliente quais produtos ou detalhes de entrega/i)
     expect(prompt).toMatch(/no máximo uma vez/i)
+    expect(prompt).toContain('Quando estiver dentro da janela, chame responder uma única vez com o texto de encaminhamento do banco (tópico escalacao) no mesmo lote de escalar.')
   })
 
   it('não fixa preços nem links fora do banco e mantém o prefixo estável entre datas e plataformas', () => {

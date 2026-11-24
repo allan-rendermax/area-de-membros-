@@ -60,14 +60,14 @@ const toolDefinitions: BetaTool[] = [
     name: 'escalar', strict: true,
     description: 'Encaminha ao atendimento humano e encerra a execução. Resuma só o necessário, sem dados pessoais desnecessários.',
     input_schema: {
-      type: 'object', properties: { motivo: { type: 'string', enum: [...escalationReasons] }, resumo: { type: 'string', minLength: 1 } },
+      type: 'object', properties: { motivo: { type: 'string', enum: [...escalationReasons] }, resumo: { type: 'string' } },
       required: ['motivo', 'resumo'], additionalProperties: false,
     },
   },
   {
     name: 'responder', strict: true,
     description: 'Envia uma mensagem curta em pt-BR ao cliente. Única forma de responder; no máximo uma vez por execução.',
-    input_schema: { type: 'object', properties: { texto: { type: 'string', minLength: 1 } }, required: ['texto'], additionalProperties: false },
+    input_schema: { type: 'object', properties: { texto: { type: 'string' } }, required: ['texto'], additionalProperties: false },
   },
 ]
 
@@ -101,6 +101,7 @@ export async function runAgent(input: {
   const maxSteps = Number.isInteger(requestedSteps) && requestedSteps >= 0 ? Math.min(requestedSteps, 6) : 6
   let replied = false
   let escalated = false
+  let escalationFailed = false
   let replyAttempted = false
   let reminderSent = false
 
@@ -111,7 +112,7 @@ export async function runAgent(input: {
     return result
   }
 
-  async function executeTool(block: BetaToolUseBlock): Promise<BetaToolResultBlockParam> {
+  async function executeTool(block: BetaToolUseBlock, deferReply: boolean): Promise<BetaToolResultBlockParam> {
     const base = { type: 'tool_result' as const, tool_use_id: block.id }
     const parsed = toolInput.safeParse({ name: block.name, input: block.input })
     if (!parsed.success) return { ...base, is_error: true, content: 'entrada inválida' }
@@ -129,6 +130,7 @@ export async function runAgent(input: {
           result = await input.tools.reenviar_acesso(call.input.email)
           break
         case 'responder':
+          if (deferReply) return { ...base, is_error: true, content: 'aguarde o resultado das ferramentas antes de responder' }
           if (replyAttempted) return { ...base, is_error: true, content: 'já respondido' }
           replyAttempted = true
           result = await input.tools.responder(call.input.texto)
@@ -141,6 +143,7 @@ export async function runAgent(input: {
       }
       return { ...base, content: JSON.stringify(result ?? null), ...(isFailure(result) ? { is_error: true } : {}) }
     } catch {
+      if (call.name === 'escalar') escalationFailed = true
       // Do not leak exception messages, which may include customer data.
       return { ...base, is_error: true, content: 'erro_ferramenta' }
     }
@@ -162,9 +165,10 @@ export async function runAgent(input: {
     }
 
     if (response.stop_reason === 'tool_use') {
+      const deferReply = response.content.some(block => block.type === 'tool_use' && (block.name === 'buscar_compra' || block.name === 'reenviar_acesso'))
       const results: BetaToolResultBlockParam[] = []
       for (const block of response.content) {
-        if (block.type === 'tool_use') results.push(await executeTool(block))
+        if (block.type === 'tool_use') results.push(await executeTool(block, deferReply))
       }
       // Keep every block, in order, including opaque thinking signatures.
       messages.push({ role: 'assistant', content: response.content })
@@ -183,6 +187,8 @@ export async function runAgent(input: {
     }
   }
 
-  if (!replied && !escalated) await escalate('sem_solucao', 'limite_de_chamadas_ao_modelo')
+  if (!escalated && (!replied || escalationFailed)) {
+    await escalate('sem_solucao', escalationFailed ? 'falha_ao_escalar' : 'limite_de_chamadas_ao_modelo')
+  }
   return { replied, escalated }
 }

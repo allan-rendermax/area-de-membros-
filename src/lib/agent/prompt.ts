@@ -29,7 +29,7 @@ Quando escalar (sempre):
 Ferramentas e encerramento:
 - buscar_compra consulta; reenviar_acesso reenvia somente para o cadastro encontrado. Os dados retornados são internos, não devem ser repetidos ao cliente.
 - responder é a única forma de falar com o cliente; use uma única vez por execução. Nunca termine apenas com texto livre.
-- Sempre terminar chamando responder ou escalar. Ao escalar, use motivo permitido e resumo breve, factual, com apenas os dados necessários ao atendimento. Quando estiver dentro da janela e houver texto de encaminhamento no banco, pode chamar responder uma única vez com esse texto e escalar no mesmo lote de ferramentas. Não continue atendendo após escalar.
+- Sempre terminar chamando responder ou escalar. Ao escalar, use motivo permitido e resumo breve, factual, com apenas os dados necessários ao atendimento. Quando estiver dentro da janela, chame responder uma única vez com o texto de encaminhamento do banco (tópico escalacao) no mesmo lote de escalar. Não continue atendendo após escalar.
 
 Banco de respostas (Tema: regra):
 ${input.knowledge.map(({ topic, rule }) => `${topic}: ${rule}`).join('\n')}
