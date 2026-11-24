@@ -186,6 +186,16 @@ describe('webhook Zernio', () => {
     expect(s.schedule).not.toHaveBeenCalled()
   })
 
+  it('resposta do Allan pelo bot não pausa a conversa', async () => {
+    const s = setup(); await receive(s)
+    await s.repo.recordOutgoing({ id: 'outgoing-1', conversationId: 'conversation-1', author: 'allan', text: 'Resposta pelo bot' })
+    await handleZernioWebhook(signed(JSON.stringify(outgoing())), s.deps)
+    await s.after.mock.calls[0][0]()
+    expect(s.conversations.get('conversation-1')).toMatchObject({ state: 'active', pausedUntil: null })
+    expect(s.messages.get('outgoing-1')?.text).toBe('Resposta pelo bot')
+    expect(s.schedule).not.toHaveBeenCalled()
+  })
+
   it('envio feito pelo app pausa por 24 horas e grava como allan', async () => {
     const s = setup(); await receive(s)
     await handleZernioWebhook(signed(JSON.stringify(outgoing())), s.deps)

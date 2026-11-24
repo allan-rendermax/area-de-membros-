@@ -37,6 +37,7 @@ export interface AgentRepository {
   claimProcessing(conversationId: string, until: Date, now: Date): Promise<boolean>
   releaseProcessing(conversationId: string, until: Date): Promise<void>
   incrementLookupMiss(conversationId: string): Promise<number>
+  resetLookupMisses(conversationId: string): Promise<void>
   recentMessages(id: string, limit: number): Promise<AgentMessage[]>
   setState(id: string, state: 'active' | 'escalated' | 'paused'): Promise<void>
   isEnabled(storeId: string): Promise<boolean>
@@ -88,7 +89,7 @@ export function createAgentRepository(): AgentRepository {
       return true
     },
     async isOwnOutgoing(id) {
-      const { data, error } = await db.from('agent_messages').select('id').eq('id', id).eq('author', 'agente').maybeSingle()
+      const { data, error } = await db.from('agent_messages').select('id').eq('id', id).eq('direction', 'out').in('author', ['agente', 'allan']).maybeSingle()
       if (error) throw new Error('agent_message_read_failed')
       return data !== null
     },
@@ -120,6 +121,10 @@ export function createAgentRepository(): AgentRepository {
       const { data, error } = await db.rpc('agent_increment_lookup_miss', { p_conversation_id: conversationId })
       if (error || !Number.isSafeInteger(data) || data < 1) throw new Error('agent_lookup_miss_update_failed')
       return data as number
+    },
+    async resetLookupMisses(conversationId) {
+      const { error } = await db.from('agent_conversations').update({ lookup_misses: 0 }).eq('id', conversationId)
+      if (error) throw new Error('agent_lookup_miss_update_failed')
     },
     async recentMessages(id, limit) {
       if (limit <= 0) return []

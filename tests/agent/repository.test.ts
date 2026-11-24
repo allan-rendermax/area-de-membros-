@@ -81,6 +81,21 @@ describe('trava de processamento', () => {
 })
 
 describe('incrementLookupMiss', () => {
+  it('resetLookupMisses zera apenas a conversa indicada', async () => {
+    io.fetch.mockResolvedValueOnce(new Response(null, { status: 204 }))
+    await createAgentRepository().resetLookupMisses('conversation')
+    const [url, request] = io.fetch.mock.calls[0]
+    expect(new URL(url).pathname).toBe('/rest/v1/agent_conversations')
+    expect(new URL(url).searchParams.get('id')).toBe('eq.conversation')
+    expect(request.method).toBe('PATCH')
+    expect(JSON.parse(request.body)).toEqual({ lookup_misses: 0 })
+  })
+
+  it('resetLookupMisses não expõe falha do banco', async () => {
+    io.fetch.mockResolvedValueOnce(new Response(JSON.stringify({ message: 'privado@example.test' }), { status: 500 }))
+    await expect(createAgentRepository().resetLookupMisses('conversation')).rejects.toThrow(/^agent_lookup_miss_update_failed$/)
+  })
+
   it('usa RPC atômico vinculado à conversa e retorna o novo total', async () => {
     io.fetch.mockResolvedValueOnce(new Response('2', { headers: { 'Content-Type': 'application/json' } }))
     expect(await createAgentRepository().incrementLookupMiss('conversation')).toBe(2)
@@ -111,5 +126,16 @@ describe('incrementLookupMiss', () => {
     expect(await repo.incrementLookupMiss('other')).toBe(1)
     expect(await repo.incrementLookupMiss('conversation')).toBe(3)
     await expect(repo.incrementLookupMiss('missing')).rejects.toThrow('agent_lookup_miss_update_failed')
+  })
+})
+
+describe('isOwnOutgoing', () => {
+  it('consulta mensagens de saída gravadas por agente ou Allan', async () => {
+    io.fetch.mockResolvedValueOnce(new Response(JSON.stringify({ id: 'outgoing' }), { headers: { 'Content-Type': 'application/json' } }))
+    expect(await createAgentRepository().isOwnOutgoing('outgoing')).toBe(true)
+    const url = new URL(io.fetch.mock.calls[0][0])
+    expect(url.searchParams.get('id')).toBe('eq.outgoing')
+    expect(url.searchParams.get('author')).toBe('in.(agente,allan)')
+    expect(url.searchParams.get('direction')).toBe('eq.out')
   })
 })
