@@ -37,7 +37,9 @@ export function memoryRepository() {
       processingUntil.set(id, until)
       return true
     },
-    async releaseProcessing(id) { processingUntil.delete(id) },
+    async releaseProcessing(id, until) {
+      if (processingUntil.get(id)?.getTime() === until.getTime()) processingUntil.delete(id)
+    },
     async incrementLookupMiss(id) {
       if (!conversations.has(id)) throw new Error('agent_lookup_miss_update_failed')
       const total = (lookupMisses.get(id) ?? 0) + 1

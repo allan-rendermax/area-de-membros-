@@ -35,7 +35,7 @@ export interface AgentRepository {
   pauseConversation(id: string, until: Date): Promise<void>
   getConversation(id: string): Promise<AgentConversation | null>
   claimProcessing(conversationId: string, until: Date, now: Date): Promise<boolean>
-  releaseProcessing(conversationId: string): Promise<void>
+  releaseProcessing(conversationId: string, until: Date): Promise<void>
   incrementLookupMiss(conversationId: string): Promise<number>
   recentMessages(id: string, limit: number): Promise<AgentMessage[]>
   setState(id: string, state: 'active' | 'escalated' | 'paused'): Promise<void>
@@ -111,8 +111,9 @@ export function createAgentRepository(): AgentRepository {
       if (error) throw new Error('agent_processing_update_failed')
       return (data?.length ?? 0) > 0
     },
-    async releaseProcessing(conversationId) {
-      const { error } = await db.from('agent_conversations').update({ processing_until: null }).eq('id', conversationId)
+    async releaseProcessing(conversationId, until) {
+      const { error } = await db.from('agent_conversations').update({ processing_until: null })
+        .eq('id', conversationId).eq('processing_until', until.toISOString())
       if (error) throw new Error('agent_processing_update_failed')
     },
     async incrementLookupMiss(conversationId) {

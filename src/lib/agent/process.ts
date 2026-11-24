@@ -24,24 +24,38 @@ export type ProcessDependencies = {
 }
 
 export async function processConversation(input: ProcessInput, deps: ProcessDependencies): Promise<ProcessResult> {
+  const startedAt = deps.now()
+  const until = new Date(startedAt.getTime() + 300000)
   await deps.sleep(deps.config.batchSeconds * 1000)
   const { repo } = deps
   const stored = await repo.getConversation(input.conversationId)
   if (!stored || stored.storeId !== deps.storeId) return 'ignorado'
 
-  const beforeClaim = await repo.recentMessages(stored.id, 12)
-  if (beforeClaim.findLast(message => message.author === 'cliente')?.id !== input.messageId) return 'ignorado'
+  let beforeClaim = await repo.recentMessages(stored.id, 12)
+  const pending = beforeClaim.findLast(message => message.author === 'cliente')
+  if (!pending || pending.id !== input.messageId) return 'ignorado'
 
   let claimTime = deps.now()
-  const deadline = claimTime.getTime() + 200000
-  while (!await repo.claimProcessing(stored.id, new Date(claimTime.getTime() + 290000), claimTime)) {
+  const deadline = claimTime.getTime() + 120000
+  let claimed = await repo.claimProcessing(stored.id, until, claimTime)
+  while (!claimed) {
     const remaining = deadline - deps.now().getTime()
-    if (remaining <= 0) return 'ignorado'
+    if (remaining <= 0) break
     await deps.sleep(Math.min(3000, remaining))
-    const latest = await repo.recentMessages(stored.id, 12)
-    if (latest.findLast(message => message.author === 'cliente')?.id !== input.messageId) return 'ignorado'
+    beforeClaim = await repo.recentMessages(stored.id, 12)
+    if (beforeClaim.findLast(message => message.author === 'cliente')?.id !== input.messageId) return 'ignorado'
     claimTime = deps.now()
-    if (claimTime.getTime() >= deadline) return 'ignorado'
+    if (claimTime.getTime() >= deadline) break
+    claimed = await repo.claimProcessing(stored.id, until, claimTime)
+  }
+  if (!claimed) {
+    try {
+      await deps.escalate({ conversation: stored, reason: 'sem_vez', summary: pending.text, recent: beforeClaim })
+      return 'escalado'
+    } catch {
+      console.error('agent_process_failed')
+      return 'ignorado'
+    }
   }
 
   try {
@@ -75,7 +89,6 @@ export async function processConversation(input: ProcessInput, deps: ProcessDepe
       await escalate('fora_da_janela')
       return 'escalado'
     }
-    if (recent.at(-1)?.author === 'agente') return 'ignorado'
 
     try {
       const system = buildSystemPrompt({
@@ -84,9 +97,13 @@ export async function processConversation(input: ProcessInput, deps: ProcessDepe
           timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric',
         }).format(now),
       })
+      const messages = recent.map(message => ({ role: message.author === 'cliente' ? 'user' as const : 'assistant' as const, text: message.text }))
+      if (recent.at(-1)?.author !== 'cliente') {
+        messages.push({ role: 'user', text: '[Mensagem do cliente ainda sem resposta]: ' + incoming.text })
+      }
       const result = await deps.brain({
         system,
-        messages: recent.map(message => ({ role: message.author === 'cliente' ? 'user' : 'assistant', text: message.text })),
+        messages,
         tools: await deps.buildTools(conversation), callModel: deps.callModel,
       })
       if (result.escalated) return 'escalado'
@@ -101,7 +118,11 @@ export async function processConversation(input: ProcessInput, deps: ProcessDepe
       }
     }
   } finally {
-    await repo.releaseProcessing(stored.id)
+    try {
+      await repo.releaseProcessing(stored.id, until)
+    } catch {
+      console.error('agent_release_failed')
+    }
   }
 }
 

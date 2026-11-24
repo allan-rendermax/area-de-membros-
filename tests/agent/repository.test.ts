@@ -32,12 +32,13 @@ describe('trava de processamento', () => {
     expect(JSON.parse(request.body)).toEqual({ processing_until: '2026-11-24T12:04:50.000Z' })
   })
 
-  it('release limpa apenas a trava da conversa indicada', async () => {
+  it('release limpa apenas a trava da conversa e do dono indicados', async () => {
     io.fetch.mockResolvedValueOnce(new Response(null, { status: 204 }))
-    await createAgentRepository().releaseProcessing('conversation')
+    await createAgentRepository().releaseProcessing('conversation', until)
     const [url, request] = io.fetch.mock.calls[0]
     expect(new URL(url).pathname).toBe('/rest/v1/agent_conversations')
     expect(new URL(url).searchParams.get('id')).toBe('eq.conversation')
+    expect(new URL(url).searchParams.get('processing_until')).toBe('eq.2026-11-24T12:04:50.000Z')
     expect(request.method).toBe('PATCH')
     expect(JSON.parse(request.body)).toEqual({ processing_until: null })
   })
@@ -45,7 +46,7 @@ describe('trava de processamento', () => {
   it.each(['claim', 'release'])('propaga falha de %s sem dados privados', async operation => {
     io.fetch.mockResolvedValueOnce(new Response(JSON.stringify({ message: 'cliente@example.test' }), { status: 500 }))
     const repo = createAgentRepository()
-    const result = operation === 'claim' ? repo.claimProcessing('conversation', until, now) : repo.releaseProcessing('conversation')
+    const result = operation === 'claim' ? repo.claimProcessing('conversation', until, now) : repo.releaseProcessing('conversation', until)
     await expect(result).rejects.toThrow(/^agent_processing_update_failed$/)
   })
 
@@ -60,10 +61,22 @@ describe('trava de processamento', () => {
     expect(await repo.claimProcessing('conversation', until, now)).toBe(false)
     await repo.recordIncoming({ ...incoming, id: 'm-3', conversationId: 'other' })
     expect(await repo.claimProcessing('other', until, now)).toBe(true)
-    await repo.releaseProcessing('conversation')
+    await repo.releaseProcessing('conversation', new Date(until))
     expect(await repo.claimProcessing('conversation', until, now)).toBe(true)
     expect(await repo.claimProcessing('conversation', new Date(until.getTime() + 290000), until)).toBe(true)
     expect(await repo.claimProcessing('missing', until, now)).toBe(false)
+  })
+
+  it('release não apaga trava de outra execução', async () => {
+    const { repo } = memoryRepository()
+    await repo.recordIncoming({ id: 'm-1', conversationId: 'conversation', storeId: 'store', accountId: 'account', platform: 'instagram', customerName: 'Ana', text: 'Ajuda', at: now })
+    const nextUntil = new Date('2026-11-24T12:09:50Z')
+    expect(await repo.claimProcessing('conversation', until, now)).toBe(true)
+    expect(await repo.claimProcessing('conversation', nextUntil, until)).toBe(true)
+    await repo.releaseProcessing('conversation', until)
+    expect(await repo.claimProcessing('conversation', nextUntil, until)).toBe(false)
+    await repo.releaseProcessing('conversation', new Date(nextUntil))
+    expect(await repo.claimProcessing('conversation', nextUntil, until)).toBe(true)
   })
 })
 

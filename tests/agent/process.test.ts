@@ -36,7 +36,7 @@ async function setup() {
     async responder(text) {
       const { messageId } = await zernio.send()
       await memory.repo.recordOutgoing({ id: messageId, conversationId: input.conversationId, author: 'agente', text })
-      memory.messages.get(messageId)!.createdAt = new Date(now.getTime() + 10)
+      memory.messages.get(messageId)!.createdAt = deps.now()
       return { ok: true }
     },
   }
@@ -73,6 +73,8 @@ afterEach(() => vi.restoreAllMocks())
 describe('processamento da conversa', () => {
   it('segunda execução espera a primeira terminar e responde com o histórico novo', async () => {
     const s = await setup()
+    let elapsed = 0
+    s.deps.now = () => new Date(now.getTime() + elapsed)
     const started = deferred()
     const finishFirst = deferred()
     const waiting = deferred()
@@ -88,10 +90,12 @@ describe('processamento da conversa', () => {
         waiting.resolve()
         await retry.promise
       }
+      elapsed += ms
     })
     const first = processConversation(input, s.deps)
     await started.promise
-    await s.incoming('incoming-2', 'Outra dúvida', new Date(now.getTime() + 15000))
+    elapsed = 15000
+    await s.incoming('incoming-2', 'Outra dúvida', s.deps.now())
     const second = processConversation({ ...input, messageId: 'incoming-2' }, s.deps)
     try {
       await Promise.race([waiting.promise, second])
@@ -99,6 +103,7 @@ describe('processamento da conversa', () => {
       expect(s.deps.brain).toHaveBeenCalledTimes(1)
       expect(s.zernio.send).not.toHaveBeenCalled()
     } finally {
+      elapsed = 26000
       finishFirst.resolve()
       await first
       retry.resolve()
@@ -109,11 +114,39 @@ describe('processamento da conversa', () => {
     expect(s.deps.brain).toHaveBeenCalledTimes(2)
     expect(s.deps.brain.mock.calls[1][0].messages).toEqual([
       { role: 'user', text: 'Preciso de ajuda' },
-      { role: 'assistant', text: 'Resposta do banco' },
       { role: 'user', text: 'Outra dúvida' },
+      { role: 'assistant', text: 'Resposta do banco' },
+      { role: 'user', text: '[Mensagem do cliente ainda sem resposta]: Outra dúvida' },
     ])
     expect(s.zernio.send).toHaveBeenCalledTimes(2)
     expect(s.messages.has('outgoing-2')).toBe(true)
+  })
+
+  it('mensagem que chegou durante a resposta anterior ainda é respondida', async () => {
+    const s = await setup()
+    s.zernio.send.mockResolvedValueOnce({ messageId: 'outgoing-1' }).mockResolvedValueOnce({ messageId: 'outgoing-2' })
+    s.deps.callModel.mockImplementationOnce(async () => {
+      await s.incoming('incoming-2', 'Outra dúvida', new Date(now.getTime() + 15000))
+      s.deps.now = () => new Date(now.getTime() + 20000)
+      return answer
+    })
+    const sentHistories: unknown[] = []
+    s.deps.callModel.mockImplementationOnce(async ({ messages }) => {
+      sentHistories.push(structuredClone(messages))
+      return answer
+    })
+    expect(await processConversation(input, s.deps)).toBe('respondido')
+    expect((await s.repo.recentMessages(input.conversationId, 12)).map(message => message.id))
+      .toEqual(['incoming-1', 'incoming-2', 'outgoing-1'])
+    expect(await processConversation({ ...input, messageId: 'incoming-2' }, s.deps)).toBe('respondido')
+    expect(sentHistories).toEqual([[
+      { role: 'user', content: 'Preciso de ajuda\nOutra dúvida' },
+      { role: 'assistant', content: 'Resposta do banco' },
+      { role: 'user', content: '[Mensagem do cliente ainda sem resposta]: Outra dúvida' },
+    ]])
+    expect(s.zernio.send).toHaveBeenCalledTimes(2)
+    expect(s.messages.get('outgoing-2')).toMatchObject({ author: 'agente', text: 'Resposta do banco' })
+    expect(s.escalate).not.toHaveBeenCalled()
   })
 
   it('execução que perde a vez para mensagem mais nova durante a espera é ignorada', async () => {
@@ -140,22 +173,58 @@ describe('processamento da conversa', () => {
     })
     expect(await processConversation(input, s.deps)).toBe('escalado')
     expect(claims).toEqual([false])
-    expect(claim).toHaveBeenNthCalledWith(1, input.conversationId, new Date('2026-11-25T01:34:50Z'), now)
+    expect(claim).toHaveBeenNthCalledWith(1, input.conversationId, new Date('2026-11-25T01:35:00Z'), now)
     expect(await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), now)).toBe(true)
   })
 
-  it('desiste após 200 segundos sem obter a trava', async () => {
+  it('espera esgotada escala sem_vez', async () => {
     const s = await setup()
     await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), now)
     let elapsed = 0
     s.deps.now = () => new Date(now.getTime() + elapsed)
     s.deps.sleep.mockImplementation(async ms => { if (ms !== 8000) elapsed += ms })
-    expect(await processConversation(input, s.deps)).toBe('ignorado')
-    expect(elapsed).toBe(200000)
-    expect(s.deps.sleep.mock.calls.slice(1).map(([ms]) => ms)).toEqual([...Array(66).fill(3000), 2000])
-    expect(s.escalate).not.toHaveBeenCalled()
+    expect(await processConversation(input, s.deps)).toBe('escalado')
+    expect(elapsed).toBe(120000)
+    expect(s.deps.sleep.mock.calls.slice(1).map(([ms]) => ms)).toEqual(Array(40).fill(3000))
+    expect(s.escalate).toHaveBeenCalledExactlyOnceWith({
+      conversation: expect.objectContaining({ id: input.conversationId }),
+      reason: 'sem_vez', summary: 'Preciso de ajuda', recent: [expect.objectContaining({ id: input.messageId })],
+    })
+    expect(s.telegram).toHaveBeenCalledTimes(1)
     expectNoReply(s)
     expect(await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), s.deps.now())).toBe(false)
+  })
+
+  it('falha ao escalar sem_vez é contida com log estático', async () => {
+    const s = await setup()
+    await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 300000), now)
+    let elapsed = 0
+    s.deps.now = () => new Date(now.getTime() + elapsed)
+    s.deps.sleep.mockImplementation(async ms => { if (ms !== 8000) elapsed += ms })
+    s.escalate.mockRejectedValue(new Error('cliente@example.test'))
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(await processConversation(input, s.deps)).toBe('ignorado')
+    expect(s.escalate).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ reason: 'sem_vez', summary: 'Preciso de ajuda' }))
+    expect(log).toHaveBeenCalledExactlyOnceWith('agent_process_failed')
+    expectNoReply(s)
+  })
+
+  it('vencimento da trava conta do início e não aumenta durante a espera', async () => {
+    const s = await setup()
+    await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 60000), now)
+    let elapsed = 0
+    s.deps.now = () => new Date(now.getTime() + elapsed)
+    s.deps.sleep.mockImplementation(async ms => { elapsed += ms })
+    const claim = vi.spyOn(s.repo, 'claimProcessing')
+    const release = vi.spyOn(s.repo, 'releaseProcessing')
+    expect(await processConversation(input, s.deps)).toBe('respondido')
+    expect(elapsed).toBe(62000)
+    expect(claim.mock.calls.length).toBeGreaterThan(1)
+    for (const [id, until] of claim.mock.calls) {
+      expect(id).toBe(input.conversationId)
+      expect(until).toEqual(new Date('2026-11-25T01:35:00Z'))
+    }
+    expect(release).toHaveBeenCalledExactlyOnceWith(input.conversationId, new Date('2026-11-25T01:35:00Z'))
   })
 
   it('relê a pausa da conversa depois de obter a trava', async () => {
@@ -164,7 +233,7 @@ describe('processamento da conversa', () => {
     s.deps.sleep.mockImplementation(async ms => {
       if (ms === 3000) {
         await s.repo.pauseConversation(input.conversationId, new Date(now.getTime() + 60000))
-        await s.repo.releaseProcessing(input.conversationId)
+        await s.repo.releaseProcessing(input.conversationId, new Date(now.getTime() + 290000))
       }
     })
     expect(await processConversation(input, s.deps)).toBe('ignorado')
@@ -183,6 +252,16 @@ describe('processamento da conversa', () => {
     await expect(processConversation(input, s.deps)).rejects.toThrow('falha da escalação')
     expect(claims).toEqual([false])
     expect(await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), now)).toBe(true)
+  })
+
+  it.each(['respondido', 'escalado', 'ignorado'] as const)('falha no release mantém resultado %s', async status => {
+    const s = await setup()
+    s.deps.brain.mockResolvedValue({ replied: status === 'respondido', escalated: status === 'escalado' })
+    vi.spyOn(s.repo, 'releaseProcessing').mockRejectedValue(new Error('cliente@example.test'))
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(await processConversation(input, s.deps)).toBe(status)
+    expect(log).toHaveBeenCalledExactlyOnceWith('agent_release_failed')
+    expect(s.escalate).not.toHaveBeenCalled()
   })
 
   it('três mensagens seguidas geram uma resposta', async () => {
@@ -276,12 +355,15 @@ describe('processamento da conversa', () => {
     expectNoReply(s)
   })
 
-  it('não responde duas vezes sem nova mensagem do cliente', async () => {
+  it.each(['agente', 'allan'] as const)('histórico terminado por %s acrescenta mensagem user pendente', async author => {
     const s = await setup()
+    await s.repo.recordOutgoing({ id: 'previous', conversationId: input.conversationId, author, text: 'Resposta anterior' })
+    s.messages.get('previous')!.createdAt = new Date(now.getTime() + 1)
     expect(await processConversation(input, s.deps)).toBe('respondido')
-    expect(await processConversation(input, s.deps)).toBe('ignorado')
+    expect(s.deps.brain.mock.calls[0][0].messages.at(-1)).toEqual({
+      role: 'user', text: '[Mensagem do cliente ainda sem resposta]: Preciso de ajuda',
+    })
     expect(s.zernio.send).toHaveBeenCalledTimes(1)
-    expect(s.deps.brain).toHaveBeenCalledTimes(1)
   })
 
   it('nova mensagem do cliente depois do agente permite resposta', async () => {
