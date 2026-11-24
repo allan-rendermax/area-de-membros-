@@ -31,12 +31,14 @@ export function createAgentActions(): AgentActions {
 
 export interface AgentRepository {
   recordIncoming(m: { id: string; conversationId: string; storeId: string; accountId: string; platform: 'instagram' | 'facebook'; customerName: string; text: string; at: Date }): Promise<boolean>
-  isOwnOutgoing(messageId: string): Promise<boolean>
+  isOwnOutgoing(messageId: string, match?: { conversationId: string; text: string; since: Date }): Promise<boolean>
   recordOutgoing(m: { id: string; conversationId: string; author: 'agente' | 'allan'; text: string }): Promise<void>
   pauseConversation(id: string, until: Date): Promise<void>
   getConversation(id: string): Promise<AgentConversation | null>
   claimProcessing(conversationId: string, until: Date, now: Date): Promise<boolean>
   releaseProcessing(conversationId: string, until: Date): Promise<void>
+  reserveRun(storeId: string, conversationId: string, now: Date): Promise<'ok' | 'excesso_conversa' | 'limite_diario'>
+  claimNotice(conversationId: string, now: Date): Promise<boolean>
   incrementLookupMiss(conversationId: string): Promise<number>
   resetLookupMisses(conversationId: string): Promise<void>
   recentMessages(id: string, limit: number): Promise<AgentMessage[]>
@@ -90,10 +92,16 @@ export function createAgentRepository(): AgentRepository {
       if (error) throw new Error('agent_message_storage_failed')
       return true
     },
-    async isOwnOutgoing(id) {
+    async isOwnOutgoing(id, match) {
       const { data, error } = await db.from('agent_messages').select('id').eq('id', id).eq('direction', 'out').in('author', ['agente', 'allan']).maybeSingle()
       if (error) throw new Error('agent_message_read_failed')
-      return data !== null
+      if (data !== null) return true
+      if (!match) return false
+      const { data: recent, error: recentError } = await db.from('agent_messages').select('text')
+        .eq('conversation_id', match.conversationId).eq('direction', 'out').in('author', ['agente', 'allan'])
+        .gte('created_at', match.since.toISOString())
+      if (recentError) throw new Error('agent_message_read_failed')
+      return recent.some(message => message.text.trim() === match.text.trim())
     },
     async recordOutgoing(m) {
       const { error } = await db.from('agent_messages').insert({ id: m.id, conversation_id: m.conversationId, direction: 'out', author: m.author, text: m.text })
@@ -118,6 +126,20 @@ export function createAgentRepository(): AgentRepository {
       const { error } = await db.from('agent_conversations').update({ processing_until: null })
         .eq('id', conversationId).eq('processing_until', until.toISOString())
       if (error) throw new Error('agent_processing_update_failed')
+    },
+    async reserveRun(storeId, conversationId, now) {
+      const { data, error } = await db.rpc('agent_reserve_run', {
+        p_store_id: storeId, p_conversation_id: conversationId, p_now: now.toISOString(),
+      })
+      if (error || !['ok', 'excesso_conversa', 'limite_diario'].includes(data)) throw new Error('agent_run_storage_failed')
+      return data as 'ok' | 'excesso_conversa' | 'limite_diario'
+    },
+    async claimNotice(conversationId, now) {
+      const since = new Date(now.getTime() - 600000)
+      const { data, error } = await db.from('agent_conversations').update({ last_notice_at: now.toISOString() })
+        .eq('id', conversationId).or(`last_notice_at.is.null,last_notice_at.lte.${since.toISOString()}`).select('id')
+      if (error) throw new Error('agent_notice_update_failed')
+      return (data?.length ?? 0) > 0
     },
     async incrementLookupMiss(conversationId) {
       const { data, error } = await db.rpc('agent_increment_lookup_miss', { p_conversation_id: conversationId })

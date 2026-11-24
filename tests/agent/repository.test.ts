@@ -138,6 +138,21 @@ describe('isOwnOutgoing', () => {
     expect(url.searchParams.get('author')).toBe('in.(agente,allan)')
     expect(url.searchParams.get('direction')).toBe('eq.out')
   })
+
+  it('busca texto com trim apenas em saídas nossas, na mesma conversa e dentro do corte', async () => {
+    io.fetch.mockResolvedValueOnce(Response.json(null)).mockResolvedValueOnce(Response.json([{ text: '  Resposta \n' }]))
+    expect(await createAgentRepository().isOwnOutgoing('different-id', { conversationId: 'conversation', text: 'Resposta ', since: new Date('2026-11-24T11:58:00Z') })).toBe(true)
+    const url = new URL(io.fetch.mock.calls[1][0])
+    expect(url.searchParams.get('conversation_id')).toBe('eq.conversation')
+    expect(url.searchParams.get('direction')).toBe('eq.out')
+    expect(url.searchParams.get('author')).toBe('in.(agente,allan)')
+    expect(url.searchParams.get('created_at')).toBe('gte.2026-11-24T11:58:00.000Z')
+  })
+
+  it('propaga erro da busca textual com código estático', async () => {
+    io.fetch.mockResolvedValueOnce(Response.json(null)).mockResolvedValueOnce(Response.json({ message: 'dado privado' }, { status: 500 }))
+    await expect(createAgentRepository().isOwnOutgoing('id', { conversationId: 'conversation', text: 'Resposta', since: new Date() })).rejects.toThrow(/^agent_message_read_failed$/)
+  })
 })
 
 describe('weeklyDigest', () => {
@@ -154,5 +169,36 @@ describe('weeklyDigest', () => {
   it.each([null, { error: true }])('não mascara erro ou ausência de métricas: %j', async failure => {
     io.fetch.mockResolvedValueOnce(failure ? new Response(JSON.stringify({ message: 'cliente@example.test' }), { status: 500 }) : Response.json(null))
     await expect(createAgentRepository().weeklyDigest('store', new Date())).rejects.toThrow(/^agent_digest_read_failed$/)
+  })
+})
+
+describe('limites persistidos', () => {
+  it.each(['ok', 'excesso_conversa', 'limite_diario'] as const)('reserva execução via RPC e retorna %s', async result => {
+    io.fetch.mockResolvedValueOnce(Response.json(result))
+    expect(await createAgentRepository().reserveRun('store', 'conversation', new Date('2026-11-24T12:00:00Z'))).toBe(result)
+    const [url, request] = io.fetch.mock.calls[0]
+    expect(new URL(url).pathname).toBe('/rest/v1/rpc/agent_reserve_run')
+    expect(JSON.parse(request.body)).toEqual({ p_store_id: 'store', p_conversation_id: 'conversation', p_now: '2026-11-24T12:00:00.000Z' })
+  })
+
+  it.each([null, 'invalid', { error: true }])('falha de reserva %j impede execução com erro estático', async result => {
+    io.fetch.mockResolvedValueOnce(result && typeof result === 'object' ? Response.json({ message: 'dados privados' }, { status: 500 }) : Response.json(result))
+    await expect(createAgentRepository().reserveRun('store', 'conversation', new Date())).rejects.toThrow(/^agent_run_storage_failed$/)
+  })
+
+  it.each([true, false])('reserva aviso com UPDATE condicional; permitido=%s', async allowed => {
+    io.fetch.mockResolvedValueOnce(Response.json(allowed ? [{ id: 'conversation' }] : []))
+    expect(await createAgentRepository().claimNotice('conversation', new Date('2026-11-24T12:00:00Z'))).toBe(allowed)
+    const [url, request] = io.fetch.mock.calls[0]
+    const parsed = new URL(url)
+    expect(parsed.searchParams.get('id')).toBe('eq.conversation')
+    expect(parsed.searchParams.get('or')).toBe('(last_notice_at.is.null,last_notice_at.lte.2026-11-24T11:50:00.000Z)')
+    expect(request.method).toBe('PATCH')
+    expect(JSON.parse(request.body)).toEqual({ last_notice_at: '2026-11-24T12:00:00.000Z' })
+  })
+
+  it('erro ao reservar aviso não expõe dados', async () => {
+    io.fetch.mockResolvedValueOnce(Response.json({ message: 'privado' }, { status: 500 }))
+    await expect(createAgentRepository().claimNotice('conversation', new Date())).rejects.toThrow(/^agent_notice_update_failed$/)
   })
 })

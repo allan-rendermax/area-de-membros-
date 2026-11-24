@@ -11,15 +11,20 @@ export type Escalate = (input: {
   reason: string
   summary: string
   recent: AgentMessage[]
-}) => Promise<void>
+  keepState?: boolean
+}) => Promise<void | false>
+
+const limitedReasons = new Set(['continuacao', 'pausado_pelo_app', 'excesso_conversa', 'limite_diario'])
 
 export function createEscalate(
   io: Pick<SupportDeps['io'], 'send'>,
   owners: number[],
-  repo: Pick<AgentRepository, 'createEscalation' | 'setState'>,
+  repo: Pick<AgentRepository, 'createEscalation' | 'setState' | 'claimNotice'>,
+  now: () => Date = () => new Date(),
 ): Escalate {
-  return async ({ conversation, reason, summary, recent }) => {
+  return async ({ conversation, reason, summary, recent, keepState }) => {
     if (!owners.length) throw new Error('agent_no_owners')
+    if (limitedReasons.has(reason) && !await repo.claimNotice(conversation.id, now())) return false
     // Escaped budgets total 3160; labels/tags keep the final HTML below 3500.
     const text = [
       '<b>Atendimento no direct</b>',
@@ -45,7 +50,7 @@ export function createEscalate(
       }
     }
     if (!delivered) throw new Error('agent_escalation_failed')
-    await repo.setState(conversation.id, 'escalated')
+    if (!keepState) await repo.setState(conversation.id, 'escalated')
   }
 }
 

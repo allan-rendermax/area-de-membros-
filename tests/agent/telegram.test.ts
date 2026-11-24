@@ -118,7 +118,7 @@ describe('resposta do Allan', () => {
       await vi.waitFor(() => expect(h.learn).toHaveBeenCalledTimes(1))
       expect(h.io.send).toHaveBeenCalledExactlyOnceWith(123, 'Enviado.')
       expect(h.io.send.mock.invocationCallOrder[0]).toBeGreaterThan(h.zernio.send.mock.invocationCallOrder[0])
-      expect(h.io.send.mock.invocationCallOrder[0]).toBeLessThan(record.mock.invocationCallOrder[0])
+      expect(record.mock.invocationCallOrder[0]).toBeLessThan(h.io.send.mock.invocationCallOrder[0])
       await expect(handleAgentTelegram(reply(), h.deps)).resolves.toBe(true)
       expect(h.zernio.send).toHaveBeenCalledTimes(1)
     } finally {
@@ -126,6 +126,28 @@ describe('resposta do Allan', () => {
       await handling
     }
     expect(h.io.send).toHaveBeenNthCalledWith(2, 123, 'Não virou regra (caso pessoal).')
+  })
+
+  it('aguarda persistir a saída antes de confirmar Enviado', async () => {
+    const h = await setup()
+    const recordOutgoing = h.repo.recordOutgoing.bind(h.repo)
+    let release!: () => void
+    const gate = new Promise<void>(resolve => { release = resolve })
+    const record = vi.spyOn(h.repo, 'recordOutgoing').mockImplementation(async message => {
+      await gate
+      await recordOutgoing(message)
+    })
+    const handling = handleAgentTelegram(reply(), h.deps)
+    try {
+      await vi.waitFor(() => expect(record).toHaveBeenCalledTimes(1))
+      expect(h.io.send).not.toHaveBeenCalled()
+      expect(h.messages.has('outgoing')).toBe(false)
+    } finally {
+      release()
+      await handling
+    }
+    expect(h.messages.get('outgoing')?.author).toBe('allan')
+    expect(h.io.send).toHaveBeenNthCalledWith(1, 123, 'Enviado.')
   })
 
   it.each([24 * hour + 1, 7 * 24 * hour])('usa HUMAN_AGENT entre 24h e 7 dias (%s ms)', async age => {
@@ -210,7 +232,7 @@ describe('resposta do Allan', () => {
     expect(h.conversations.get('conversation')?.state).toBe('active')
     expect(h.io.send).toHaveBeenCalledTimes(2)
     expect(h.io.send).toHaveBeenNthCalledWith(1, 123, 'Enviado.')
-    expect(h.io.send).toHaveBeenNthCalledWith(2, 123, 'Não virou regra (caso pessoal).')
+    expect(h.io.send).toHaveBeenNthCalledWith(2, 123, 'Não consegui avaliar se vira regra.')
   })
 
   it('salva regra geral na loja da conversa, escapa HTML e oferece desfazer', async () => {

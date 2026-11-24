@@ -81,8 +81,8 @@ export async function handleAgentTelegram(update: z.infer<typeof telegramUpdateS
     return true
   }
   // O envio já aconteceu: nenhuma falha posterior deve provocar uma reentrega.
-  await bestEffort('agent_reply_confirmation_failed', () => deps.io.send(message.chat.id, 'Enviado.'))
   await bestEffort('agent_reply_record_failed', () => deps.repo.recordOutgoing({ id: messageId, conversationId: conversation.id, author: 'allan', text }))
+  await bestEffort('agent_reply_confirmation_failed', () => deps.io.send(message.chat.id, 'Enviado.'))
   await bestEffort('agent_reply_answer_failed', () => deps.repo.answerEscalation(escalation.id))
   await bestEffort('agent_reply_state_failed', () => deps.repo.setState(conversation.id, 'active'))
   await bestEffort('agent_reply_reset_lookup_failed', () => deps.repo.resetLookupMisses(conversation.id))
@@ -91,7 +91,7 @@ export async function handleAgentTelegram(update: z.infer<typeof telegramUpdateS
     const id = await bestEffort('agent_knowledge_add_failed', () => deps.repo.addKnowledge({ storeId: conversation.storeId, topic: learned.topic, rule: learned.rule, sourceEscalation: escalation.id }))
     if (id) await bestEffort('agent_learn_message_failed', () => deps.io.send(message.chat.id, `Aprendi: ${html(learned.rule, 4000)}`, [[{ text: 'Não aprender isso', callback_data: `agk:off:${id}` }]]))
   } else {
-    await bestEffort('agent_learn_message_failed', () => deps.io.send(message.chat.id, 'Não virou regra (caso pessoal).'))
+    await bestEffort('agent_learn_message_failed', () => deps.io.send(message.chat.id, learned === undefined ? 'Não consegui avaliar se vira regra.' : 'Não virou regra (caso pessoal).'))
   }
   return true
 }

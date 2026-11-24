@@ -36,16 +36,16 @@ export async function processConversation(input: ProcessInput, deps: ProcessDepe
   if (!pending || pending.id !== input.messageId) return 'ignorado'
 
   let claimTime = deps.now()
-  const deadline = claimTime.getTime() + 120000
+  const claimDeadline = claimTime.getTime() + 120000
   let claimed = await repo.claimProcessing(stored.id, until, claimTime)
   while (!claimed) {
-    const remaining = deadline - deps.now().getTime()
+    const remaining = claimDeadline - deps.now().getTime()
     if (remaining <= 0) break
     await deps.sleep(Math.min(3000, remaining))
     beforeClaim = await repo.recentMessages(stored.id, 12)
     if (beforeClaim.findLast(message => message.author === 'cliente')?.id !== input.messageId) return 'ignorado'
     claimTime = deps.now()
-    if (claimTime.getTime() >= deadline) break
+    if (claimTime.getTime() >= claimDeadline) break
     claimed = await repo.claimProcessing(stored.id, until, claimTime)
   }
   if (!claimed) {
@@ -66,24 +66,26 @@ export async function processConversation(input: ProcessInput, deps: ProcessDepe
     const incoming = recent.findLast(message => message.author === 'cliente')
     if (!incoming || incoming.id !== input.messageId) return 'ignorado'
 
-    const escalate = async (reason: string) => deps.escalate({
-      conversation, reason, summary: incoming.text, recent,
+    const escalate = async (reason: string, keepState?: true) => deps.escalate({
+      conversation, reason, summary: incoming.text, recent, ...(keepState ? { keepState } : {}),
     })
 
     if (!await repo.isEnabled(deps.storeId)) {
-      await escalate('agente_pausado')
+      await escalate('agente_pausado', true)
       return 'escalado'
     }
 
     const now = deps.now()
     if (conversation.state === 'paused') {
-      if (!conversation.pausedUntil || conversation.pausedUntil > now) return 'ignorado'
+      if (!conversation.pausedUntil || conversation.pausedUntil > now) {
+        await escalate('pausado_pelo_app', true)
+        return 'ignorado'
+      }
       await repo.setState(conversation.id, 'active')
       conversation = { ...conversation, state: 'active', pausedUntil: null }
     }
     if (conversation.state === 'escalated') {
-      await escalate('continuacao')
-      return 'escalado'
+      return await escalate('continuacao') === false ? 'ignorado' : 'escalado'
     }
     if (!conversation.lastIncomingAt || now.getTime() - conversation.lastIncomingAt.getTime() > 24 * 60 * 60 * 1000) {
       await escalate('fora_da_janela')
@@ -91,6 +93,8 @@ export async function processConversation(input: ProcessInput, deps: ProcessDepe
     }
 
     try {
+      const reservation = await repo.reserveRun(deps.storeId, conversation.id, deps.now())
+      if (reservation !== 'ok') return await escalate(reservation) === false ? 'ignorado' : 'escalado'
       const system = buildSystemPrompt({
         knowledge: await repo.knowledge(deps.storeId), platform: conversation.platform,
         today: new Intl.DateTimeFormat('pt-BR', {
@@ -105,6 +109,7 @@ export async function processConversation(input: ProcessInput, deps: ProcessDepe
         system,
         messages,
         tools: await deps.buildTools(conversation), callModel: deps.callModel,
+        deadline: new Date(startedAt.getTime() + 240000), now: deps.now,
       })
       if (result.escalated) return 'escalado'
       return result.replied ? 'respondido' : 'ignorado'

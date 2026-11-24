@@ -9,6 +9,8 @@ export function memoryRepository() {
   const messages = new Map<string, AgentMessage & { conversationId: string }>()
   const lookupMisses = new Map<string, number>()
   const processingUntil = new Map<string, Date>()
+  const lastNoticeAt = new Map<string, Date>()
+  const runs: { storeId: string; conversationId: string; createdAt: Date }[] = []
   const settings = new Map<string, boolean>()
   const knowledge = new Map<string, { id: string; storeId: string; topic: string; rule: string; sourceEscalation: string; active: boolean }>()
   const escalations = new Map<string, { id: string; conversationId: string; reason: string; chatId: number; messageId: number; state: 'open' | 'answered' }>()
@@ -25,9 +27,11 @@ export function memoryRepository() {
       messages.set(m.id, { id: m.id, conversationId: m.conversationId, direction: 'in', author: 'cliente', text: m.text, createdAt: m.at })
       return true
     },
-    async isOwnOutgoing(id) {
+    async isOwnOutgoing(id, match) {
       const message = messages.get(id)
-      return message?.direction === 'out' && (message.author === 'agente' || message.author === 'allan')
+      if (message?.direction === 'out' && (message.author === 'agente' || message.author === 'allan')) return true
+      return !!match && [...messages.values()].some(m => m.conversationId === match.conversationId && m.direction === 'out'
+        && (m.author === 'agente' || m.author === 'allan') && m.createdAt >= match.since && m.text.trim() === match.text.trim())
     },
     async recordOutgoing(m) {
       if (!messages.has(m.id)) messages.set(m.id, { ...m, direction: 'out', createdAt: new Date() })
@@ -45,6 +49,21 @@ export function memoryRepository() {
     },
     async releaseProcessing(id, until) {
       if (processingUntil.get(id)?.getTime() === until.getTime()) processingUntil.delete(id)
+    },
+    async reserveRun(storeId, conversationId, now) {
+      if (conversations.get(conversationId)?.storeId !== storeId) throw new Error('agent_run_storage_failed')
+      if (runs.filter(run => run.conversationId === conversationId && run.createdAt.getTime() >= now.getTime() - 3600000 && run.createdAt <= now).length >= 10) return 'excesso_conversa'
+      const day = (at: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(at)
+      if (runs.filter(run => run.storeId === storeId && day(run.createdAt) === day(now)).length >= 400) return 'limite_diario'
+      runs.push({ storeId, conversationId, createdAt: now })
+      return 'ok'
+    },
+    async claimNotice(id, now) {
+      if (!conversations.has(id)) return false
+      const previous = lastNoticeAt.get(id)
+      if (previous && now.getTime() - previous.getTime() < 600000) return false
+      lastNoticeAt.set(id, now)
+      return true
     },
     async incrementLookupMiss(id) {
       if (!conversations.has(id)) throw new Error('agent_lookup_miss_update_failed')
@@ -93,5 +112,5 @@ export function memoryRepository() {
     },
     agentResendsToday: unused, agentResendSince: unused, weeklyDigest: unused,
   }
-  return { repo, conversations, messages }
+  return { repo, conversations, messages, runs }
 }

@@ -4,6 +4,8 @@ O agente atende mensagens do Instagram e do Facebook das contas configuradas par
 
 O agente só responde dentro de 24 horas da última mensagem do cliente. Respostas digitadas pelo proprietário podem usar a janela humana de até 7 dias. Quando o proprietário atende pelo direct, a conversa fica pausada para evitar respostas sobrepostas.
 
+O agente começa pausado. Antes de `/agente ligar`, as mensagens recebidas são gravadas e encaminhadas ao Telegram, sem prender a conversa em `escalated`. Ao ligar, a próxima mensagem do cliente pode ser atendida automaticamente; uma pausa de atendimento pelo app continua valendo até expirar ou até a resposta pelo Telegram.
+
 O reenvio de acesso usa apenas o e-mail já cadastrado, sem corrigir ou sugerir endereços parecidos. O agente pode fazer até 20 reenvios por dia, no máximo um por conversa a cada 24 horas, interrompendo os reenvios quando restarem menos de 30 envios na cota diária da plataforma.
 
 ## Variáveis
@@ -21,6 +23,8 @@ Configure estas variáveis no servidor, sem colocar chaves em arquivos públicos
 | `AGENT_BATCH_SECONDS` | Tempo de agrupamento de mensagens antes de processar a conversa. |
 
 O bot de Telegram já deve estar configurado. `TELEGRAM_OWNER_USER_IDS` define os proprietários que recebem escalações e o resumo semanal; operadores de suporte não recebem esses avisos. O cron usa `CRON_SECRET` com autenticação Bearer pelo autorizador de jobs existente.
+
+Configure também um limite de gasto para a chave da Anthropic, usando os controles de orçamento disponíveis na conta ou workspace da chave. O processamento permite até 10 execuções por conversa na última hora e 400 por loja no dia de São Paulo; ao atingir o teto, encaminha ao Telegram sem chamar o modelo. Avisos de continuação, pausa pelo app e limites compartilham um intervalo mínimo de 10 minutos por conversa. Esses tetos não substituem o limite de gasto da Anthropic, pois o consumo também depende do tamanho das chamadas e do aprendizado.
 
 ## Ativação
 

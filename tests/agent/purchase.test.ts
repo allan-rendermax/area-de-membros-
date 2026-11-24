@@ -29,24 +29,16 @@ function setup() {
 }
 
 describe('findPurchase', () => {
-  it('lastNotice não traz e-mail', async () => {
+  it('não devolve dados do cadastro, produtos nem entrega ao modelo', async () => {
     const { lookup, tools } = setup()
     lookup.delivery = `Destinatário: Cliente+acesso@Example.Test\nCópia: suporte@sub.example.test\n${' '.repeat(230)}Reenvio: ultimo+tag@outro.example.test\n${'Aviso '.repeat(60)}`
     const result = await tools.findPurchase(input.email)
-    expect(result.found).toBe(true)
-    if (result.found) {
-      expect(result.lastNotice).toContain('Destinatário: [e-mail]\nCópia: [e-mail]')
-      expect(result.lastNotice).toContain('Reenvio: [e-mail]')
-      expect(result.lastNotice).not.toContain('@')
-      expect(result.lastNotice).toHaveLength(300)
-    }
+    expect(result).toEqual({ found: true })
   })
 
   it('não devolve sugestões nem pedidos', async () => {
     const { deps, tools } = setup()
-    expect(await tools.findPurchase(input.email)).toEqual({
-      found: true, customerId: 'customer', products: ['Atlas', 'Bônus'], lastNotice: 'Entregue',
-    })
+    expect(await tools.findPurchase(input.email)).toEqual({ found: true })
     expect(deps.ops.lookup).toHaveBeenCalledWith(input.email)
     expect(deps.actions.create).not.toHaveBeenCalled()
   })

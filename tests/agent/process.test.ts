@@ -29,7 +29,7 @@ async function setup() {
   const memory = memoryRepository()
   memory.repo.isEnabled = vi.fn(async () => true)
   const telegram = vi.fn(async () => 123)
-  const escalate = vi.fn(createEscalate({ send: telegram }, [42], memory.repo))
+  const escalate = vi.fn(createEscalate({ send: telegram }, [42], memory.repo, (): Date => deps.now()))
   const zernio = { send: vi.fn(async () => ({ messageId: 'outgoing-1' })) }
   const tools: AgentTools = {
     buscar_compra: vi.fn(), reenviar_acesso: vi.fn(), escalar: vi.fn(),
@@ -294,7 +294,9 @@ describe('processamento da conversa', () => {
     const s = await setup()
     await s.repo.pauseConversation(input.conversationId, new Date(now.getTime() + 1))
     expect(await processConversation(input, s.deps)).toBe('ignorado')
-    expect(s.escalate).not.toHaveBeenCalled()
+    expect(s.escalate).toHaveBeenCalledWith(expect.objectContaining({ reason: 'pausado_pelo_app', keepState: true }))
+    expect(s.telegram).toHaveBeenCalledTimes(1)
+    expect(s.conversations.get(input.conversationId)?.state).toBe('paused')
     expectNoReply(s)
   })
 
@@ -335,6 +337,53 @@ describe('processamento da conversa', () => {
     expect(s.escalate).toHaveBeenCalledWith(expect.objectContaining({ reason: 'agente_pausado', summary: 'Preciso de ajuda' }))
     expect(s.telegram).toHaveBeenCalledTimes(1)
     expectNoReply(s)
+  })
+
+  it('agente desligado avisa sem prender a conversa e atende a próxima mensagem ao religar', async () => {
+    const s = await setup()
+    let on = false
+    s.repo.isEnabled = async () => on
+    expect(await processConversation(input, s.deps)).toBe('escalado')
+    expect(s.telegram).toHaveBeenCalledTimes(1)
+    expect(s.conversations.get(input.conversationId)?.state).toBe('active')
+    on = true
+    await s.incoming('next', 'Valor?', new Date(now.getTime() + 1))
+    expect(await processConversation({ ...input, messageId: 'next' }, s.deps)).toBe('respondido')
+    expect(s.zernio.send).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['continuacao', 'pausado_pelo_app', 'excesso_conversa', 'limite_diario'])('aviso %s suprimido retorna ignorado e não chama o modelo', async reason => {
+    const s = await setup()
+    if (reason === 'continuacao') await s.repo.setState(input.conversationId, 'escalated')
+    if (reason === 'pausado_pelo_app') await s.repo.pauseConversation(input.conversationId, new Date(now.getTime() + 3600000))
+    if (reason === 'excesso_conversa' || reason === 'limite_diario') s.repo.reserveRun = async () => reason
+    expect(await processConversation(input, s.deps)).toBe(reason === 'pausado_pelo_app' ? 'ignorado' : 'escalado')
+    await s.incoming('next', 'Mais uma', new Date(now.getTime() + 1))
+    expect(await processConversation({ ...input, messageId: 'next' }, s.deps)).toBe('ignorado')
+    expect(s.telegram).toHaveBeenCalledTimes(1)
+    expectNoReply(s)
+  })
+
+  it('registra uma execução antes do cérebro e passa deadline fixo desde o início', async () => {
+    const s = await setup()
+    const reserve = vi.spyOn(s.repo, 'reserveRun')
+    s.deps.brain.mockImplementation(async options => {
+      expect(s.runs).toHaveLength(1)
+      expect(options.deadline).toEqual(new Date('2026-11-25T01:34:00Z'))
+      return { replied: true, escalated: false }
+    })
+    expect(await processConversation(input, s.deps)).toBe('respondido')
+    expect(reserve).toHaveBeenCalledExactlyOnceWith('store-1', input.conversationId, now)
+  })
+
+  it.each(['excesso_conversa', 'limite_diario'] as const)('%s escala antes de montar ferramentas ou chamar modelo', async reason => {
+    const s = await setup()
+    s.repo.reserveRun = async () => reason
+    expect(await processConversation(input, s.deps)).toBe('escalado')
+    expect(s.escalate).toHaveBeenCalledWith(expect.objectContaining({ reason }))
+    expect(s.telegram).toHaveBeenCalledTimes(1)
+    expectNoReply(s)
+    expect(s.runs).toHaveLength(0)
   })
 
   it('agente desligado ignora execução obsoleta antes de escalar', async () => {

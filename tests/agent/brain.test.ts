@@ -22,7 +22,7 @@ function response(content: BetaMessage['content'], stop_reason: BetaMessage['sto
 
 function harness(script: BetaMessage[]) {
   const tools = {
-    buscar_compra: vi.fn<AgentTools['buscar_compra']>().mockResolvedValue({ found: true, customerId: 'customer-test', products: ['Atlas'], lastNotice: 'sent' }),
+    buscar_compra: vi.fn<AgentTools['buscar_compra']>().mockResolvedValue({ found: true }),
     reenviar_acesso: vi.fn<AgentTools['reenviar_acesso']>().mockResolvedValue({ ok: true }),
     escalar: vi.fn<AgentTools['escalar']>().mockResolvedValue({ ok: true }),
     responder: vi.fn<AgentTools['responder']>().mockResolvedValue({ ok: true }),
@@ -35,7 +35,7 @@ function harness(script: BetaMessage[]) {
     if (!next) throw new Error('unexpected_model_call')
     return next
   })
-  const input = { system: 'instruções', messages: [{ role: 'user' as const, text: 'Valor' }], tools, callModel }
+  const input = { system: 'instruções', messages: [{ role: 'user' as const, text: 'Valor' }], tools, callModel, deadline: new Date(Date.now() + 240000) }
   return { tools, calls, callModel, input }
 }
 
@@ -48,9 +48,28 @@ function results(message: BetaMessageParam): BetaToolResultBlockParam[] {
   return blocks
 }
 
-afterEach(() => { vi.restoreAllMocks() })
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks() })
 
 describe('cérebro do agente', () => {
+  it.each([0, -1])('deadline alcançado (%s ms) escala sem chamar o modelo', async offset => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-11-24T15:00:00Z'))
+    const h = harness([response([tool('responder', { texto: 'Não enviar' })])])
+    expect(await runAgent({ ...h.input, deadline: new Date(Date.now() + offset) })).toEqual({ replied: false, escalated: true })
+    expect(h.callModel).not.toHaveBeenCalled()
+    expect(h.tools.escalar).toHaveBeenCalledExactlyOnceWith('sem_solucao', 'tempo_esgotado')
+  })
+
+  it('confere deadline novamente antes da próxima chamada ao modelo', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-11-24T15:00:00Z'))
+    const h = harness([response([tool('buscar_compra', { email: 'cliente@example.com' })])])
+    h.tools.buscar_compra.mockImplementation(async () => { vi.advanceTimersByTime(1000); return { found: true } })
+    expect(await runAgent({ ...h.input, deadline: new Date(Date.now() + 1000) })).toEqual({ replied: false, escalated: true })
+    expect(h.callModel).toHaveBeenCalledTimes(1)
+    expect(h.tools.escalar).toHaveBeenCalledExactlyOnceWith('sem_solucao', 'tempo_esgotado')
+  })
+
   it('responde dúvida de preço com uma chamada a responder', async () => {
     const h = harness([response([tool('responder', { texto: 'O Básico custa R$ 19,90 😊' })])])
     expect(await runAgent(h.input)).toEqual({ replied: true, escalated: false })
@@ -160,7 +179,7 @@ describe('cérebro do agente', () => {
     expect(h.calls[1].messages[1]).toEqual({ role: 'assistant', content })
     expect(h.calls[1].messages[1].content).toBe(content)
     expect(results(h.calls[1].messages[2])).toEqual([
-      { type: 'tool_result', tool_use_id: 'lookup', content: JSON.stringify({ found: true, customerId: 'customer-test', products: ['Atlas'], lastNotice: 'sent' }) },
+      { type: 'tool_result', tool_use_id: 'lookup', content: JSON.stringify({ found: true }) },
       { type: 'tool_result', tool_use_id: 'resend', content: JSON.stringify({ ok: true }) },
     ])
   })
@@ -271,14 +290,14 @@ describe('cérebro do agente', () => {
     expect(h.tools.responder).not.toHaveBeenCalled()
   })
 
-  it('processa todo o lote e para na volta seguinte ao escalar', async () => {
+  it('bloqueia responder após escalação bem-sucedida no mesmo lote', async () => {
     const h = harness([response([
       tool('escalar', { motivo: 'reembolso', resumo: 'Pediu reembolso.' }, 'escalate'),
       tool('responder', { texto: 'Vou verificar com a equipe.' }, 'reply'),
     ])])
-    expect(await runAgent(h.input)).toEqual({ replied: true, escalated: true })
+    expect(await runAgent(h.input)).toEqual({ replied: false, escalated: true })
     expect(h.tools.escalar).toHaveBeenCalledExactlyOnceWith('reembolso', 'Pediu reembolso.')
-    expect(h.tools.responder).toHaveBeenCalledExactlyOnceWith('Vou verificar com a equipe.')
+    expect(h.tools.responder).not.toHaveBeenCalled()
     expect(h.callModel).toHaveBeenCalledTimes(1)
   })
 
@@ -371,7 +390,8 @@ describe('instruções', () => {
     expect(prompt).toMatch(/nunca revelar dados de outro cliente/i)
     expect(prompt).toMatch(/nunca dizer ao cliente quais produtos ou detalhes de entrega/i)
     expect(prompt).toMatch(/no máximo uma vez/i)
-    expect(prompt).toContain('Quando estiver dentro da janela, chame responder uma única vez com o texto de encaminhamento do banco (tópico escalacao) no mesmo lote de escalar.')
+    expect(prompt).toContain('A ferramenta escalar JÁ avisa o cliente')
+    expect(prompt).toContain('Não chame responder junto com escalar.')
   })
 
   it('não fixa preços nem links fora do banco e mantém o prefixo estável entre datas e plataformas', () => {

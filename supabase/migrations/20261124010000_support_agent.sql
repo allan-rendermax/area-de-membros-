@@ -16,9 +16,19 @@ create table public.agent_conversations (
   processing_until timestamptz null,
   lookup_misses integer not null default 0,
   last_incoming_at timestamptz,
+  last_notice_at timestamptz,
   created_at timestamptz not null default now()
 );
 create index agent_conversations_store on public.agent_conversations(store_id);
+
+create table public.agent_runs (
+  id uuid primary key default gen_random_uuid(),
+  store_id uuid not null references public.stores(id) on delete cascade,
+  conversation_id text not null references public.agent_conversations(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create index agent_runs_conversation on public.agent_runs(conversation_id,created_at);
+create index agent_runs_store on public.agent_runs(store_id,created_at);
 
 create table public.agent_messages (
   id text primary key, -- Zernio message ID
@@ -62,8 +72,35 @@ alter table public.agent_conversations enable row level security;
 alter table public.agent_messages enable row level security;
 alter table public.agent_escalations enable row level security;
 alter table public.agent_knowledge enable row level security;
-revoke all on public.agent_settings,public.agent_conversations,public.agent_messages,public.agent_escalations,public.agent_knowledge from public,anon,authenticated;
-grant select,insert,update,delete on public.agent_settings,public.agent_conversations,public.agent_messages,public.agent_escalations,public.agent_knowledge to service_role;
+alter table public.agent_runs enable row level security;
+revoke all on public.agent_settings,public.agent_conversations,public.agent_messages,public.agent_escalations,public.agent_knowledge,public.agent_runs from public,anon,authenticated;
+grant select,insert,update,delete on public.agent_settings,public.agent_conversations,public.agent_messages,public.agent_escalations,public.agent_knowledge,public.agent_runs to service_role;
+
+-- Serialize reservations per store: separate conversations share the daily budget.
+create function public.agent_reserve_run(p_store_id uuid,p_conversation_id text,p_now timestamptz) returns text
+language plpgsql volatile security invoker set search_path='' as $$
+declare
+  day_start timestamptz := date_trunc('day',p_now at time zone 'America/Sao_Paulo') at time zone 'America/Sao_Paulo';
+  day_end timestamptz := (date_trunc('day',p_now at time zone 'America/Sao_Paulo')+interval '1 day') at time zone 'America/Sao_Paulo';
+begin
+  if p_now is null or not exists(select 1 from public.agent_conversations where id=p_conversation_id and store_id=p_store_id) then
+    raise exception 'agent_run_invalid_context';
+  end if;
+  insert into public.agent_settings(store_id) values(p_store_id) on conflict(store_id) do nothing;
+  perform 1 from public.agent_settings where store_id=p_store_id for update;
+  if (select count(*) from public.agent_runs where conversation_id=p_conversation_id
+      and created_at>=p_now-interval '1 hour' and created_at<=p_now)>=10 then
+    return 'excesso_conversa';
+  end if;
+  if (select count(*) from public.agent_runs where store_id=p_store_id and created_at>=day_start and created_at<day_end)>=400 then
+    return 'limite_diario';
+  end if;
+  insert into public.agent_runs(store_id,conversation_id,created_at) values(p_store_id,p_conversation_id,p_now);
+  return 'ok';
+end;
+$$;
+revoke all on function public.agent_reserve_run(uuid,text,timestamptz) from public,anon,authenticated;
+grant execute on function public.agent_reserve_run(uuid,text,timestamptz) to service_role;
 
 -- Increment in one statement so concurrent tool contexts cannot lose a miss.
 create function public.agent_increment_lookup_miss(p_conversation_id text) returns integer

@@ -12,7 +12,12 @@ const eventSchema = z.object({
     conversationId: z.string().min(1),
     platform: z.string(),
     direction: z.enum(['incoming', 'outgoing']),
-    text: z.string().optional().default(''),
+    text: z.string().nullish().transform(text => text ?? ''),
+    sentVia: z.string().nullish(),
+    automationId: z.string().nullish(),
+    workflowId: z.string().nullish(),
+    broadcastId: z.string().nullish(),
+    sequenceId: z.string().nullish(),
     sender: z.object({ id: z.string().min(1), name: z.string().nullish(), username: z.string().nullish() }).optional(),
   }),
   conversation: z.object({ id: z.string().min(1) }),
@@ -45,7 +50,10 @@ export async function handleZernioWebhook(request: Request, deps: {
   try { input = JSON.parse(new TextDecoder().decode(raw)) }
   catch { return Response.json({ error: 'corpo inválido' }, { status: 400 }) }
   const parsed = eventSchema.safeParse(input)
-  if (!parsed.success) return Response.json({ ok: true })
+  if (!parsed.success) {
+    console.error('agent_webhook_invalid_payload')
+    return Response.json({ ok: true })
+  }
   const { event, message, account } = parsed.data
   const { platform } = message
   if (!config.accountIds.includes(account.id) || (platform !== 'instagram' && platform !== 'facebook')) return Response.json({ ok: true })
@@ -54,14 +62,18 @@ export async function handleZernioWebhook(request: Request, deps: {
     if (event === 'message.received' && message.direction === 'incoming') {
       const fresh = await repo.recordIncoming({
         id: message.id, conversationId: message.conversationId, storeId, accountId: account.id,
-        platform, customerName: message.sender?.name || message.sender?.username || '', text: message.text, at: deps.now(),
+        platform, customerName: message.sender?.name || message.sender?.username || '', text: message.text.trim() ? message.text : '[anexo sem texto]', at: deps.now(),
       })
       if (fresh) deps.schedule(message.conversationId, message.id)
     } else if (event === 'message.sent') {
+      if ([message.automationId, message.workflowId, message.broadcastId, message.sequenceId].some(id => id?.trim())) return Response.json({ ok: true })
       deps.after(async () => {
         try {
           await deps.sleep(10000)
-          if (await repo.isOwnOutgoing(message.id)) return
+          if (await repo.isOwnOutgoing(message.id, {
+            conversationId: message.conversationId, text: message.text,
+            since: new Date(deps.now().getTime() - 120000),
+          })) return
           const conversation = await repo.getConversation(message.conversationId)
           if (!conversation || conversation.storeId !== storeId) return
           await repo.pauseConversation(message.conversationId, new Date(deps.now().getTime() + 24 * 60 * 60 * 1000))

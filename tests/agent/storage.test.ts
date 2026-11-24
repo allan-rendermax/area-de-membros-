@@ -10,7 +10,7 @@ const legacyAction = '00000000-0000-4000-8000-000000000004'
 const log = '00000000-0000-4000-8000-000000000005'
 const offer = '00000000-0000-4000-8000-000000000006'
 const product = '00000000-0000-4000-8000-000000000007'
-const agentTables = ['agent_settings', 'agent_conversations', 'agent_messages', 'agent_escalations', 'agent_knowledge']
+const agentTables = ['agent_settings', 'agent_conversations', 'agent_messages', 'agent_escalations', 'agent_knowledge', 'agent_runs']
 
 beforeAll(async () => {
   db = new PGlite()
@@ -164,7 +164,7 @@ describe('persistência privada do agente', () => {
     expect((await db.query(`select lookup_misses from public.agent_conversations where id='other-conversation'`)).rows).toEqual([{ lookup_misses: 0 }])
   })
 
-  it('habilita RLS e permite apenas service_role nas cinco tabelas', async () => {
+  it('habilita RLS e permite apenas service_role nas seis tabelas', async () => {
     for (const table of agentTables) {
       const security = await db.query<{ relrowsecurity: boolean }>('select relrowsecurity from pg_class where oid=to_regclass($1)', [`public.${table}`])
       expect(security.rows).toEqual([{ relrowsecurity: true }])
@@ -224,6 +224,84 @@ describe('persistência privada do agente', () => {
 
   it('exige uma conversa existente nas mensagens', async () => {
     await expect(db.exec(`insert into public.agent_messages(id,conversation_id,direction,author,text) values('invalid','missing','in','cliente','Texto')`)).rejects.toMatchObject({ code: '23503' })
+  })
+})
+
+describe('tetos de execução e avisos no storage', () => {
+  async function reserve(id: string, at: string, storeId = store) {
+    const result = await db.query<{ result: string }>('select public.agent_reserve_run($1,$2,$3) as result', [storeId, id, at])
+    return result.rows[0].result
+  }
+
+  it('permite dez execuções/hora e bloqueia a décima primeira sem inserir linha', async () => {
+    await conversation()
+    for (let i = 0; i < 10; i++) expect(await reserve('conversation-1', '2026-11-24T12:00:00Z')).toBe('ok')
+    expect(await reserve('conversation-1', '2026-11-24T12:59:59.999Z')).toBe('excesso_conversa')
+    expect((await db.query('select count(*)::int as total from public.agent_runs')).rows).toEqual([{ total: 10 }])
+    expect(await reserve('conversation-1', '2026-11-24T13:00:00.001Z')).toBe('ok')
+  })
+
+  it('duas reservas disputando a décima vaga só liberam uma execução', async () => {
+    await conversation()
+    for (let i = 0; i < 9; i++) await reserve('conversation-1', '2026-11-24T12:00:00Z')
+    expect(await Promise.all([reserve('conversation-1', '2026-11-24T12:00:00Z'), reserve('conversation-1', '2026-11-24T12:00:00Z')])).toEqual(['ok', 'excesso_conversa'])
+  })
+
+  it('teto de 400 é por loja e dia de São Paulo, com virada às 03:00 UTC', async () => {
+    await conversation()
+    await conversation('other-store-conversation')
+    await db.query('update public.agent_conversations set store_id=$1 where id=$2', [otherStore, 'other-store-conversation'])
+    await db.query(`insert into public.agent_conversations(id,store_id,account_id,platform)
+      select 'bulk-'||n,$1,'account','instagram' from generate_series(1,399) n`, [store])
+    await db.query(`insert into public.agent_runs(store_id,conversation_id,created_at)
+      select $1,'bulk-'||n,'2026-11-24T15:00:00Z' from generate_series(1,399) n`, [store])
+    expect(await reserve('conversation-1', '2026-11-25T02:59:59Z')).toBe('ok')
+    expect(await reserve('other-store-conversation', '2026-11-25T02:59:59Z', otherStore)).toBe('ok')
+    expect(await reserve('bulk-1', '2026-11-25T02:59:59Z')).toBe('limite_diario')
+    expect(await reserve('bulk-1', '2026-11-25T03:00:00Z')).toBe('ok')
+  })
+
+  it('RPC é privado e agent_runs tem índices, defaults e cascade', async () => {
+    await conversation()
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      const result = await db.query<{ allowed: boolean }>(`select has_function_privilege($1,'public.agent_reserve_run(uuid,text,timestamptz)','execute') as allowed`, [role])
+      expect(result.rows[0].allowed).toBe(role === 'service_role')
+    }
+    await db.exec('set local role service_role')
+    expect(await reserve('conversation-1', '2026-11-24T12:00:00Z')).toBe('ok')
+    const rows = await db.query('insert into public.agent_runs(store_id,conversation_id) values($1,$2) returning id,created_at', [store, 'conversation-1'])
+    expect(rows.rows[0]).toMatchObject({ id: expect.any(String), created_at: expect.any(Date) })
+    const indexes = await db.query<{ indexdef: string }>(`select indexdef from pg_indexes where tablename='agent_runs'`)
+    expect(indexes.rows.some(row => row.indexdef.includes('(conversation_id, created_at)'))).toBe(true)
+    expect(indexes.rows.some(row => row.indexdef.includes('(store_id, created_at)'))).toBe(true)
+    await db.query('delete from public.agent_conversations where id=$1', ['conversation-1'])
+    expect((await db.query('select count(*)::int as total from public.agent_runs')).rows).toEqual([{ total: 0 }])
+  })
+
+  it.each(['missing', 'conversation-1'])('RPC recusa conversa %s fora da loja sem registrar execução', async id => {
+    await conversation()
+    await expect(reserve(id, '2026-11-24T12:00:00Z', otherStore)).rejects.toThrow('agent_run_invalid_context')
+  })
+
+  it('última vaga diária é compartilhada por reservas de conversas diferentes', async () => {
+    await conversation('a')
+    await conversation('b')
+    await db.query(`insert into public.agent_runs(store_id,conversation_id,created_at)
+      select $1,'a','2026-11-24T03:00:00Z' from generate_series(1,399)`, [store])
+    expect(await Promise.all([reserve('a', '2026-11-24T15:00:00Z'), reserve('b', '2026-11-24T15:00:00Z')])).toEqual(['ok', 'limite_diario'])
+    expect((await db.query('select count(*)::int as total from public.agent_runs')).rows).toEqual([{ total: 400 }])
+  })
+
+  it('reserva aviso atomicamente, isola conversa e libera em exatamente dez minutos', async () => {
+    await conversation()
+    await conversation('other')
+    const claim = (at: string) => db.query(`update public.agent_conversations set last_notice_at=$2
+      where id=$1 and (last_notice_at is null or last_notice_at <= $2::timestamptz-interval '10 minutes') returning id`, ['conversation-1', at])
+    const results = await Promise.all([claim('2026-11-24T12:00:00Z'), claim('2026-11-24T12:00:00Z')])
+    expect(results.map(r => r.rows)).toEqual([[{ id: 'conversation-1' }], []])
+    expect((await claim('2026-11-24T12:09:59.999Z')).rows).toEqual([])
+    expect((await claim('2026-11-24T12:10:00Z')).rows).toEqual([{ id: 'conversation-1' }])
+    expect((await db.query("select last_notice_at,state from public.agent_conversations where id='other'")).rows).toEqual([{ last_notice_at: null, state: 'active' }])
   })
 })
 

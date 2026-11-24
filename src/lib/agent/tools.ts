@@ -15,9 +15,11 @@ export function createAgentTools(ctx: {
 }): AgentTools {
   const { conversation, zernio, repo, purchase, escalate } = ctx
   let escalationNotified = conversation.state === 'escalated'
+  let replied = false
 
   async function responder(texto: string) {
     const { messageId } = await zernio.send({ conversationId: conversation.id, accountId: conversation.accountId, text: texto })
+    replied = true
     await repo.recordOutgoing({ id: messageId, conversationId: conversation.id, author: 'agente', text: texto })
     return { ok: true }
   }
@@ -25,7 +27,7 @@ export function createAgentTools(ctx: {
   return {
     async buscar_compra(email) {
       const result = await purchase.findPurchase(email)
-      if (result.found) return result
+      if (result.found) return { found: true }
       const misses = await repo.incrementLookupMiss(conversation.id)
       return misses >= 2 ? { found: false, instrucao: 'escalar' } : { found: false }
     },
@@ -35,7 +37,7 @@ export function createAgentTools(ctx: {
     responder,
     async escalar(motivo, resumo) {
       const current = await repo.getConversation(conversation.id) ?? conversation
-      if (!escalationNotified && current.state !== 'escalated') {
+      if (!replied && !escalationNotified && current.state !== 'escalated') {
         const knowledge = await repo.knowledge(conversation.storeId)
         const notice = knowledge.find(entry => entry.topic === 'escalacao')?.rule ?? 'Vou verificar com a equipe e te respondo aqui 💛'
         await responder(notice)

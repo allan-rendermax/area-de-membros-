@@ -48,7 +48,7 @@ const toolInput = z.discriminatedUnion('name', [
 const toolDefinitions: BetaTool[] = [
   {
     name: 'buscar_compra', strict: true,
-    description: 'Localiza a compra pelo e-mail. Resultados são internos: nunca revele dados ou produtos ao cliente.',
+    description: 'Localiza a compra pelo e-mail. Devolve apenas se encontrou; não comprova a identidade do cliente.',
     input_schema: { type: 'object', properties: { email: { type: 'string', format: 'email' } }, required: ['email'], additionalProperties: false },
   },
   {
@@ -58,7 +58,7 @@ const toolDefinitions: BetaTool[] = [
   },
   {
     name: 'escalar', strict: true,
-    description: 'Encaminha ao atendimento humano e encerra a execução. Resuma só o necessário, sem dados pessoais desnecessários.',
+    description: 'Encaminha ao atendimento humano, já avisa o cliente e encerra a execução. Não chame responder junto. Resuma só o necessário, sem dados pessoais desnecessários.',
     input_schema: {
       type: 'object', properties: { motivo: { type: 'string', enum: [...escalationReasons] }, resumo: { type: 'string' } },
       required: ['motivo', 'resumo'], additionalProperties: false,
@@ -66,7 +66,7 @@ const toolDefinitions: BetaTool[] = [
   },
   {
     name: 'responder', strict: true,
-    description: 'Envia uma mensagem curta em pt-BR ao cliente. Única forma de responder; no máximo uma vez por execução.',
+    description: 'Envia uma mensagem curta em pt-BR ao cliente; no máximo uma vez por execução. Para encaminhar ao humano, use apenas escalar, que já avisa o cliente.',
     input_schema: { type: 'object', properties: { texto: { type: 'string' } }, required: ['texto'], additionalProperties: false },
   },
 ]
@@ -94,6 +94,8 @@ export async function runAgent(input: {
   tools: AgentTools
   callModel: CallModel
   maxSteps?: number
+  deadline: Date
+  now?: () => Date
 }): Promise<{ replied: boolean; escalated: boolean }> {
   const messages = modelHistory(input.messages)
   const foundEmails = new Set<string>()
@@ -130,6 +132,7 @@ export async function runAgent(input: {
           result = await input.tools.reenviar_acesso(call.input.email)
           break
         case 'responder':
+          if (escalated) return { ...base, is_error: true, content: 'já escalado; cliente já avisado' }
           if (deferReply) return { ...base, is_error: true, content: 'aguarde o resultado das ferramentas antes de responder' }
           if (replyAttempted) return { ...base, is_error: true, content: 'já respondido' }
           replyAttempted = true
@@ -156,6 +159,10 @@ export async function runAgent(input: {
 
   for (let step = 0; step < maxSteps; step++) {
     if (replied || escalated) break
+    if ((input.now?.() ?? new Date()).getTime() >= input.deadline.getTime()) {
+      await escalate('sem_solucao', 'tempo_esgotado')
+      break
+    }
     let response: BetaMessage
     try {
       response = await input.callModel({ system: input.system, tools: toolDefinitions, messages })

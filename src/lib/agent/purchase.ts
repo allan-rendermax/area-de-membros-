@@ -20,15 +20,13 @@ type PurchaseDeps = {
   now(): Date
 }
 
-type PurchaseResult = { found: false } | { found: true; customerId: string; products: string[]; lastNotice: string }
+type PurchaseResult = { found: boolean }
 type ResendResult = { ok: true } | { ok: false; reason: 'nao_encontrado' | 'limite_dia' | 'limite_conversa' | 'cota' | 'recusado' | 'incerto' }
 
 export function createPurchaseTools(deps: PurchaseDeps) {
   async function findPurchase(email: string): Promise<PurchaseResult> {
     const result = await deps.ops.lookup(email)
-    if (!result.customer) return { found: false }
-    const lastNotice = result.delivery.replace(/[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, '[e-mail]').slice(0, 300)
-    return { found: true, customerId: result.customer.id, products: result.products.map(product => product.title), lastNotice }
+    return { found: result.customer !== null }
   }
 
   async function resendAccess(input: { email: string; conversationId: string }): Promise<ResendResult> {

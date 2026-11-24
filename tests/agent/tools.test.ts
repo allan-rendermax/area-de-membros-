@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createAgentTools } from '@/lib/agent/tools'
+import { runAgent, type CallModel } from '@/lib/agent/brain'
 import { createEscalate, type Escalate } from '@/lib/agent/escalation'
 import type { AgentConversation, AgentMessage } from '@/lib/agent/types'
 import type { ZernioClient } from '@/lib/agent/zernio'
@@ -68,11 +69,11 @@ describe('ferramentas do agente', () => {
     ])
   })
 
-  it('compra encontrada mantém o resultado e não conta como falha', async () => {
+  it('compra encontrada devolve só found e não conta como falha', async () => {
     const s = await setup()
     const found = { found: true as const, customerId: 'customer', products: ['Atlas'], lastNotice: 'Entregue' }
     s.purchase.findPurchase.mockResolvedValueOnce(found)
-    expect(await s.tools.buscar_compra('compra@example.test')).toEqual(found)
+    expect(await s.tools.buscar_compra('compra@example.test')).toEqual({ found: true })
     expect(await s.tools.buscar_compra('ausente@example.test')).toEqual({ found: false })
   })
 
@@ -99,6 +100,20 @@ describe('ferramentas do agente', () => {
     await createAgentTools(s.deps).escalar('outro', 'Retomada')
     expect(s.send).toHaveBeenCalledExactlyOnceWith({ conversationId: 'conversation', accountId: 'account', text: 'Vou conferir com a equipe 💛' })
     expect([...s.messages.values()].filter(message => message.author === 'agente').map(message => message.text)).toEqual(['Vou conferir com a equipe 💛'])
+    expect((await s.repo.getConversation('conversation'))?.state).toBe('escalated')
+  })
+
+  it.each([false, true])('responder e escalar no mesmo lote enviam um único aviso e notificam Allan (escalar primeiro: %s)', async escalationFirst => {
+    const s = await setup()
+    const blocks = [
+      { type: 'tool_use' as const, id: 'reply', name: 'responder', input: { texto: 'Vou verificar com a equipe.' } },
+      { type: 'tool_use' as const, id: 'escalate', name: 'escalar', input: { motivo: 'reembolso', resumo: 'Pediu reembolso.' } },
+    ]
+    const callModel: CallModel = async () => ({ stop_reason: 'tool_use', content: escalationFirst ? blocks.reverse() : blocks }) as Awaited<ReturnType<CallModel>>
+    const result = await runAgent({ system: 'instruções', messages: [{ role: 'user', text: 'Quero reembolso' }], tools: s.tools, callModel, deadline: new Date(now.getTime() + 240000) })
+    expect(result.escalated).toBe(true)
+    expect(s.send).toHaveBeenCalledTimes(1)
+    expect(s.io.send.mock.calls.map(([owner]) => owner)).toEqual([11, 22])
     expect((await s.repo.getConversation('conversation'))?.state).toBe('escalated')
   })
 
@@ -141,6 +156,39 @@ describe('ferramentas do agente', () => {
 })
 
 describe('escalação no Telegram', () => {
+  it.each(['active', 'paused'] as const)('keepState preserva %s ao encaminhar ao Telegram', async state => {
+    const s = await setup()
+    if (state === 'paused') await s.repo.pauseConversation('conversation', new Date(now.getTime() + 3600000))
+    const before = await s.repo.getConversation('conversation')
+    await createEscalate(s.io, [11], s.repo)({ conversation: before!, reason: 'agente_pausado', summary: 'Ajuda', recent: [], keepState: true })
+    expect(s.io.send).toHaveBeenCalledTimes(1)
+    expect(await s.repo.getConversation('conversation')).toEqual(before)
+  })
+
+  it.each(['continuacao', 'pausado_pelo_app', 'excesso_conversa', 'limite_diario'])('%s avisa no máximo uma vez por conversa a cada dez minutos', async reason => {
+    const s = await setup()
+    const notify = createEscalate(s.io, [11], s.repo)
+    const escalation = { conversation: s.conversation, reason, summary: 'Ajuda', recent: [], keepState: true }
+    await notify(escalation)
+    vi.setSystemTime(new Date(now.getTime() + 599999))
+    expect(await notify(escalation)).toBe(false)
+    expect(s.io.send).toHaveBeenCalledTimes(1)
+    vi.setSystemTime(new Date(now.getTime() + 600000))
+    await notify(escalation)
+    expect(s.io.send).toHaveBeenCalledTimes(2)
+  })
+
+  it('limite de avisos é compartilhado entre motivos e atômico para notificadores concorrentes', async () => {
+    const s = await setup()
+    const first = createEscalate(s.io, [11], s.repo)
+    const second = createEscalate(s.io, [11], s.repo)
+    const base = { conversation: s.conversation, summary: 'Ajuda', recent: [], keepState: true }
+    const results = await Promise.all([first({ ...base, reason: 'continuacao' }), second({ ...base, reason: 'limite_diario' })])
+    expect(results.filter(result => result === false)).toHaveLength(1)
+    expect(s.io.send).toHaveBeenCalledTimes(1)
+    expect((await s.repo.getConversation('conversation'))?.state).toBe('active')
+  })
+
   it('escalar avisa só proprietários', async () => {
     const s = await setup()
     await s.tools.escalar('compra_nao_encontrada', 'Não encontrou a compra')
@@ -152,7 +200,8 @@ describe('escalação no Telegram', () => {
 
   it('mensagem de escalação não traz e-mail do cadastro', async () => {
     const s = await setup()
-    s.purchase.findPurchase.mockResolvedValue({ found: true, customerId: 'private-customer-id', products: ['Produto privado'], lastNotice: 'Enviado para cadastro@example.test' })
+    const legacyResult = { found: true, customerId: 'private-customer-id', products: ['Produto privado'], lastNotice: 'Enviado para cadastro@example.test' }
+    s.purchase.findPurchase.mockResolvedValue(legacyResult)
     await s.tools.buscar_compra('digitado@example.test')
     await s.tools.escalar('outro', 'Cliente pede ajuda')
     for (const [, text] of s.io.send.mock.calls) {

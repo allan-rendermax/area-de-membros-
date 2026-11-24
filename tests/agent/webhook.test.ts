@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AgentConfig } from '@/lib/agent/config'
 import { handleZernioWebhook } from '@/lib/agent/webhook'
 import { memoryRepository } from './memory-repository'
@@ -11,6 +11,7 @@ const config: AgentConfig = {
   storeSlug: 'arquitetura', batchSeconds: 8, dailyResendLimit: 20, quotaReserve: 30,
 }
 const at = new Date('2026-11-24T15:00:00.000Z')
+afterEach(() => vi.restoreAllMocks())
 function event() {
   return {
     id: 'event-1', event: 'message.received',
@@ -136,7 +137,9 @@ describe('webhook Zernio', () => {
 
   it.each([null, {}, { event: 'message.received' }, { ...event(), message: { ...event().message, id: 42 } }, { ...event(), account: {} }])('ignora evento inválido: %j', async input => {
     const s = setup()
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     expect((await handleZernioWebhook(signed(JSON.stringify(input)), s.deps)).status).toBe(200)
+    expect(log).toHaveBeenCalledExactlyOnceWith('agent_webhook_invalid_payload')
     expectNoEffects(s)
   })
 
@@ -155,11 +158,11 @@ describe('webhook Zernio', () => {
   it.each([
     { name: '', username: 'usuario', expected: 'usuario' },
     { name: undefined, username: undefined, expected: '' },
-  ])('usa fallback do nome: $expected e texto ausente vira vazio', async ({ name, username, expected }) => {
+  ])('usa fallback do nome: $expected e sinaliza anexo sem texto', async ({ name, username, expected }) => {
     const s = setup(), input = { ...event(), message: { ...event().message, text: undefined, sender: { id: 'sender-1', name, username } } }
     await handleZernioWebhook(signed(JSON.stringify(input)), s.deps)
     expect(s.conversations.get('conversation-1')?.customerName).toBe(expected)
-    expect(s.messages.get('message-1')?.text).toBe('')
+    expect(s.messages.get('message-1')?.text).toBe('[anexo sem texto]')
     expect(s.schedule).toHaveBeenCalledTimes(1)
   })
 
@@ -184,6 +187,38 @@ describe('webhook Zernio', () => {
     expect(s.messages.get('outgoing-1')?.author).toBe('agente')
     expect(s.messages.size).toBe(2)
     expect(s.schedule).not.toHaveBeenCalled()
+  })
+
+  it.each(['automationId', 'workflowId', 'broadcastId', 'sequenceId'])('envio automático com %s não pausa nem é gravado como Allan', async field => {
+    const s = setup(); await receive(s)
+    const input = outgoing()
+    const message = { ...input.message, sentVia: 'automation', [field]: 'automatic-123' }
+    await handleZernioWebhook(signed(JSON.stringify({ ...input, message })), s.deps)
+    for (const [callback] of s.after.mock.calls) await callback()
+    expect(s.conversations.get('conversation-1')?.state).toBe('active')
+    expect(s.messages.has('outgoing-1')).toBe(false)
+  })
+
+  it.each([
+    ['agente', 'conversation-1', -120000, '  Vou verificar \n', false],
+    ['allan', 'conversation-1', -1000, 'Vou verificar', false],
+    ['agente', 'other', -1000, 'Vou verificar', true],
+    ['agente', 'conversation-1', -120001, 'Vou verificar', true],
+    ['agente', 'conversation-1', -1000, 'Outro texto', true],
+    ['cliente', 'conversation-1', -1000, 'Vou verificar', true],
+  ] as const)('reconhece texto próprio só na mesma conversa por dois minutos (%s, %s, %s)', async (author, conversationId, age, text, paused) => {
+    const s = setup(); await receive(s)
+    s.messages.set('different-api-id', { id: 'different-api-id', conversationId, direction: author === 'cliente' ? 'in' : 'out', author, text, createdAt: new Date(at.getTime() + age) })
+    await handleZernioWebhook(signed(JSON.stringify(outgoing())), s.deps)
+    await s.after.mock.calls[0][0]()
+    expect(s.conversations.get('conversation-1')?.state).toBe(paused ? 'paused' : 'active')
+    expect(s.messages.has('outgoing-1')).toBe(paused)
+  })
+
+  it.each([null, '', '   '])('grava marcador para mídia com texto %j', async text => {
+    const s = setup(), input = event()
+    await handleZernioWebhook(signed(JSON.stringify({ ...input, message: { ...input.message, text } })), s.deps)
+    expect(s.messages.get('message-1')?.text).toBe('[anexo sem texto]')
   })
 
   it('resposta do Allan pelo bot não pausa a conversa', async () => {
@@ -229,7 +264,7 @@ describe('webhook Zernio', () => {
     release()
     await pending
     expect(s.sleep).toHaveBeenCalledExactlyOnceWith(10000)
-    expect(check).toHaveBeenCalledExactlyOnceWith('outgoing-1')
+    expect(check).toHaveBeenCalledExactlyOnceWith('outgoing-1', { conversationId: 'conversation-1', text: 'Vou verificar', since: new Date('2026-11-24T14:58:00Z') })
     expect(s.conversations.get('conversation-1')).toMatchObject({ state: 'active', pausedUntil: null })
     expect(s.messages.get('outgoing-1')?.author).toBe('agente')
   })
