@@ -16,7 +16,7 @@ export type CallModel = (params: {
 }) => Promise<BetaMessage>
 
 export function createCallModel(apiKey: string, model: string): CallModel {
-  const client = new Anthropic({ apiKey })
+  const client = new Anthropic({ apiKey, timeout: 20000, maxRetries: 1 })
   return async ({ system, tools, messages }) => client.beta.messages.create({
     model,
     max_tokens: 16000,

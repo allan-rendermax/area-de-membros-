@@ -13,7 +13,7 @@ const eventSchema = z.object({
     platform: z.string(),
     direction: z.enum(['incoming', 'outgoing']),
     text: z.string().optional().default(''),
-    sender: z.object({ id: z.string().min(1), name: z.string().nullish(), username: z.string().nullish() }),
+    sender: z.object({ id: z.string().min(1), name: z.string().nullish(), username: z.string().nullish() }).optional(),
   }),
   conversation: z.object({ id: z.string().min(1) }),
   account: z.object({ id: z.string().min(1) }),
@@ -24,6 +24,8 @@ export async function handleZernioWebhook(request: Request, deps: {
   storeId: string
   repo: AgentRepository
   schedule(conversationId: string, messageId: string): void
+  after(callback: () => Promise<void>): void
+  sleep(ms: number): Promise<void>
   now(): Date
 }): Promise<Response> {
   const { config, storeId, repo } = deps
@@ -52,15 +54,20 @@ export async function handleZernioWebhook(request: Request, deps: {
     if (event === 'message.received' && message.direction === 'incoming') {
       const fresh = await repo.recordIncoming({
         id: message.id, conversationId: message.conversationId, storeId, accountId: account.id,
-        platform, customerName: message.sender.name || message.sender.username || '', text: message.text, at: deps.now(),
+        platform, customerName: message.sender?.name || message.sender?.username || '', text: message.text, at: deps.now(),
       })
       if (fresh) deps.schedule(message.conversationId, message.id)
     } else if (event === 'message.sent') {
-      if (await repo.isOwnOutgoing(message.id)) return Response.json({ ok: true })
-      const conversation = await repo.getConversation(message.conversationId)
-      if (!conversation || conversation.storeId !== storeId) return Response.json({ ok: true })
-      await repo.pauseConversation(message.conversationId, new Date(deps.now().getTime() + 24 * 60 * 60 * 1000))
-      await repo.recordOutgoing({ id: message.id, conversationId: message.conversationId, author: 'allan', text: message.text })
+      deps.after(async () => {
+        try {
+          await deps.sleep(10000)
+          if (await repo.isOwnOutgoing(message.id)) return
+          const conversation = await repo.getConversation(message.conversationId)
+          if (!conversation || conversation.storeId !== storeId) return
+          await repo.pauseConversation(message.conversationId, new Date(deps.now().getTime() + 24 * 60 * 60 * 1000))
+          await repo.recordOutgoing({ id: message.id, conversationId: message.conversationId, author: 'allan', text: message.text })
+        } catch { console.error('agent_webhook_failed') }
+      })
     }
   } catch { return Response.json({ error: 'falha temporária' }, { status: 500 }) }
   return Response.json({ ok: true })

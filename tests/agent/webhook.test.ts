@@ -26,7 +26,9 @@ function signed(body: string, signature = createHmac('sha256', config.webhookSec
 function setup() {
   const memory = memoryRepository()
   const schedule = vi.fn<(conversationId: string, messageId: string) => void>()
-  return { ...memory, deps: { config, storeId: 'store-1', repo: memory.repo, schedule, now: () => new Date(at) }, schedule }
+  const after = vi.fn<(callback: () => Promise<void>) => void>()
+  const sleep = vi.fn<(ms: number) => Promise<void>>().mockResolvedValue(undefined)
+  return { ...memory, deps: { config, storeId: 'store-1', repo: memory.repo, schedule, after, sleep, now: () => new Date(at) }, schedule, after, sleep }
 }
 function expectNoEffects(s: ReturnType<typeof setup>) {
   expect(s.conversations.size).toBe(0)
@@ -176,6 +178,8 @@ describe('webhook Zernio', () => {
     const input = outgoing()
     await s.repo.recordOutgoing({ id: input.message.id, conversationId: 'conversation-1', author: 'agente', text: input.message.text })
     await handleZernioWebhook(signed(JSON.stringify(input)), s.deps)
+    expect(s.after).toHaveBeenCalledTimes(1)
+    await s.after.mock.calls[0][0]()
     expect(s.conversations.get('conversation-1')).toMatchObject({ state: 'active', pausedUntil: null })
     expect(s.messages.get('outgoing-1')?.author).toBe('agente')
     expect(s.messages.size).toBe(2)
@@ -185,6 +189,10 @@ describe('webhook Zernio', () => {
   it('envio feito pelo app pausa por 24 horas e grava como allan', async () => {
     const s = setup(); await receive(s)
     await handleZernioWebhook(signed(JSON.stringify(outgoing())), s.deps)
+    expect(s.conversations.get('conversation-1')?.state).toBe('active')
+    expect(s.messages.has('outgoing-1')).toBe(false)
+    await s.after.mock.calls[0][0]()
+    expect(s.sleep).toHaveBeenCalledExactlyOnceWith(10000)
     expect(s.conversations.get('conversation-1')).toMatchObject({ state: 'paused', pausedUntil: new Date('2026-11-25T15:00:00.000Z') })
     expect(s.messages.get('outgoing-1')).toMatchObject({ author: 'allan', direction: 'out', conversationId: 'conversation-1', text: 'Vou verificar' })
     expect(s.schedule).not.toHaveBeenCalled()
@@ -193,7 +201,38 @@ describe('webhook Zernio', () => {
   it('ignora envio feito pelo app quando a conversa ainda não existe', async () => {
     const s = setup()
     expect((await handleZernioWebhook(signed(JSON.stringify(outgoing())), s.deps)).status).toBe(200)
+    expect(s.after).toHaveBeenCalledTimes(1)
+    await s.after.mock.calls[0][0]()
     expectNoEffects(s)
+  })
+
+  it('envio do agente gravado depois do webhook não pausa', async () => {
+    const s = setup(); await receive(s)
+    let release!: () => void
+    s.sleep.mockImplementation(() => new Promise<void>(resolve => { release = resolve }))
+    expect((await handleZernioWebhook(signed(JSON.stringify(outgoing())), s.deps)).status).toBe(200)
+    expect(s.after).toHaveBeenCalledTimes(1)
+    const check = vi.spyOn(s.repo, 'isOwnOutgoing')
+    const pending = s.after.mock.calls[0][0]()
+    expect(check).not.toHaveBeenCalled()
+    await s.repo.recordOutgoing({ id: 'outgoing-1', conversationId: 'conversation-1', author: 'agente', text: 'Resposta do agente' })
+    release()
+    await pending
+    expect(s.sleep).toHaveBeenCalledExactlyOnceWith(10000)
+    expect(check).toHaveBeenCalledExactlyOnceWith('outgoing-1')
+    expect(s.conversations.get('conversation-1')).toMatchObject({ state: 'active', pausedUntil: null })
+    expect(s.messages.get('outgoing-1')?.author).toBe('agente')
+  })
+
+  it('message.sent sem sender ainda pausa quando não é do agente', async () => {
+    const s = setup(); await receive(s)
+    const input = outgoing()
+    const message = { ...input.message, sender: undefined }
+    expect((await handleZernioWebhook(signed(JSON.stringify({ ...input, message })), s.deps)).status).toBe(200)
+    expect(s.after).toHaveBeenCalledTimes(1)
+    await s.after.mock.calls[0][0]()
+    expect(s.conversations.get('conversation-1')).toMatchObject({ state: 'paused', pausedUntil: new Date('2026-11-25T15:00:00Z') })
+    expect(s.messages.get('outgoing-1')?.author).toBe('allan')
   })
 
   it('recusa Content-Length acima de 64 KB sem ler o corpo', async () => {
