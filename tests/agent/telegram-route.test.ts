@@ -4,11 +4,11 @@ import { telegramUpdateSchema } from '@/lib/telegram/handler'
 
 const h = vi.hoisted(() => ({
   team: vi.fn(), support: vi.fn(), agent: vi.fn(), config: vi.fn(), store: vi.fn(),
-  agentRepo: vi.fn(), zernio: vi.fn(), learn: vi.fn(),
+  agentRepo: vi.fn(), zernio: vi.fn(), learn: vi.fn(), acceptUpdate: vi.fn(),
 }))
 vi.mock('@/lib/telegram/config', () => ({ getTelegramConfig: () => ({ token: 'test-token', secret: 'secret', storeSlug: 'support-store', allowedUsers: [123, 456] }) }))
 vi.mock('@/lib/telegram/client', () => ({ createTelegramClient: () => ({ send: vi.fn(), edit: vi.fn(), ack: vi.fn() }) }))
-vi.mock('@/lib/telegram/repository', () => ({ createSupportRepository: () => ({ acceptUpdate: vi.fn() }) }))
+vi.mock('@/lib/telegram/repository', () => ({ createSupportRepository: () => ({ acceptUpdate: h.acceptUpdate }) }))
 vi.mock('@/lib/telegram/team-repository', () => ({ createTeamRepository: () => ({}) }))
 vi.mock('@/lib/telegram/team-access', () => ({ teamOwners: () => [123], isSupportUser: async () => true }))
 vi.mock('@/lib/telegram/team', () => ({ handleTeamUpdate: h.team }))
@@ -38,24 +38,31 @@ beforeEach(() => {
   h.agentRepo.mockReturnValue({ agent: 'repo' })
   h.zernio.mockReturnValue({ agent: 'zernio' })
   h.learn.mockReturnValue(vi.fn())
+  h.acceptUpdate.mockResolvedValue(true)
 })
 
 it('dono entra no agente depois da equipe e usa a loja da configuração do agente', async () => {
   expect((await POST(request())).status).toBe(200)
   expect(h.agent).toHaveBeenCalledExactlyOnceWith(telegramUpdateSchema.parse(input()), expect.objectContaining({
-    owners: [123], storeId: 'resolved-agent-store', repo: { agent: 'repo' }, zernio: { agent: 'zernio' }, learn: expect.any(Function), now: expect.any(Function),
+    owners: [123], storeId: 'resolved-agent-store', repo: { agent: 'repo' }, zernio: { agent: 'zernio' }, learn: expect.any(Function), now: expect.any(Function), acceptUpdate: expect.any(Function),
   }))
   expect(h.store).toHaveBeenCalledExactlyOnceWith('agent-store')
   expect(h.zernio).toHaveBeenCalledExactlyOnceWith('zernio-key')
   expect(h.learn).toHaveBeenCalledExactlyOnceWith('model-key', 'test-model')
   expect(h.team.mock.invocationCallOrder[0]).toBeLessThan(h.agent.mock.invocationCallOrder[0])
   expect(h.support).not.toHaveBeenCalled()
+  h.acceptUpdate.mockResolvedValueOnce(false)
+  const deps = h.agent.mock.calls[0][1]
+  expect(await deps.acceptUpdate(99)).toBe(false)
+  expect(h.acceptUpdate).toHaveBeenCalledExactlyOnceWith(99)
 })
 
 it('operador que não é dono nunca entra no handler do agente', async () => {
   expect((await POST(request(input(456)))).status).toBe(200)
   expect(h.agent).not.toHaveBeenCalled()
   expect(h.agentRepo).not.toHaveBeenCalled()
+  expect(h.config).not.toHaveBeenCalled()
+  expect(h.store).not.toHaveBeenCalled()
   expect(h.support).toHaveBeenCalledTimes(1)
 })
 
@@ -90,10 +97,26 @@ it('callback de dono também entra no handler do agente', async () => {
   expect(h.support).not.toHaveBeenCalled()
 })
 
-it('loja ausente falha sem invocar o agente com outro storeId', async () => {
+it('loja ausente não derruba o bot antigo', async () => {
   h.store.mockResolvedValue(null)
   const response = await POST(request())
-  expect(response.status).toBe(500)
-  expect(await response.json()).toEqual({ error: 'falha temporária' })
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({ ok: true })
   expect(h.agent).not.toHaveBeenCalled()
+  expect(h.agentRepo).not.toHaveBeenCalled()
+  expect(h.zernio).not.toHaveBeenCalled()
+  expect(h.learn).not.toHaveBeenCalled()
+  expect(h.support).toHaveBeenCalledTimes(1)
+})
+
+it('erro ao resolver loja não derruba o bot antigo', async () => {
+  h.store.mockRejectedValueOnce(new Error('loja indisponível'))
+  const response = await POST(request())
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({ ok: true })
+  expect(h.agent).not.toHaveBeenCalled()
+  expect(h.agentRepo).not.toHaveBeenCalled()
+  expect(h.zernio).not.toHaveBeenCalled()
+  expect(h.learn).not.toHaveBeenCalled()
+  expect(h.support).toHaveBeenCalledTimes(1)
 })

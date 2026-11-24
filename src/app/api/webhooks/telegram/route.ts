@@ -30,11 +30,12 @@ export async function POST(request: Request) {
     if (owners.includes(userId)) {
       const agentConfig = getAgentConfig()
       if (agentConfig) {
-        const store = await getStoreBySlug(agentConfig.storeSlug)
-        if (!store) throw new Error('agent_store_unavailable')
-        if (await handleAgentTelegram(update, {
+        let store: Awaited<ReturnType<typeof getStoreBySlug>> = null
+        try { store = await getStoreBySlug(agentConfig.storeSlug) }
+        catch { /* Loja indisponível desliga só o agente; o suporte continua. */ }
+        if (store && await handleAgentTelegram(update, {
           owners, repo: createAgentRepository(), zernio: createZernioClient(agentConfig.zernioApiKey),
-          io, learn: createLearn(agentConfig.anthropicApiKey, agentConfig.model), storeId: store.id, now: () => new Date(),
+          io, learn: createLearn(agentConfig.anthropicApiKey, agentConfig.model), acceptUpdate: id => repo.acceptUpdate(id), storeId: store.id, now: () => new Date(),
         })) return
       }
     }

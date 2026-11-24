@@ -12,8 +12,14 @@ type AgentTelegramDeps = {
   zernio: ZernioClient
   io: SupportDeps['io']
   learn: Learn
+  acceptUpdate(updateId: number): Promise<boolean>
   now(): Date
   storeId: string
+}
+
+async function bestEffort<T>(code: string, action: () => Promise<T>): Promise<T | undefined> {
+  try { return await action() }
+  catch { console.error(code) }
 }
 
 export async function handleAgentTelegram(update: z.infer<typeof telegramUpdateSchema>, deps: AgentTelegramDeps): Promise<boolean> {
@@ -24,6 +30,7 @@ export async function handleAgentTelegram(update: z.infer<typeof telegramUpdateS
   if (callback) {
     const match = callback.data?.match(/^agk:off:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i)
     if (!match || !callback.message) return false
+    if (!(await deps.acceptUpdate(update.update_id))) return true
     const found = await deps.repo.deactivateKnowledge(match[1])
     await deps.io.ack(callback.id)
     await deps.io.edit(callback.message.chat.id, callback.message.message_id, found ? 'Regra desativada.' : 'Regra não encontrada.')
@@ -31,6 +38,7 @@ export async function handleAgentTelegram(update: z.infer<typeof telegramUpdateS
   }
   if (!message) return false
   const text = message.text?.trim() ?? ''
+  if (['/agente pausar', '/agente ligar', '/agente status'].includes(text) && !(await deps.acceptUpdate(update.update_id))) return true
   if (text === '/agente pausar') {
     await deps.repo.setEnabled(deps.storeId, false)
     await deps.io.send(message.chat.id, 'Agente pausado. As mensagens novas vão para cá.')
@@ -55,6 +63,7 @@ export async function handleAgentTelegram(update: z.infer<typeof telegramUpdateS
   }
   const conversation = await deps.repo.getConversation(escalation.conversationId)
   if (!conversation || conversation.storeId !== deps.storeId) return false
+  if (!(await deps.acceptUpdate(update.update_id))) return true
   const age = conversation.lastIncomingAt ? deps.now().getTime() - conversation.lastIncomingAt.getTime() : Infinity
   if (age > 7 * 24 * 60 * 60 * 1000) {
     await deps.io.send(message.chat.id, 'Passou de 7 dias, a Meta não deixa mais enviar por aqui.')
@@ -71,18 +80,18 @@ export async function handleAgentTelegram(update: z.infer<typeof telegramUpdateS
     await deps.io.send(message.chat.id, 'Não consegui enviar. Tente de novo em instantes.')
     return true
   }
-  await deps.repo.recordOutgoing({ id: messageId, conversationId: conversation.id, author: 'allan', text })
-  await deps.repo.answerEscalation(escalation.id)
-  await deps.repo.setState(conversation.id, 'active')
-  await deps.repo.resetLookupMisses(conversation.id)
-  let learned: Awaited<ReturnType<Learn>> = { general: false }
-  try { learned = await deps.learn({ reply: text, recent: await deps.repo.recentMessages(conversation.id, 20) }) }
-  catch { /* O envio já aconteceu; falhas de aprendizado não o desfazem. */ }
-  if (learned.general) {
-    const id = await deps.repo.addKnowledge({ storeId: conversation.storeId, topic: learned.topic, rule: learned.rule, sourceEscalation: escalation.id })
-    await deps.io.send(message.chat.id, `Enviado. Aprendi: ${html(learned.rule, 4000)}`, [[{ text: 'Não aprender isso', callback_data: `agk:off:${id}` }]])
+  // O envio já aconteceu: nenhuma falha posterior deve provocar uma reentrega.
+  await bestEffort('agent_reply_confirmation_failed', () => deps.io.send(message.chat.id, 'Enviado.'))
+  await bestEffort('agent_reply_record_failed', () => deps.repo.recordOutgoing({ id: messageId, conversationId: conversation.id, author: 'allan', text }))
+  await bestEffort('agent_reply_answer_failed', () => deps.repo.answerEscalation(escalation.id))
+  await bestEffort('agent_reply_state_failed', () => deps.repo.setState(conversation.id, 'active'))
+  await bestEffort('agent_reply_reset_lookup_failed', () => deps.repo.resetLookupMisses(conversation.id))
+  const learned = await bestEffort('agent_learn_failed', async () => deps.learn({ reply: text, recent: await deps.repo.recentMessages(conversation.id, 20) }))
+  if (learned?.general) {
+    const id = await bestEffort('agent_knowledge_add_failed', () => deps.repo.addKnowledge({ storeId: conversation.storeId, topic: learned.topic, rule: learned.rule, sourceEscalation: escalation.id }))
+    if (id) await bestEffort('agent_learn_message_failed', () => deps.io.send(message.chat.id, `Aprendi: ${html(learned.rule, 4000)}`, [[{ text: 'Não aprender isso', callback_data: `agk:off:${id}` }]]))
   } else {
-    await deps.io.send(message.chat.id, 'Enviado. Não virou regra (caso pessoal).')
+    await bestEffort('agent_learn_message_failed', () => deps.io.send(message.chat.id, 'Não virou regra (caso pessoal).'))
   }
   return true
 }
