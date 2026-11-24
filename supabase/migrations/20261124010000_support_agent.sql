@@ -13,6 +13,7 @@ create table public.agent_conversations (
   customer_name text,
   state text not null default 'active' check (state in ('active','escalated','paused')),
   paused_until timestamptz,
+  processing_until timestamptz null,
   lookup_misses integer not null default 0,
   last_incoming_at timestamptz,
   created_at timestamptz not null default now()

@@ -62,9 +62,129 @@ function expectNoReply(s: Awaited<ReturnType<typeof setup>>) {
   expect(s.deps.buildTools).not.toHaveBeenCalled()
 }
 
+function deferred() {
+  let resolve!: () => void
+  const promise = new Promise<void>(done => { resolve = done })
+  return { promise, resolve }
+}
+
 afterEach(() => vi.restoreAllMocks())
 
 describe('processamento da conversa', () => {
+  it('segunda execução espera a primeira terminar e responde com o histórico novo', async () => {
+    const s = await setup()
+    const started = deferred()
+    const finishFirst = deferred()
+    const waiting = deferred()
+    const retry = deferred()
+    s.deps.callModel.mockImplementationOnce(async () => {
+      started.resolve()
+      await finishFirst.promise
+      return answer
+    })
+    s.zernio.send.mockResolvedValueOnce({ messageId: 'outgoing-1' }).mockResolvedValueOnce({ messageId: 'outgoing-2' })
+    s.deps.sleep.mockImplementation(async ms => {
+      if (ms === 3000) {
+        waiting.resolve()
+        await retry.promise
+      }
+    })
+    const first = processConversation(input, s.deps)
+    await started.promise
+    await s.incoming('incoming-2', 'Outra dúvida', new Date(now.getTime() + 15000))
+    const second = processConversation({ ...input, messageId: 'incoming-2' }, s.deps)
+    try {
+      await Promise.race([waiting.promise, second])
+      expect(s.deps.sleep).toHaveBeenCalledWith(3000)
+      expect(s.deps.brain).toHaveBeenCalledTimes(1)
+      expect(s.zernio.send).not.toHaveBeenCalled()
+    } finally {
+      finishFirst.resolve()
+      await first
+      retry.resolve()
+      await second
+    }
+    expect(await first).toBe('respondido')
+    expect(await second).toBe('respondido')
+    expect(s.deps.brain).toHaveBeenCalledTimes(2)
+    expect(s.deps.brain.mock.calls[1][0].messages).toEqual([
+      { role: 'user', text: 'Preciso de ajuda' },
+      { role: 'assistant', text: 'Resposta do banco' },
+      { role: 'user', text: 'Outra dúvida' },
+    ])
+    expect(s.zernio.send).toHaveBeenCalledTimes(2)
+    expect(s.messages.has('outgoing-2')).toBe(true)
+  })
+
+  it('execução que perde a vez para mensagem mais nova durante a espera é ignorada', async () => {
+    const s = await setup()
+    await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), now)
+    s.deps.sleep.mockImplementation(async ms => {
+      if (ms === 3000) await s.incoming('incoming-2', 'Mensagem mais nova', new Date(now.getTime() + 1))
+    })
+    expect(await processConversation(input, s.deps)).toBe('ignorado')
+    expect(s.deps.sleep.mock.calls).toEqual([[8000], [3000]])
+    expect(s.escalate).not.toHaveBeenCalled()
+    expectNoReply(s)
+    // A execução ignorada não pode liberar a trava que pertence à primeira.
+    expect(await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), now)).toBe(false)
+  })
+
+  it('trava é liberada mesmo quando o cérebro falha', async () => {
+    const s = await setup()
+    const claims: boolean[] = []
+    const claim = vi.spyOn(s.repo, 'claimProcessing')
+    s.deps.brain.mockImplementation(async () => {
+      claims.push(await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), now))
+      throw new Error('falha do modelo')
+    })
+    expect(await processConversation(input, s.deps)).toBe('escalado')
+    expect(claims).toEqual([false])
+    expect(claim).toHaveBeenNthCalledWith(1, input.conversationId, new Date('2026-11-25T01:34:50Z'), now)
+    expect(await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), now)).toBe(true)
+  })
+
+  it('desiste após 200 segundos sem obter a trava', async () => {
+    const s = await setup()
+    await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), now)
+    let elapsed = 0
+    s.deps.now = () => new Date(now.getTime() + elapsed)
+    s.deps.sleep.mockImplementation(async ms => { if (ms !== 8000) elapsed += ms })
+    expect(await processConversation(input, s.deps)).toBe('ignorado')
+    expect(elapsed).toBe(200000)
+    expect(s.deps.sleep.mock.calls.slice(1).map(([ms]) => ms)).toEqual([...Array(66).fill(3000), 2000])
+    expect(s.escalate).not.toHaveBeenCalled()
+    expectNoReply(s)
+    expect(await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), s.deps.now())).toBe(false)
+  })
+
+  it('relê a pausa da conversa depois de obter a trava', async () => {
+    const s = await setup()
+    await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), now)
+    s.deps.sleep.mockImplementation(async ms => {
+      if (ms === 3000) {
+        await s.repo.pauseConversation(input.conversationId, new Date(now.getTime() + 60000))
+        await s.repo.releaseProcessing(input.conversationId)
+      }
+    })
+    expect(await processConversation(input, s.deps)).toBe('ignorado')
+    expectNoReply(s)
+    expect(await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), now)).toBe(true)
+  })
+
+  it('libera a trava quando uma escalação direta lança erro', async () => {
+    const s = await setup()
+    const claims: boolean[] = []
+    s.repo.isEnabled = async () => false
+    s.escalate.mockImplementation(async () => {
+      claims.push(await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), now))
+      throw new Error('falha da escalação')
+    })
+    await expect(processConversation(input, s.deps)).rejects.toThrow('falha da escalação')
+    expect(claims).toEqual([false])
+    expect(await s.repo.claimProcessing(input.conversationId, new Date(now.getTime() + 290000), now)).toBe(true)
+  })
+
   it('três mensagens seguidas geram uma resposta', async () => {
     const s = await setup()
     const sleepers: (() => void)[] = []

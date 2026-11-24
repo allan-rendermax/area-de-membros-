@@ -45,6 +45,25 @@ async function conversation(id = 'conversation-1') {
     values($1,$2,'instagram-account','instagram') returning *`, [id, store])
 }
 
+describe('trava de processamento no storage', () => {
+  it('claimProcessing é atômico: duas chamadas simultâneas, só uma obtém a trava', async () => {
+    const created = await conversation()
+    await conversation('other')
+    expect(created.rows[0]).toMatchObject({ processing_until: null })
+    const now = new Date('2026-11-24T12:00:00Z')
+    const until = new Date('2026-11-24T12:04:50Z')
+    const claim = () => db.query(`update public.agent_conversations set processing_until=$2
+      where id=$1 and (processing_until is null or processing_until <= $3) returning id`, ['conversation-1', until, now])
+    const results = await Promise.all([claim(), claim()])
+    expect(results.map(result => result.rows)).toEqual([[{ id: 'conversation-1' }], []])
+    expect((await db.query(`select processing_until from public.agent_conversations where id='other'`)).rows).toEqual([{ processing_until: null }])
+    expect((await db.query(`select processing_until from public.agent_conversations where id='conversation-1'`)).rows).toEqual([{ processing_until: until }])
+    expect((await db.query(`update public.agent_conversations set processing_until=$2
+      where id=$1 and (processing_until is null or processing_until <= $3) returning id`,
+    ['conversation-1', new Date(until.getTime() + 290000), until])).rows).toEqual([{ id: 'conversation-1' }])
+  })
+})
+
 describe('ações e métricas compartilhadas com Telegram', () => {
   it('aceita ação do agente sem usuário do Telegram', async () => {
     const result = await db.query(`insert into public.telegram_support_actions(origin,user_id,chat_id,customer_id,store_id,kind,expected_email)
