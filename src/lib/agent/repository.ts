@@ -1,6 +1,33 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AgentConversation, AgentMessage } from './types'
 
+export type AgentActions = {
+  create(input: { customerId: string; storeId: string; expectedEmail: string; conversationId: string }): Promise<string | 'locked'>
+  finish(id: string, state: 'done' | 'uncertain', logId: string | null, result: string): Promise<void>
+}
+
+export function createAgentActions(): AgentActions {
+  const db = createAdminClient()
+  return {
+    async create(input) {
+      const { data, error } = await db.from('telegram_support_actions').insert({
+        origin: 'agente', kind: 'resend', state: 'processing', user_id: null, chat_id: null,
+        customer_id: input.customerId, store_id: input.storeId, expected_email: input.expectedEmail,
+        conversation_id: input.conversationId,
+      }).select('id').single()
+      if (error?.code === '23505') return 'locked'
+      if (error) throw new Error('agent_action_storage_failed')
+      return data.id as string
+    },
+    async finish(id, state, logId, result) {
+      const { error } = await db.from('telegram_support_actions').update({
+        state, log_id: logId, result, finished_at: new Date().toISOString(),
+      }).eq('id', id).eq('origin', 'agente').select('id').single()
+      if (error) throw new Error('agent_action_update_failed')
+    },
+  }
+}
+
 export interface AgentRepository {
   recordIncoming(m: { id: string; conversationId: string; storeId: string; accountId: string; platform: 'instagram' | 'facebook'; customerName: string; text: string; at: Date }): Promise<boolean>
   isOwnOutgoing(messageId: string): Promise<boolean>

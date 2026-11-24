@@ -30,7 +30,7 @@ export function createSupportOperations(scope: Scope, data: OperationData): Supp
       const customer = await data.getCustomer(id)
       return customer ? { customer, storeId: scope.storeId, products: await data.access(customer) } : null
     },
-    async execute(a: SupportAction): Promise<ActionResult> {
+    async execute(a: Pick<SupportAction, 'kind' | 'customerId' | 'storeId' | 'expectedEmail' | 'newEmail'>): Promise<ActionResult> {
       if (a.storeId !== scope.storeId) return refused('Esta ação pertence a outra loja. Consulte novamente.')
       const c = await data.getCustomer(a.customerId)
       if (!c || c.blocked || c.email !== a.expectedEmail) return refused('O cadastro mudou ou está bloqueado. Consulte novamente antes de agir.')

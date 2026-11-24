@@ -27,5 +27,5 @@ export type SupportDeps = {
   failures?: (offset: number) => Promise<import('./monitoring').FailureList>
   allowedUsers: number[]; owners?: number[]; now: () => Date; repo: SupportRepository
   io: { send(chatId: number, text: string, buttons?: Button[][], forceReply?: boolean): Promise<number>; edit(chatId: number, messageId: number, text: string, buttons?: Button[][]): Promise<void>; ack(id: string): Promise<void> }
-  ops: { lookup(email: string): Promise<CustomerLookup>; lookupId(id: string): Promise<CustomerLookup | null>; actionCustomer(id: string): Promise<Pick<CustomerLookup, 'customer' | 'storeId' | 'products'> | null>; execute(action: SupportAction): Promise<ActionResult> }
+  ops: { lookup(email: string): Promise<CustomerLookup>; lookupId(id: string): Promise<CustomerLookup | null>; actionCustomer(id: string): Promise<Pick<CustomerLookup, 'customer' | 'storeId' | 'products'> | null>; execute(action: Pick<SupportAction, 'kind' | 'customerId' | 'storeId' | 'expectedEmail' | 'newEmail'>): Promise<ActionResult> }
 }
