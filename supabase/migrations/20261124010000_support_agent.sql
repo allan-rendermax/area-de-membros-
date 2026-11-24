@@ -68,8 +68,12 @@ alter table public.telegram_support_actions
   alter column user_id drop not null,
   alter column chat_id drop not null,
   add column origin text not null default 'telegram' check (origin in ('telegram','agente')),
+  add column conversation_id text null references public.agent_conversations(id) on delete set null,
   add constraint telegram_support_actions_telegram_identity
     check (origin='agente' or (user_id is not null and chat_id is not null));
+
+create index telegram_support_actions_conversation
+  on public.telegram_support_actions(conversation_id, finished_at);
 
 create or replace function public.telegram_support_metrics(p_store uuid,p_start timestamptz,p_end timestamptz) returns jsonb
 language sql stable set search_path=public as $$

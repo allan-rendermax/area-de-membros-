@@ -52,6 +52,19 @@ describe('ações e métricas compartilhadas com Telegram', () => {
     expect(result.rows).toEqual([{ origin: 'agente', user_id: null, chat_id: null }])
   })
 
+  it('vincula ação do agente à conversa', async () => {
+    await conversation()
+    const action = await db.query<{ id: string }>(`insert into public.telegram_support_actions(origin,conversation_id,customer_id,store_id,kind,expected_email)
+      values('agente','conversation-1',$1,$2,'resend','customer@example.test') returning id`, [customer, store])
+    const actionId = action.rows[0].id
+    const linked = await db.query('select origin,conversation_id from public.telegram_support_actions where id=$1', [actionId])
+    expect(linked.rows).toEqual([{ origin: 'agente', conversation_id: 'conversation-1' }])
+
+    await db.query('delete from public.agent_conversations where id=$1', ['conversation-1'])
+    const unlinked = await db.query('select origin,conversation_id from public.telegram_support_actions where id=$1', [actionId])
+    expect(unlinked.rows).toEqual([{ origin: 'agente', conversation_id: null }])
+  })
+
   it('recusa ação do Telegram sem usuário', async () => {
     await expect(db.query(`insert into public.telegram_support_actions(origin,user_id,chat_id,customer_id,store_id,kind,expected_email)
       values('telegram',null,123,$1,$2,'resend','customer@example.test')`, [customer, store])).rejects.toMatchObject({ code: '23514' })
