@@ -17,7 +17,7 @@ Configure estas variáveis no servidor, sem colocar chaves em arquivos públicos
 | `ZERNIO_API_KEY` | Chave para receber e enviar mensagens pela Zernio. |
 | `ZERNIO_WEBHOOK_SECRET` | Segredo com pelo menos 32 caracteres para autenticar os eventos. |
 | `ANTHROPIC_API_KEY` | Chave do modelo de respostas e aprendizado. |
-| `AGENT_MODEL` | Modelo usado pelo agente. |
+| `AGENT_MODEL` | Opcional. Padrão `claude-haiku-5-5` (o mais barato). Para respostas mais caprichadas, `claude-sonnet-5-5`. |
 | `AGENT_ACCOUNT_IDS` | IDs das contas atendidas, separados por vírgula. |
 | `AGENT_STORE_SLUG` | Identificador da loja atendida. |
 | `AGENT_BATCH_SECONDS` | Tempo de agrupamento de mensagens antes de processar a conversa. |

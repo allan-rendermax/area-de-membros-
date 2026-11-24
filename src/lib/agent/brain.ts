@@ -17,11 +17,14 @@ export type CallModel = (params: {
 
 export function createCallModel(apiKey: string, model: string): CallModel {
   const client = new Anthropic({ apiKey, timeout: 20000, maxRetries: 1 })
+  // Haiku 5.5 recusa `fallbacks` com 400; os demais modelos usam o reencaminhamento do servidor.
+  const fallback = model.startsWith('claude-haiku-')
+    ? {}
+    : { betas: ['server-side-fallback-2026-07-01'], fallbacks: 'default' as const }
   return async ({ system, tools, messages }) => client.beta.messages.create({
     model,
     max_tokens: 16000,
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
+    ...fallback,
     system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
     tools,
     tool_choice: { type: 'auto' },

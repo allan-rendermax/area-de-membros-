@@ -33,7 +33,7 @@ describe('configuração do agente', () => {
   it('lê contas separadas por vírgula', () => {
     expect(getAgentConfig()).toEqual({
       zernioApiKey: 'zernio-key', webhookSecret: 's'.repeat(32), anthropicApiKey: 'anthropic-key',
-      model: 'claude-opus-5-5', accountIds: ['6b05a6a49f8d271e5d1941a2', '6b05a8f01de1f94249e842e8'],
+      model: 'claude-haiku-5-5', accountIds: ['6b05a6a49f8d271e5d1941a2', '6b05a8f01de1f94249e842e8'],
       storeSlug: 'arquitetura', batchSeconds: 8, dailyResendLimit: 20, quotaReserve: 30,
     })
   })
@@ -63,7 +63,7 @@ describe('configuração do agente', () => {
   it.each([undefined, '', '   '])('usa modelo e loja padrão quando vazios: %s', value => {
     vi.stubEnv('AGENT_MODEL', value)
     vi.stubEnv('AGENT_STORE_SLUG', value)
-    expect(getAgentConfig()).toMatchObject({ model: 'claude-opus-5-5', storeSlug: 'arquitetura' })
+    expect(getAgentConfig()).toMatchObject({ model: 'claude-haiku-5-5', storeSlug: 'arquitetura' })
   })
 
   it.each([['0', 0], [' 15 ', 15], ['60', 60]])('aceita intervalo inteiro %s', (value, expected) => {

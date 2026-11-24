@@ -17,7 +17,7 @@ export function getAgentConfig(): AgentConfig | null {
   const accountIds = [...new Set((process.env.AGENT_ACCOUNT_IDS ?? '').split(',').map(id => id.trim()).filter(Boolean))]
   if (!zernioApiKey || webhookSecret.length < 32 || !anthropicApiKey || !accountIds.length) return null
 
-  const model = process.env.AGENT_MODEL?.trim() || 'claude-opus-5-5'
+  const model = process.env.AGENT_MODEL?.trim() || 'claude-haiku-5-5'
   const storeSlug = process.env.AGENT_STORE_SLUG?.trim() || 'arquitetura'
   const batchValue = Number(process.env.AGENT_BATCH_SECONDS?.trim() || '8')
   const batchSeconds = Number.isInteger(batchValue) && batchValue >= 0 && batchValue <= 60 ? batchValue : 8
