@@ -91,7 +91,7 @@ export function memoryRepository() {
       const current = escalations.get(id)
       if (current?.state === 'open') current.state = 'answered'
     },
-    agentResendsToday: unused, agentResendSince: unused,
+    agentResendsToday: unused, agentResendSince: unused, weeklyDigest: unused,
   }
   return { repo, conversations, messages }
 }

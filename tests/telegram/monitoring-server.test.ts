@@ -50,6 +50,14 @@ it('timeout no Telegram mantém resultado incerto e não reenvia automaticamente
   expect(await runDailyReport(new Date('2026-10-26T02:06:00Z'))).toEqual({sent:0})
   expect(mock.send).toHaveBeenCalledTimes(1)
 })
+it.each([undefined, 7])('relatório diário interpreta agentResends da RPC (%s) com fallback zero', async agentResends => {
+  vi.stubEnv('TELEGRAM_REPORT_USER_IDS', '123')
+  mock.rpc.mockImplementation(async (name: string) => ({ data: name === 'telegram_support_metrics'
+    ? { sales: 0, accessCustomers: 0, accessEmails: 0, delivered: 0, failed: 0, pending: 0, complaints: 0, unknown: 0, resends: 1, corrections: 0, refused: 0, uncertain: 0, ...(agentResends === undefined ? {} : { agentResends }) }
+    : { total: 0, rows: [], updatedAt: null, unknown: 0 }, error: null }))
+  expect(await runDailyReport(new Date('2026-11-25T02:05:00Z'))).toEqual({ sent: 1 })
+  expect(mock.send.mock.calls[0][1]).toContain(`🤖 Reenvios do agente: <b>${agentResends ?? 0}</b>`)
+})
 it('cron nega segredo ausente ou errado', () => {
   vi.stubEnv('CRON_SECRET',''); vi.stubEnv('TELEGRAM_WEBHOOK_SECRET','')
   expect(authorizeTelegramJob(new Request('https://example.test'))).toBe(false)

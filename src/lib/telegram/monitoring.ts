@@ -3,7 +3,7 @@ import { html } from './format'
 export { menu } from './format'
 
 export type FailureList = { total: number; rows: { customerId: string; email: string; failedEmail: string; event: string; date: string }[]; updatedAt: string | null; unknown: number }
-export type DailyMetrics = { sales: number; accessCustomers: number; accessEmails: number; delivered: number; failed: number; pending: number; complaints: number; unknown: number; resends: number; corrections: number; refused: number; uncertain: number }
+export type DailyMetrics = { sales: number; accessCustomers: number; accessEmails: number; delivered: number; failed: number; pending: number; complaints: number; unknown: number; resends: number; agentResends: number; corrections: number; refused: number; uncertain: number }
 const timestamp = (s: string) => new Date(s).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 export function syncLabel(value: FailureList) {
   return value.updatedAt ? `🕐 Última conferência: ${timestamp(value.updatedAt)}` : '🕐 Última conferência: conferência completa ainda não concluída.'
@@ -46,6 +46,7 @@ Clientes dessas vendas com produto publicado liberado: <b>${m.accessCustomers}</
 
 🛠️ <b>Suporte pelo bot</b>
 📨 Reenvios aceitos pelo provedor: <b>${m.resends}</b> (inclui correções com reenvio)
+🤖 Reenvios do agente: <b>${m.agentResends}</b>
 ✏️ Correções confirmadas: <b>${m.corrections}</b>
 ⛔ Ações encerradas sem envio confirmado: <b>${m.refused}</b>
 ⚠️ Ações em andamento ou com resultado incerto: <b>${m.uncertain}</b>

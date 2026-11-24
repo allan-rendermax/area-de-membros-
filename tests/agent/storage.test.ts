@@ -121,6 +121,7 @@ describe('ações e métricas compartilhadas com Telegram', () => {
       insert into public.telegram_support_actions(origin,user_id,chat_id,customer_id,store_id,kind,expected_email,state,log_id,finished_at,correction_confirmed) values
         ('telegram',123,123,'${customer}','${store}','resend','customer@example.test','done','${log}','2026-11-24T12:00:00Z',false),
         ('agente',null,null,'${customer}','${store}','resend','customer@example.test','done','${log}','2026-11-24T12:00:00Z',false),
+        ('agente',null,null,'${customer}','${store}','resend','customer@example.test','done',null,'2026-11-24T12:00:00Z',false),
         ('telegram',123,123,'${customer}','${store}','correct','customer@example.test','done',null,'2026-11-24T12:00:00Z',true),
         ('agente',null,null,'${customer}','${store}','resend','customer@example.test','uncertain','${log}',null,false),
         ('agente',null,null,'${customer}','${store}','resend','customer@example.test','done','${log}','2026-11-25T00:00:00Z',false),
@@ -223,6 +224,89 @@ describe('persistência privada do agente', () => {
 
   it('exige uma conversa existente nas mensagens', async () => {
     await expect(db.exec(`insert into public.agent_messages(id,conversation_id,direction,author,text) values('invalid','missing','in','cliente','Texto')`)).rejects.toMatchObject({ code: '23503' })
+  })
+})
+
+describe('resumo semanal no storage', () => {
+  const since = '2026-11-17T02:00:00Z'
+  const recent = '2026-11-20T12:00:00Z'
+  const old = '2026-11-17T01:59:59Z'
+
+  it('retorna zeros e listas vazias sem atividade e só permite service_role', async () => {
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      const privilege = await db.query<{ allowed: boolean }>(`select has_function_privilege($1,'public.agent_weekly_digest(uuid,timestamptz)','execute') as allowed`, [role])
+      expect(privilege.rows[0].allowed).toBe(role === 'service_role')
+    }
+    await db.exec('set local role service_role')
+    const result = await db.query(`select public.agent_weekly_digest($1,$2) as value`, [store, since])
+    expect(result.rows).toEqual([{ value: { conversas: 0, resolvidas: 0, reenvios: 0, escalacoes: {}, novas: [], repetidas: [] } }])
+  })
+
+  it('conta conversas distintas com cliente recente, resposta do agente e nenhuma escalação recente', async () => {
+    for (const id of ['resolved', 'escalated', 'unanswered', 'human', 'old-reply', 'old-client', 'out-only', 'other']) await conversation(id)
+    await db.exec(`update public.agent_conversations set store_id='${otherStore}' where id='other'`)
+    // last_incoming_at deliberately disagrees with history: messages are the source of truth.
+    await db.exec(`update public.agent_conversations set last_incoming_at='${recent}' where id='old-client'`)
+    for (const id of ['resolved', 'escalated', 'unanswered', 'human', 'old-reply', 'other']) {
+      await db.query(`insert into public.agent_messages(id,conversation_id,direction,author,text,created_at) values($1,$2,'in','cliente','Ajuda',$3)`, [`in-${id}`, id, since])
+    }
+    await db.exec(`insert into public.agent_messages(id,conversation_id,direction,author,text,created_at) values
+      ('in-duplicate','resolved','in','cliente','Outra mensagem','${recent}'),
+      ('old-in','old-client','in','cliente','Ajuda','${old}'),
+      ('human-out','human','out','allan','Resposta','${recent}'),
+      ('old-agent-out','old-reply','out','agente','Resposta','${old}')`)
+    for (const id of ['resolved', 'escalated', 'old-client', 'out-only', 'other']) {
+      await db.query(`insert into public.agent_messages(id,conversation_id,direction,author,text,created_at) values($1,$2,'out','agente','Resposta',$3)`, [`out-${id}`, id, recent])
+    }
+    await db.exec(`insert into public.agent_escalations(conversation_id,reason,state,created_at) values
+      ('resolved','Antiga','open','${old}'),('escalated','Reembolso','answered','${since}')`)
+    const result = await db.query<{ value: { conversas: number; resolvidas: number } }>(`select public.agent_weekly_digest($1,$2) as value`, [store, since])
+    expect(result.rows[0].value).toMatchObject({ conversas: 5, resolvidas: 1 })
+  })
+
+  it('deduplica donos por conversa, motivo e minuto; novas regras e reenvios respeitam loja e janela', async () => {
+    for (const id of ['a', 'b', 'other']) await conversation(id)
+    await db.exec(`update public.agent_conversations set store_id='${otherStore}' where id='other'`)
+    await db.exec(`insert into public.agent_escalations(conversation_id,reason,created_at) values
+      ('a','reembolso','2026-11-20T12:00:01Z'),('a','reembolso','2026-11-20T12:00:59Z'),
+      ('a','reembolso','2026-11-20T12:01:00Z'),('b','reembolso','2026-11-20T12:00:01Z'),
+      ('a','técnica','2026-11-20T12:00:01Z'),('a','técnica','${since}'),
+      ('a','fora da janela','${old}'),('other','outra loja','${recent}')`)
+    await db.exec(`insert into public.email_log(id,store_id) values('${log}','${store}')`)
+    // Only one completed, logged agent resend in this store is inside the window.
+    const actions = [
+      ['agente', 'resend', 'done', log, since, store],
+      ['telegram', 'resend', 'done', log, recent, store],
+      ['agente', 'correct', 'done', log, recent, store],
+      ['agente', 'resend', 'done', null, recent, store],
+      ['agente', 'resend', 'uncertain', log, recent, store],
+      ['agente', 'resend', 'processing', log, recent, store],
+      ['agente', 'resend', 'done', log, old, store],
+      ['agente', 'resend', 'done', log, null, store],
+      ['agente', 'resend', 'done', log, recent, otherStore],
+    ]
+    for (const [origin, kind, state, logId, finishedAt, storeId] of actions) {
+      const actionCustomer = await db.query<{ id: string }>(`insert into public.customers(id,email) values(gen_random_uuid(),'action@example.test') returning id`)
+      await db.query(`insert into public.telegram_support_actions(origin,kind,state,log_id,finished_at,store_id,customer_id,expected_email,user_id,chat_id)
+        values($1,$2,$3,$4,$5,$6,$7,'action@example.test',123,123)`, [origin, kind, state, logId, finishedAt, storeId, actionCustomer.rows[0].id])
+    }
+    const knowledge = [
+      ['00000000-0000-4000-8000-000000000010', store, 'Nova A', 'allan', true, since],
+      ['00000000-0000-4000-8000-000000000011', store, 'Nova B', 'allan', true, recent],
+      ['00000000-0000-4000-8000-000000000012', store, 'Inativa', 'allan', false, recent],
+      ['00000000-0000-4000-8000-000000000013', store, 'Inicial', 'inicial', true, recent],
+      ['00000000-0000-4000-8000-000000000014', store, 'Antiga', 'allan', true, old],
+      ['00000000-0000-4000-8000-000000000015', otherStore, 'Outra loja', 'allan', true, recent],
+    ]
+    for (const row of knowledge) {
+      await db.query(`insert into public.agent_knowledge(id,store_id,rule,origin,active,created_at,topic) values($1,$2,$3,$4,$5,$6,'suporte')`, row)
+    }
+    const result = await db.query(`select public.agent_weekly_digest($1,$2) as value`, [store, since])
+    expect(result.rows).toEqual([{ value: {
+      conversas: 0, resolvidas: 0, reenvios: 1, escalacoes: { reembolso: 3, técnica: 2 },
+      novas: [{ id: '00000000-0000-4000-8000-000000000010', rule: 'Nova A' }, { id: '00000000-0000-4000-8000-000000000011', rule: 'Nova B' }],
+      repetidas: ['reembolso: 3x'],
+    } }])
   })
 })
 

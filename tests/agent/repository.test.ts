@@ -139,3 +139,20 @@ describe('isOwnOutgoing', () => {
     expect(url.searchParams.get('direction')).toBe('eq.out')
   })
 })
+
+describe('weeklyDigest', () => {
+  it('consulta o resumo por loja e corte temporal via RPC', async () => {
+    const metrics = { conversas: 4, resolvidas: 2, reenvios: 1, escalacoes: { reembolso: 3 }, novas: [{ id: 'id', rule: 'Regra' }], repetidas: ['reembolso: 3x'] }
+    io.fetch.mockResolvedValueOnce(Response.json(metrics))
+    expect(await createAgentRepository().weeklyDigest('store', new Date('2026-11-17T02:00:00Z'))).toEqual(metrics)
+    const [url, request] = io.fetch.mock.calls[0]
+    expect(new URL(url).pathname).toBe('/rest/v1/rpc/agent_weekly_digest')
+    expect(request.method).toBe('POST')
+    expect(JSON.parse(request.body)).toEqual({ p_store: 'store', p_since: '2026-11-17T02:00:00.000Z' })
+  })
+
+  it.each([null, { error: true }])('não mascara erro ou ausência de métricas: %j', async failure => {
+    io.fetch.mockResolvedValueOnce(failure ? new Response(JSON.stringify({ message: 'cliente@example.test' }), { status: 500 }) : Response.json(null))
+    await expect(createAgentRepository().weeklyDigest('store', new Date())).rejects.toThrow(/^agent_digest_read_failed$/)
+  })
+})

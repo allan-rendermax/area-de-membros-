@@ -114,12 +114,48 @@ select jsonb_build_object(
   'resends',(select count(*) from actions where origin='telegram' and state='done' and log_id is not null),
   'agentResends',(select count(*) from actions where origin='agente' and state='done' and log_id is not null),
   'corrections',(select count(*) from actions where correction_confirmed),
-  'refused',(select count(*) from actions where state='done' and log_id is null),
+  'refused',(select count(*) from actions where origin='telegram' and state='done' and log_id is null),
   'uncertain',(select count(*) from telegram_support_actions where store_id=p_store and state in ('processing','uncertain'))
 );
 $$;
 revoke all on function public.telegram_support_metrics(uuid,timestamptz,timestamptz) from public,anon,authenticated;
 grant execute on function public.telegram_support_metrics(uuid,timestamptz,timestamptz) to service_role;
+
+-- Aggregate server-side so row limits cannot silently truncate a weekly report.
+create function public.agent_weekly_digest(p_store uuid,p_since timestamptz) returns jsonb
+language sql stable security invoker set search_path='' as $$
+with conversations as (
+  select c.id from public.agent_conversations c
+  where c.store_id=p_store and exists (
+    select 1 from public.agent_messages m where m.conversation_id=c.id
+      and m.direction='in' and m.author='cliente' and m.created_at>=p_since
+  )
+), escalation_events as (
+  select distinct e.conversation_id,e.reason,date_trunc('minute',e.created_at) as minute
+  from public.agent_escalations e join public.agent_conversations c on c.id=e.conversation_id
+  where c.store_id=p_store and e.created_at>=p_since
+), reasons as (
+  select reason,count(*) as total from escalation_events group by reason
+)
+select jsonb_build_object(
+  'conversas',(select count(*) from conversations),
+  'resolvidas',(select count(*) from conversations c where exists (
+    select 1 from public.agent_messages m where m.conversation_id=c.id
+      and m.direction='out' and m.author='agente' and m.created_at>=p_since
+  ) and not exists (
+    select 1 from escalation_events e where e.conversation_id=c.id
+  )),
+  'reenvios',(select count(*) from public.telegram_support_actions
+    where store_id=p_store and origin='agente' and kind='resend' and state='done'
+      and log_id is not null and finished_at>=p_since),
+  'escalacoes',coalesce((select jsonb_object_agg(reason,total order by reason) from reasons),'{}'::jsonb),
+  'novas',coalesce((select jsonb_agg(jsonb_build_object('id',id,'rule',rule) order by created_at,id)
+    from public.agent_knowledge where store_id=p_store and origin='allan' and active and created_at>=p_since),'[]'::jsonb),
+  'repetidas',coalesce((select jsonb_agg(reason || ': ' || total || 'x' order by reason) from reasons where total>=3),'[]'::jsonb)
+);
+$$;
+revoke all on function public.agent_weekly_digest(uuid,timestamptz) from public,anon,authenticated;
+grant execute on function public.agent_weekly_digest(uuid,timestamptz) to service_role;
 
 -- Approved knowledge is scoped by store slug, never by an installation-specific UUID.
 insert into public.agent_knowledge(store_id,topic,rule,origin)

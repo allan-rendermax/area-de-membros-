@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import type { AgentConversation, AgentMessage } from './types'
+import type { WeeklyDigest } from './digest'
 
 export type AgentActions = {
   create(input: { customerId: string; storeId: string; expectedEmail: string; conversationId: string }): Promise<string | 'locked'>
@@ -50,6 +51,7 @@ export interface AgentRepository {
   answerEscalation(id: string): Promise<void>
   agentResendsToday(storeId: string): Promise<number>
   agentResendSince(conversationId: string, since: Date): Promise<boolean>
+  weeklyDigest(storeId: string, since: Date): Promise<WeeklyDigest>
 }
 
 type ConversationRow = {
@@ -186,6 +188,11 @@ export function createAgentRepository(): AgentRepository {
         .eq('conversation_id', conversationId).eq('origin', 'agente').eq('kind', 'resend').eq('state', 'done').not('log_id', 'is', null).gte('finished_at', since.toISOString()).limit(1)
       if (error) throw new Error('agent_resends_read_failed')
       return (data?.length ?? 0) > 0
+    },
+    async weeklyDigest(storeId, since) {
+      const { data, error } = await db.rpc('agent_weekly_digest', { p_store: storeId, p_since: since.toISOString() })
+      if (error || !data) throw new Error('agent_digest_read_failed')
+      return data as WeeklyDigest
     },
   }
 }

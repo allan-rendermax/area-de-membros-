@@ -71,7 +71,8 @@ export async function runDailyReport(now = new Date()) {
   if (!store) throw new Error('telegram_store_missing')
   const { data, error } = await db.rpc('telegram_support_metrics', { p_store: store.id, p_start: window.start, p_end: window.end })
   if (error || !data) throw new Error('telegram_report_metrics_failed')
-  const text = dailyReport(store.name, window.date, data as DailyMetrics, await listFailures(config.storeSlug))
+  const metrics = data as DailyMetrics
+  const text = dailyReport(store.name, window.date, { ...metrics, agentResends: metrics.agentResends ?? 0 }, await listFailures(config.storeSlug))
   const io = createTelegramClient(config.token)
   let sent = 0
   for (const userId of recipients) {
