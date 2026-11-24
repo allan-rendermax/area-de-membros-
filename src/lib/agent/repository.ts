@@ -34,6 +34,7 @@ export interface AgentRepository {
   recordOutgoing(m: { id: string; conversationId: string; author: 'agente' | 'allan'; text: string }): Promise<void>
   pauseConversation(id: string, until: Date): Promise<void>
   getConversation(id: string): Promise<AgentConversation | null>
+  incrementLookupMiss(conversationId: string): Promise<number>
   recentMessages(id: string, limit: number): Promise<AgentMessage[]>
   setState(id: string, state: 'active' | 'escalated' | 'paused'): Promise<void>
   isEnabled(storeId: string): Promise<boolean>
@@ -101,6 +102,11 @@ export function createAgentRepository(): AgentRepository {
       const { data, error } = await db.from('agent_conversations').select('id,store_id,account_id,platform,customer_name,state,paused_until,last_incoming_at').eq('id', id).maybeSingle()
       if (error) throw new Error('agent_conversation_read_failed')
       return data ? conversation(data as ConversationRow) : null
+    },
+    async incrementLookupMiss(conversationId) {
+      const { data, error } = await db.rpc('agent_increment_lookup_miss', { p_conversation_id: conversationId })
+      if (error || !Number.isSafeInteger(data) || data < 1) throw new Error('agent_lookup_miss_update_failed')
+      return data as number
     },
     async recentMessages(id, limit) {
       if (limit <= 0) return []

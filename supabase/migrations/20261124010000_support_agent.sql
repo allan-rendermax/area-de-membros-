@@ -13,6 +13,7 @@ create table public.agent_conversations (
   customer_name text,
   state text not null default 'active' check (state in ('active','escalated','paused')),
   paused_until timestamptz,
+  lookup_misses integer not null default 0,
   last_incoming_at timestamptz,
   created_at timestamptz not null default now()
 );
@@ -62,6 +63,15 @@ alter table public.agent_escalations enable row level security;
 alter table public.agent_knowledge enable row level security;
 revoke all on public.agent_settings,public.agent_conversations,public.agent_messages,public.agent_escalations,public.agent_knowledge from public,anon,authenticated;
 grant select,insert,update,delete on public.agent_settings,public.agent_conversations,public.agent_messages,public.agent_escalations,public.agent_knowledge to service_role;
+
+-- Increment in one statement so concurrent tool contexts cannot lose a miss.
+create function public.agent_increment_lookup_miss(p_conversation_id text) returns integer
+language sql volatile security invoker set search_path='' as $$
+  update public.agent_conversations set lookup_misses=lookup_misses+1
+  where id=p_conversation_id returning lookup_misses;
+$$;
+revoke all on function public.agent_increment_lookup_miss(text) from public,anon,authenticated;
+grant execute on function public.agent_increment_lookup_miss(text) to service_role;
 
 -- Existing actions remain Telegram actions; both origins share the customer lock.
 alter table public.telegram_support_actions

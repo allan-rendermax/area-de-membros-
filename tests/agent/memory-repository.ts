@@ -6,9 +6,12 @@ async function unused(): Promise<never> { throw new Error('unused_repository_met
 export function memoryRepository() {
   const conversations = new Map<string, AgentConversation>()
   const messages = new Map<string, AgentMessage & { conversationId: string }>()
+  const lookupMisses = new Map<string, number>()
+  const escalations = new Map<string, { id: string; conversationId: string; reason: string; chatId: number; messageId: number; state: 'open' | 'answered' }>()
   const repo: AgentRepository = {
     async recordIncoming(m) {
       const current = conversations.get(m.conversationId)
+      if (!current) lookupMisses.set(m.conversationId, 0)
       conversations.set(m.conversationId, {
         id: m.conversationId, storeId: m.storeId, accountId: m.accountId, platform: m.platform,
         customerName: m.customerName, lastIncomingAt: m.at,
@@ -27,9 +30,34 @@ export function memoryRepository() {
       if (current) conversations.set(id, { ...current, state: 'paused', pausedUntil: until })
     },
     async getConversation(id) { return conversations.get(id) ?? null },
-    recentMessages: unused, setState: unused, isEnabled: unused, setEnabled: unused,
-    knowledge: unused, addKnowledge: unused, deactivateKnowledge: unused,
-    createEscalation: unused, findEscalationByTelegram: unused, answerEscalation: unused,
+    async incrementLookupMiss(id) {
+      if (!conversations.has(id)) throw new Error('agent_lookup_miss_update_failed')
+      const total = (lookupMisses.get(id) ?? 0) + 1
+      lookupMisses.set(id, total)
+      return total
+    },
+    async recentMessages(id, limit) {
+      if (limit <= 0) return []
+      return [...messages.values()].filter(m => m.conversationId === id)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()).slice(-limit)
+    },
+    async setState(id, state) {
+      const current = conversations.get(id)
+      if (current) conversations.set(id, { ...current, state, ...(state !== 'paused' ? { pausedUntil: null } : {}) })
+    },
+    isEnabled: unused, setEnabled: unused,
+    async knowledge() { return [] },
+    addKnowledge: unused, deactivateKnowledge: unused,
+    async createEscalation(e) {
+      const id = `escalation-${escalations.size + 1}`
+      escalations.set(id, { ...e, id, state: 'open' })
+      return id
+    },
+    async findEscalationByTelegram(chatId, messageId) {
+      const found = [...escalations.values()].find(e => e.chatId === chatId && e.messageId === messageId)
+      return found ? { id: found.id, conversationId: found.conversationId, state: found.state } : null
+    },
+    answerEscalation: unused,
     agentResendsToday: unused, agentResendSince: unused,
   }
   return { repo, conversations, messages }

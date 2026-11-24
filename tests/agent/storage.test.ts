@@ -124,6 +124,26 @@ describe('ações e métricas compartilhadas com Telegram', () => {
 })
 
 describe('persistência privada do agente', () => {
+  it('inicia lookup_misses em zero', async () => {
+    const created = await conversation()
+    expect(created.rows[0]).toMatchObject({ lookup_misses: 0 })
+  })
+
+  it('incrementa e devolve tentativas por conversa com RPC restrito ao serviço', async () => {
+    await conversation()
+    await conversation('other-conversation')
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      const privilege = await db.query<{ allowed: boolean }>(`select has_function_privilege($1,'public.agent_increment_lookup_miss(text)','execute') as allowed`, [role])
+      expect(privilege.rows[0].allowed).toBe(role === 'service_role')
+    }
+    await db.exec('set local role service_role')
+    for (const expected of [1, 2, 3]) {
+      const result = await db.query(`select public.agent_increment_lookup_miss('conversation-1') as total`)
+      expect(result.rows).toEqual([{ total: expected }])
+    }
+    expect((await db.query(`select lookup_misses from public.agent_conversations where id='other-conversation'`)).rows).toEqual([{ lookup_misses: 0 }])
+  })
+
   it('habilita RLS e permite apenas service_role nas cinco tabelas', async () => {
     for (const table of agentTables) {
       const security = await db.query<{ relrowsecurity: boolean }>('select relrowsecurity from pg_class where oid=to_regclass($1)', [`public.${table}`])
